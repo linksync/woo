@@ -290,213 +290,11 @@ if (get_option('linksync_status') == 'Active') {
                                 9 => 'nine',
                                 10 => 'ten'
                             );
+
                             if (isset($_POST['product-type']) && $_POST['product-type'] == 'variable') {
-                                $total_product_outlets = 0;
-                                if (isset($_POST['variable_sku']) && !empty($_POST['variable_sku'])) {
-                                    foreach ($_POST['variable_sku'] as $sku_key => $val) {
-                                        if (@empty($_POST['variable_sku'][$sku_key])) {
-                                            $_POST['variable_sku'][$sku_key] = 'sku_' . $_POST['variable_post_id'][$sku_key];
-                                            update_post_meta($_POST['variable_post_id'][$sku_key], '_sku', 'sku_' . $_POST['variable_post_id'][$sku_key]);
-                                        }
-                                        $variable_sku = $_POST['variable_sku'][$sku_key];
-                                        $id = $_POST['variable_post_id'][$sku_key];
-                                        $name = $_POST['post_title'];
-//                                         Tax and Price  
-                                        if (get_option('ps_price') == 'on') {
-                                            $taxname = empty($_POST['variable_tax_class'][$sku_key]) ? 'standard-tax' : $_POST['variable_tax_class'][$sku_key];
-                                            if ($taxname == 'parent') {
-                                                if (isset($_POST['_tax_status']) && $_POST['_tax_status'] == 'taxable') { # Product with TAX  
-                                                    $taxname = empty($_POST['_tax_class']) ? 'standard-tax' : $_POST['_tax_class'];
-                                                }
-                                            }
-                                            $response_taxes = linksyn_get_tax_details_for_product($taxname);
-                                            if ($response_taxes['result'] == 'success') {
-                                                $tax_name = ($response_taxes['data']['tax_name']);
-                                                $tax_rate = $response_taxes['data']['tax_rate'];
-                                                $taxsetup = true;
-                                            }
-                                            if ($excluding_tax == 'on') {
-                                                # https://www.evernote.com/shard/s144/sh/e63f527b-903f-4002-8f00-313ff0652290/d9c1e0ce5a95800a  
-                                                if ($taxsetup) {
-                                                    if (get_option('price_field') == 'regular_price') {
-                                                        if (isset($_POST['variable_regular_price'][$sku_key]) && !empty($_POST['variable_regular_price'][$sku_key])) {
-//cost price:_regular_price
-                                                            $regular_price = (float) $_POST['variable_regular_price'][$sku_key];
-                                                            //Get Tax_value
-                                                            $tax_rate = (float) $tax_rate;
-                                                            $tax_value = (float) ($regular_price * $tax_rate);
-                                                            //sell price:_regular_price
-                                                            /* For excluding tax (both Woo Tax Excluding and Vend Tax Excluding)
-                                                             * display_retail_price_tax_inclusive 1, sell_price = Woo Final price + tax
-                                                             * For display_retail_price_tax_inclusive 0, sell_price = Woo Final price
-                                                             */
-                                                            if ($display_retail_price_tax_inclusive == '1') {
-                                                                $variant_price = $_POST['variable_regular_price'][$sku_key] + $tax_value;
-                                                            } elseif ($display_retail_price_tax_inclusive == '0') {
-                                                                $variant_price = $_POST['variable_regular_price'][$sku_key];
-                                                            }
-                                                            $regular_price = str_replace(',', '.', $variant_price);
-//sell price:_regular_price
-                                                        }
-                                                    } else {
-                                                        if (isset($_POST['variable_sale_price'][$sku_key]) && !empty($_POST['variable_sale_price'][$sku_key])) {
-                                                            $regular_price = (float) $_POST['variable_sale_price'][$sku_key];
-//                                                             Get Tax_value
-                                                            $tax_rate = (float) $tax_rate;
-                                                            $tax_value = (float) ($regular_price * $tax_rate);
-                                                            if ($display_retail_price_tax_inclusive == '1') {
-                                                                $variant_price = $_POST['variable_sale_price'][$sku_key] + $tax_value;
-                                                            } elseif ($display_retail_price_tax_inclusive == '0') {
-                                                                $variant_price = $_POST['variable_sale_price'][$sku_key];
-                                                            }
-                                                            $regular_price = str_replace(',', '.', $variant_price);
-                                                        }
-                                                    }
-                                                } else { // exc   ticked 
-                                                    // excluding tax off and tax not enabled in woocomerce 
-                                                    if (get_option('price_field') == 'regular_price') {
-                                                        if (isset($_POST['variable_regular_price'][$sku_key]) && !empty($_POST['variable_regular_price'][$sku_key])) {
-                                                            $regular_price = str_replace(',', '.', $_POST['variable_regular_price'][$sku_key]);
-                                                        }
-                                                    } else {
-                                                        if (isset($_POST['variable_sale_price'][$sku_key]) && !empty($_POST['variable_sale_price'][$sku_key])) {
-//cost price:_regular_price
-                                                            $regular_price = str_replace(',', '.', $_POST['variable_sale_price'][$sku_key]);
-                                                        }
-                                                    }
-                                                }
-                                            } else {
-//                                                 No effect on price 
-                                                if (get_option('price_field') == 'regular_price') {
-                                                    if (isset($_POST['variable_regular_price'][$sku_key]) && !empty($_POST['variable_regular_price'][$sku_key])) {
-//cost price:_regular_price
-                                                        $regular_price = (float) $_POST['variable_regular_price'][$sku_key];
-//                                                 Get Tax_value
-                                                        if (isset($tax_rate)) {
-                                                            $tax_rate = (float) $tax_rate;
-                                                            $tax_value = ($regular_price - ($regular_price / (1 + $tax_rate)));
-                                                        } else {
-                                                            $tax_value = 0;
-                                                        }
-                                                        if ($display_retail_price_tax_inclusive == '1') {
-                                                            $price = $_POST['variable_regular_price'][$sku_key];
-                                                        } elseif ($display_retail_price_tax_inclusive == '0') {
-                                                            $price = $_POST['variable_regular_price'][$sku_key] - $tax_value;
-                                                        }
-                                                        $regular_price = str_replace(',', '.', $_POST['variable_regular_price'][$sku_key]);
-                                                    }
-                                                } else {
-                                                    if (isset($_POST['variable_sale_price'][$sku_key]) && !empty($_POST['variable_sale_price'][$sku_key])) {
-                                                        $regular_price = (float) $_POST['variable_sale_price'][$sku_key];
-//                                                 Get Tax_value
-
-                                                        if (isset($tax_rate)) {
-                                                            $tax_rate = (float) $tax_rate;
-                                                            $tax_value = ($regular_price - ($regular_price / (1 + $tax_rate)));
-                                                        } else {
-
-                                                            $tax_value = 0;
-                                                        }
-                                                        if ($display_retail_price_tax_inclusive == '1') {
-                                                            $price = $_POST['variable_sale_price'][$sku_key];
-                                                        } elseif ($display_retail_price_tax_inclusive == '0') {
-                                                            $price = $_POST['variable_sale_price'][$sku_key] - $tax_value;
-                                                        }
-//cost price:_regular_price
-                                                        $regular_price = str_replace(',', '.', $_POST['variable_sale_price'][$sku_key]);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        # Pride and Tax ending 
-                                        #outlets and quantity
-
-                                        if (get_option('ps_quantity') == 'on') {
-                                            if (get_option('ps_wc_to_vend_outlet') == 'on') {
-                                                $getoutlets = get_option('wc_to_vend_outlet_detail');
-                                                if (isset($getoutlets) && !empty($getoutlets)) {
-                                                    $outlets = explode('|', $getoutlets);
-                                                    if (isset($_POST['variable_manage_stock'][$sku_key]) && $_POST['variable_manage_stock'][$sku_key] == 'on') {
-                                                        if (isset($_POST['variable_stock_status'][$sku_key]) && $_POST['variable_stock_status'][$sku_key] == 'instock' || $_POST['variable_stock_status'][$sku_key] == '') {
-                                                            $outlet = array(array('name' => isset($outlets[0]) ? $outlets[0] : '',
-                                                                    'quantity' => $_POST['variable_stock'][$sku_key]));
-                                                        }
-                                                    } else {
-                                                        $outlet = array();
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            $outlet = array(array('quantity' => NULL));
-                                        }
-
-                                        if (isset($_POST['variable_stock'][$sku_key]) && !empty($_POST['variable_stock'][$sku_key])) {
-                                            #Stock Quantity
-                                            $quantity = $_POST['variable_stock'][$sku_key];
-                                        }
-                                        if (isset($_POST['attribute_names']) && !empty($_POST['attribute_names'])) {
-                                            $check = 1;
-                                            foreach ($_POST['attribute_names'] as $arr_key => $attribute) {
-                                                $_attribute = strtolower($attribute);
-                                                if (strpos($_attribute, ' ')) {
-                                                    $_attribute = str_replace(' ', '-', $_attribute);
-                                                }
-                                                if (isset($_POST['attribute_' . $_attribute][$sku_key]) && !empty($_POST['attribute_' . $_attribute][$sku_key])) {
-                                                    if (strpos($_attribute, 'pa_') !== false) {
-                                                        $attribute_name = str_replace('pa_', '', $_attribute);
-                                                    } else {
-                                                        $attribute_name = $attribute;
-                                                    }
-                                                    $attribute_query = mysql_query("SELECT attribute_label FROM `" . $wpdb->prefix . "woocommerce_attribute_taxonomies` WHERE `attribute_name`= '" . $attribute_name . "'");
-                                                    if (mysql_num_rows($attribute_query) != 0) {
-                                                        $attribute_name_result = mysql_fetch_assoc($attribute_query);
-                                                        $attributeName = $attribute_name_result['attribute_label'];
-                                                    } else {
-                                                        $attributeName = $attribute_name;
-                                                    }
-                                                    $details['option_' . $option[$check] . '_name'] = isset($attributeName) ? $attributeName : '';
-                                                    $query = mysql_query("SELECT name FROM `" . $wpdb->base_prefix . "terms` WHERE `slug` = '" . $_POST['attribute_' . $_attribute][$sku_key] . "'");
-                                                    if (mysql_num_rows($query) != 0) {
-                                                        $attribute_value = mysql_fetch_assoc($query);
-                                                        $value = $attribute_value['name'];
-                                                    } else {
-                                                        if (isset($_POST['attribute_values'][$arr_key]) && !empty($_POST['attribute_values'][$arr_key])) {
-                                                            if (strpos($_POST['attribute_values'][$arr_key], '|')) {
-                                                                $attribute_values = explode('|', $_POST['attribute_values'][$arr_key]);
-                                                                $value = trim($attribute_values[$sku_key]);
-                                                            }
-                                                        }
-                                                    }
-                                                    $details['option_' . $option[$check] . '_value'] = isset($value) ? $value : '';
-                                                    $check++;
-                                                }
-                                            }
-                                        }
-                                        if (isset($name))
-                                            $details['name'] = 'Variation #' . $id . ' of ' . stripslashes($name);
-                                        if (isset($variable_sku))
-                                            $details['sku'] = $variable_sku;
-                                        if (isset($quantity))
-                                            $details['quantity'] = $quantity;
-                                        if (isset($tax_name))
-                                            $details['tax_name'] = $tax_name;
-                                        if (isset($tax_rate))
-                                            $details['tax_rate'] = $tax_rate;
-                                        if (isset($tax_value))
-                                            $details['tax_value'] = $tax_value;
-                                        if (isset($regular_price)) {
-                                            $details['list_price'] = $regular_price;
-                                            $details['sell_price'] = $regular_price;
-                                        }
-                                        isset($outlet) ? $details['outlets'] = $outlet : $details['outlets'] = array();
-                                        $total_product_outlets+= isset($quantity) ? $quantity : 0;
-                                        $varient_data[$sku_key] = $details;
-                                        unset($details);
-                                        unset($quantity);
-                                    }
-                                    $product['variants'] = $varient_data;
-                                }
-
+                                $varient_data = linksync_getVariantData($_POST['post_ID'], $excluding_tax, $display_retail_price_tax_inclusive);
+                                $product['variants'] = $varient_data['variants'];
+                                $total_product_outlets = $varient_data['total_product_outlets'];
                                 if ($total_product_outlets > 0) {
                                     if (get_option('ps_quantity') == 'on') {
                                         if (get_option('ps_wc_to_vend_outlet') == 'on') {
@@ -532,8 +330,10 @@ if (get_option('linksync_status') == 'Active') {
                                             $variant['name'] = html_entity_decode($variant_data['post_title']);
                                         }
 #quantity
-                                        if (@$variants_detail['_stock_status'][0] == 'instock') {
-                                            $variant['quantity'] = @$variants_detail['_stock'][0];
+                                        if ($variants_detail['_manage_stock'][0] == 'yes') {
+                                            if (@$variants_detail['_stock_status'][0] == 'instock') {
+                                                $variant['quantity'] = @$variants_detail['_stock'][0];
+                                            }
                                         }
 // Price with Tax
                                         if (get_option('ps_price') == 'on') {
@@ -702,17 +502,21 @@ if (get_option('linksync_status') == 'Active') {
                                                 $getoutlets = get_option('wc_to_vend_outlet_detail');
                                                 if (isset($getoutlets) && !empty($getoutlets)) {
                                                     $outlets = explode('|', $getoutlets);
-                                                    if (isset($variants_detail['_stock'][0]) && !empty($variants_detail['_stock'][0])) {
-                                                        $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
-                                                                'quantity' => $variants_detail['_stock'][0]));
-                                                        $variable_product_outlets+=$variants_detail['_stock'][0];
+                                                    if ($variants_detail['_manage_stock'][0] == 'yes') {
+                                                        if (isset($variants_detail['_stock'][0]) && !empty($variants_detail['_stock'][0])) {
+                                                            $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
+                                                                    'quantity' => $variants_detail['_stock'][0]));
+                                                            $variable_product_outlets+=$variants_detail['_stock'][0];
+                                                        } else {
+                                                            $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
+                                                                    'quantity' => NULL));
+                                                        }
                                                     } else {
-                                                        $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
-                                                                'quantity' => NULL));
+                                                        $variant['outlets'] = NULL;
                                                     }
-                                                } else {
-                                                    $variant['outlets'] = NULL;
                                                 }
+                                            } else {
+                                                $variant['outlets'] = NULL;
                                             }
                                         } else {
                                             $variant['outlets'] = array(array('quantity' => NULL));
@@ -1038,9 +842,11 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
                 $variant['name'] = html_entity_decode($variant_data['post_title']);
             }
 
-#quantity
-            if (@$variants_detail['_stock_status'][0] == 'instock') {
-                $variant['quantity'] = @$variants_detail['_stock'][0];
+#quantity 
+            if ($variants_detail['_manage_stock'][0] == 'yes') {
+                if (@$variants_detail['_stock_status'][0] == 'instock') {
+                    $variant['quantity'] = @$variants_detail['_stock'][0];
+                }
             }
 
 
@@ -1210,15 +1016,17 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
                     $getoutlets = get_option('wc_to_vend_outlet_detail');
                     if (isset($getoutlets) && !empty($getoutlets)) {
                         $outlets = explode('|', $getoutlets);
-                        if (isset($variants_detail['_stock'][0]) && !empty($variants_detail['_stock'][0])) {
-                            $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
-                                    'quantity' => $variants_detail['_stock'][0]));
+                        if ($variants_detail['_manage_stock'][0] == 'yes') {
+                            if (isset($variants_detail['_stock'][0]) && !empty($variants_detail['_stock'][0])) {
+                                $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
+                                        'quantity' => $variants_detail['_stock'][0]));
+                            } else {
+                                $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
+                                        'quantity' => NULL));
+                            }
                         } else {
-                            $variant['outlets'] = array(array('name' => html_entity_decode($outlets[0]),
-                                    'quantity' => NULL));
+                            $variant['outlets'] = NULL;
                         }
-                    } else {
-                        $variant['outlets'] = NULL;
                     }
                 }
             } else {

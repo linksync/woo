@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.2.9
+  Version: 2.3.0
  */
 // RE-CONNECT because it's wp set on mysqli
 @mysql_connect(DB_HOST, DB_USER, DB_PASSWORD);
@@ -18,7 +18,7 @@ mb_internal_encoding('UTF-8');
 mb_http_output('UTF-8');
 mb_http_input('UTF-8');
 mb_language('uni');
-mb_regex_encoding('UTF-8'); 
+mb_regex_encoding('UTF-8');
 //include_once(dirname(__FILE__) . '/linksync_add_action_product.php'); #POST Product hook file
 if (!@include_once(dirname(__FILE__) . '/linksync_add_action_order.php')) {
     echo ("<p style='text-align:center;'>Linksync : linksync_add_action_order.php File Not Found !</p>");
@@ -29,6 +29,9 @@ if (!@include_once(dirname(__FILE__) . '/linksync_add_action_delete.php')) {
 if (!@include_once(dirname(__FILE__) . '/linksync_add_action_product_QB.php')) {
     echo ("<p style='text-align:center;'>Linksync : linksync_add_action_product_QB.php File Not Found !</p>");
 }
+if (!@include_once(dirname(__FILE__) . '/linksync_plugin_updater/linksync_plugin_updater.php')) {
+    echo ("<p style='text-align:center;'>Linksync : linksync Plugin Updater File Not Found !</p>");
+}
 
 class linksync {
 
@@ -37,18 +40,19 @@ class linksync {
         add_action('admin_menu', array(&$this, 'linksync_add_menu'), 99); # To create custom menu in Wordpress Side Bar  
         add_action('admin_menu', array(&$this, 'linksync_wooVersion_check'));
         add_action('admin_notices', array('linksync', 'linksync_show_message'));
-        // add_action('wp', array('linksync', 'linksync_dailyCron'));
-        // add_action('linksync_logs_clear', array('linksync', 'clearLogsDetails'));
+        add_action('plugins_loaded', array('linksync', 'linsksyncVend_init'), 0);
+// add_action('wp', array('linksync', 'linksync_dailyCron'));
+// add_action('linksync_logs_clear', array('linksync', 'clearLogsDetails'));
         add_action('admin_notices', array('linksync', 'linksync_video_message'));
         add_filter('contextual_help', array('linksync', 'linksync_help'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array(&$this, 'plugin_action_links'));
     }
 
-    public static function activate() { 
+    public static function activate() {
         global $wpdb;
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
-        $check_laid=get_option('linksync_laid');
-        if(isset($check_laid)&&!empty($check_laid)){
+        $check_laid = get_option('linksync_laid');
+        if (isset($check_laid) && !empty($check_laid)) {
             self::checkForConnection($check_laid);
         }
         add_option('linksync_laid', "");
@@ -70,7 +74,7 @@ class linksync {
         add_option('linksync_stock_updated_time', "1900-01-01 00:00:00");
         add_option('linksync_option', '');
         add_option('hide_this_notice', 'on');
-        // Product Sync Settings 
+// Product Sync Settings 
         add_option('product_sync_type', 'disabled_sync'); # Two-way ,Vend to WooCommerce,WooCommerce to Vend,Disabled
         add_option('ps_name_title', 'on');
         add_option('ps_description', 'on');
@@ -103,7 +107,7 @@ class linksync {
         add_option('ps_attribute', 'on');
         add_option('linksync_visiable_attr', '1');
         add_option('linksync_woocommerce_tax_option', 'on');
-        //Order sync Add options
+//Order sync Add options
         add_option('order_sync_type', 'disabled');
         add_option('order_time_req', null);
         add_option('order_time_suc', null);
@@ -114,14 +118,14 @@ class linksync {
         add_option('wc_to_vend_tax', '');
         add_option('wc_to_vend_payment', '');
         add_option('wc_to_vend_export', '');
-        // Vend To WC
+// Vend To WC
         add_option('order_vend_to_wc', 'wc-completed');
         add_option('vend_to_wc_tax', '');
         add_option('vend_to_wc_payments', '');
         add_option('vend_to_wc_customer', '');
         add_option('laid_message', null);
         add_option('prod_last_page', '');
-        //QuickBook Options
+//QuickBook Options
         add_option('product_sync_type_QBO', 'disabled_sync');
         add_option('order_sync_type_QBO', 'disabled');
         add_option('order_status_wc_to_QBO', 'wc-processing');
@@ -140,30 +144,30 @@ class linksync {
         add_option('QBO_locations', '');
         add_option('product_import', 'no');
         add_option('order_import', 'no');
-        //order id
+//order id
         add_option('linksync_sent_order_id', '');
         add_option('Vend_orderIDs', '');
-        //product details
+//product details
         add_option('product_detail', '');
-        //order details
+//order details
         add_option('order_detail', '');
-        //Woo Version Checker
+//Woo Version Checker
         add_option('linksync_wooVersion', 'off');
-        //user activity
+//user activity
         add_option('linksync_user_activity', time());
         add_option('linksync_user_activity_daily', time());
-        //update notic 
+//update notic 
         add_option('linksync_update_notic', 'off');
-        //Post product 
+//Post product 
         add_option('post_product', 0);
-        // syncing Status
+// syncing Status
         add_option('linksync_sycning_status', NULL);
-        // display_retail_price_tax_inclusive
+// display_retail_price_tax_inclusive
         add_option('linksync_tax_inclusive', '');
 // WEBHOOK CONCEPT 
         $webhook_url_code = linksync::linksync_autogenerate_code();
         add_option('webhook_url_code', $webhook_url_code);
-        // Logs Record Table 
+// Logs Record Table 
         $sql1 = 'CREATE TABLE IF NOT EXISTS `' . $wpdb->prefix . 'linksync_log`(
 			`id_linksync_log` int(10) unsigned NOT NULL auto_increment,
 			`method` varchar(200),
@@ -180,8 +184,8 @@ class linksync {
 			PRIMARY KEY (`id`)) DEFAULT CHARSET=utf8';
         dbDelta($sql1);
         dbDelta($sql2);
-        // Removing Spaces b/w  sku value of product 
-        // linksync::linksync_removespaces_of_exists_product();
+// Removing Spaces b/w  sku value of product 
+// linksync::linksync_removespaces_of_exists_product();
     }
 
     public static function linksync_wooVersion_check() {
@@ -237,7 +241,7 @@ class linksync {
 
     public static function linksync_help() {
         $screen = get_current_screen();
-        // Add my_help_tab if current screen is My Admin Page
+// Add my_help_tab if current screen is My Admin Page
         $screen->add_help_tab(array(
             'id' => 'my_help_tab',
             'title' => __(' Documentation '),
@@ -256,6 +260,17 @@ class linksync {
         if (!in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
             add_action('admin_notices', array('linksync', 'dependent_plugin_error'));
         }
+    }
+
+    function linsksyncVend_init() {
+        if (is_admin()) { 
+            $className = PucFactory::getLatestClassVersion('PucGitHubChecker');
+            $myUpdateChecker = new $className(
+                            'https://github.com/linksync/woo',
+                            __FILE__,
+                            'master'
+            );
+         }
     }
 
     public function plugin_action_links($links) {
@@ -395,7 +410,7 @@ class linksync {
         <?php
     }
 
-    #------------------------PRODUCT POST---------------------------#
+#------------------------PRODUCT POST---------------------------#
 
     public static function linksync_productPost() {
         include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Handle Module Functions
@@ -407,9 +422,9 @@ class linksync {
         include_once(dirname(__FILE__) . '/linksync_add_action_product_QB.php'); #POST Product hook file
     }
 
-    // Function to used to remove space b/w sku 
+// Function to used to remove space b/w sku 
     public static function linksync_removespaces($vars) {
-        //echo "<pre>";print_r($_POST);
+//echo "<pre>";print_r($_POST);
         if (isset($_POST['_sku']) && !empty($_POST['_sku'])) {
             $sku = $_POST['_sku'];
             if (strpos($sku, ' ')) {
@@ -428,8 +443,8 @@ class linksync {
         if (isset($_POST['product-type']) && $_POST['product-type'] == 'variable') {
             if (isset($_POST['variable_sku']) && !empty($_POST['variable_sku'])) {
                 foreach ($_POST['variable_sku'] as $key => $sku) {
-                    //  print_r($sku);
-                    //Remove the Space in the SKU 
+//  print_r($sku);
+//Remove the Space in the SKU 
                     if (isset($sku) && !empty($sku)) {
                         if (strpos($sku, ' ')) {
                             $sku_replaced = str_replace(' ', '', $sku);
@@ -482,7 +497,7 @@ class linksync {
         update_option('price_field', 'regular_price');
         update_option('ps_attribute', 'on');
         update_option('linksync_woocommerce_tax_option', 'on');
-        //Order sync Add options
+//Order sync Add options
         update_option('order_sync_type', 'disabled');
         update_option('order_time_req', null);
         update_option('order_time_suc', null);
@@ -493,14 +508,14 @@ class linksync {
         update_option('wc_to_vend_tax', '');
         update_option('wc_to_vend_payment', '');
         update_option('wc_to_vend_export', '');
-        // Vend To WC
+// Vend To WC
         update_option('order_vend_to_wc', 'wc-completed');
         update_option('vend_to_wc_tax', '');
         update_option('vend_to_wc_payments', '');
         update_option('vend_to_wc_customer', '');
         update_option('laid_message', null);
         update_option('prod_last_page', '');
-        //QuickBook Options
+//QuickBook Options
         update_option('product_sync_type_QBO', 'disabled_sync');
         update_option('order_sync_type_QBO', 'disabled');
         update_option('order_status_wc_to_QBO', 'wc-processing');
@@ -519,32 +534,32 @@ class linksync {
         update_option('QBO_locations', '');
         update_option('product_import', 'no');
         update_option('order_import', 'no');
-        //order id
+//order id
         update_option('linksync_sent_order_id', '');
         update_option('Vend_orderIDs', '');
-        //product details
+//product details
         update_option('product_detail', '');
-        //order details
+//order details
         update_option('order_detail', '');
-        //Woo Version Checker
+//Woo Version Checker
         update_option('linksync_wooVersion', 'off');
-        //user activity
+//user activity
         update_option('linksync_user_activity', time());
         update_option('linksync_user_activity_daily', time());
-        //update notic 
+//update notic 
         update_option('linksync_update_notic', 'off');
-        //Post product 
+//Post product 
         update_option('post_product', 0);
-        // syncing Status
+// syncing Status
         update_option('linksync_sycning_status', NULL);
-        //display_retail_price_tax_inclusive
+//display_retail_price_tax_inclusive
         update_option('linksync_tax_inclusive', '');
     }
 
     public static function checkForConnection($api_key) {
         global $wpdb;
-        // Start - Saving API Key and Connecting to Server 
-        # On Save button clicking , it should be saved and connected as well. 
+// Start - Saving API Key and Connecting to Server 
+# On Save button clicking , it should be saved and connected as well. 
         $LAIDKey = trim($api_key);
         $testMode = get_option('linksync_test');
         if (isset($testMode) && $testMode == 'on') {
@@ -593,7 +608,7 @@ class linksync {
                     }
                 }
                 if (isset($status) && isset($app_name_status) && $status == 'Active' && $app_name_status == 'Active') {
-                    // if (isset($result['connected_app_version']) && !empty($result['connected_app_version'])) {woocommerce/woocommerce.php
+// if (isset($result['connected_app_version']) && !empty($result['connected_app_version'])) {woocommerce/woocommerce.php
 
                     $plugin_file = dirname(__FILE__) . '/linksync.php';
                     $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
@@ -606,7 +621,7 @@ class linksync {
                             update_option('linksync_addedfile', '<a href="' . content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . content_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
                         }
                     }
-                    //}
+//}
                     if (isset($result['time']) && !empty($result['time'])) {
                         $server_response = strtotime($result['time']);
                         $server_time = time();
@@ -616,7 +631,7 @@ class linksync {
                     }
 
                     if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
-                        // Add Default setting into DB  
+// Add Default setting into DB  
                         $response_outlets = $apicall->linksync_getOutlets();
                         if (@get_option('ps_outlet') == 'on') { #VEND TO WC
                             if (isset($response_outlets) && !empty($response_outlets)) {
@@ -730,7 +745,7 @@ class linksync {
                     }
                     update_post_meta($product_wc->ID, '_sku', $sku);
                 }
-                #Variants product
+#Variants product
                 $variants_data = get_posts(array(
                     'post_type' => 'product_variation',
                     'post_parent' => $product_wc->ID
@@ -773,8 +788,11 @@ if (get_option('order_sync_type') == 'wc_to_vend') {
     add_action('transition_post_status', 'post_unpublished', 10, 3);
 }
 if (get_option('order_sync_type') == 'disabled') {
-    add_action('woocommerce_process_shop_order_meta', 'order_product_post'); # Order From Back End (Admin Order)
-    add_action('woocommerce_thankyou', 'order_product_post'); # Order From Front End (User Order)
+    $check_product_syncing_setting = get_option('product_sync_type');
+    if ($check_product_syncing_setting == 'two_way' || $check_product_syncing_setting == 'wc_to_vend') {
+        add_action('woocommerce_process_shop_order_meta', 'order_product_post'); # Order From Back End (Admin Order)
+        add_action('woocommerce_thankyou', 'order_product_post'); # Order From Front End (User Order)
+    }
 }
 if (get_option('linksync_update_notic') == 'on') {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';

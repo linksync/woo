@@ -28,25 +28,16 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
                 $product_thumbnail = get_post_meta($product_ID, 'Vend_thumbnail_image', TRUE);
                 if (isset($product_thumbnail) && !empty($product_thumbnail)) {
                     if (get_option('ps_import_image_radio') == 'Ongoing') {
-                        $thumbnail_id = addImage_thumbnail($product_thumbnail, $product_ID);
-                        $image_thumbnail = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $product_ID . "'"));
-                        if ($image_thumbnail != 0) {
-                            update_post_meta($product_ID, '_thumbnail_id', $thumbnail_id);
-                        } else {
-                            add_post_meta($product_ID, '_thumbnail_id', $thumbnail_id);
-                        }
+                        addImage_thumbnail($product_thumbnail, $product_ID);
                         delete_post_meta($product_ID, 'Vend_thumbnail_image', $product_thumbnail);
-                        unset($thumbnail_id);
                         $thumbnail_response = 'success';
                     }
                     /*
                      * Enable (Once)-> This option will sync images from Vend to WooCommerce products on creation of a new product,
                      *  or if an existing product in WooCommerce does not have an image.
                      */ elseif (get_option('ps_import_image_radio') == 'Enable') {
-                        $attach_id = addImage_thumbnail($product_thumbnail, $product_ID);
-                        add_post_meta($product_ID, '_thumbnail_id', $attach_id);
+                        addImage_thumbnail($product_thumbnail, $product_ID);
                         delete_post_meta($product_ID, 'Vend_thumbnail_image', $product_thumbnail);
-                        unset($attach_id);
                         $thumbnail_response = 'success';
                     }
                 } else {
@@ -65,7 +56,7 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
                         }
                     }
                 }
- 
+
                 $vend_gallery_image = get_post_meta($product_ID, 'Vend_product_image_gallery', TRUE);
                 if (isset($vend_gallery_image) && !empty($vend_gallery_image)) {
                     if (strpos($vend_gallery_image, ','))
@@ -140,14 +131,12 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
                             }
                         }
                     }
-                } 
+                }
                 if (get_option('ps_import_image_radio') == 'Enable' || get_option('ps_import_image_radio') == 'Ongoing') {
                     $product_thumbnail_image = get_post_meta($product_ID, 'Vend_thumbnail_image', TRUE);
                     if (isset($product_thumbnail_image) && !empty($product_thumbnail_image)) {
-                        $attach_thumb_id = addImage_thumbnail($product_thumbnail_image, $product_ID);
-                        add_post_meta($product_ID, '_thumbnail_id', $attach_thumb_id);
+                        addImage_thumbnail($product_thumbnail_image, $product_ID);
                         delete_post_meta($product_ID, 'Vend_thumbnail_image', $product_thumbnail_image);
-                        unset($attach_thumb_id);
                         $thumbnail_response = 'success';
                     } else {
                         $thumbnail_response = 'success';

@@ -159,13 +159,14 @@ class linksync_class {
         }
         return $result;
     }
- public function isReferenceExists($reference) {
+
+    public function isReferenceExists($reference) {
         global $wpdb;
         $query = mysql_query("SELECT post_id FROM `" . $wpdb->prefix . "postmeta` WHERE meta_key='_sku' AND BINARY meta_value='" . $reference . "'");
         if (0 != mysql_num_rows($query)) {
             while ($result = mysql_fetch_assoc($query)) {
-                $product_detail = mysql_query("SELECT * FROM `" . $wpdb->prefix . "posts` WHERE post_type='product' AND ID='" . $result['post_id'] . "'");
-                if (0 != mysql_num_rows($query)) {
+                $product_detail = mysql_query("SELECT * FROM `" . $wpdb->prefix . "posts` WHERE post_type='product' AND ID='" . $result['post_id'] . "' AND post_status!='trash'");
+                if (0 != mysql_num_rows($product_detail)) {
                     while ($detail = mysql_fetch_assoc($product_detail)) {
                         $reference_result['result'] = 'success';
                         $reference_result['data'] = $detail['ID'];
@@ -177,6 +178,7 @@ class linksync_class {
         }
         return $reference_result;
     }
+
     public function isReferenceExists_order($reference) {
         global $wpdb;
         $query = mysql_query("SELECT post_id FROM `" . $wpdb->prefix . "postmeta` WHERE meta_key='_sku' AND BINARY meta_value='" . $reference . "'");
@@ -190,17 +192,12 @@ class linksync_class {
         return $reference_result;
     }
 
-    public function variantSku($sku) {
+    public function variantSkuHandler($sku, $parent_id) {
         global $wpdb;
         $query = mysql_query("SELECT post_id FROM `" . $wpdb->prefix . "postmeta` WHERE meta_key='_sku' AND BINARY meta_value='" . $sku . "'");
         if (0 != mysql_num_rows($query)) {
             while ($result = mysql_fetch_assoc($query)) {
-                $product_detail = mysql_query("SELECT ID FROM `" . $wpdb->prefix . "posts` WHERE post_type='product_variation' AND ID='" . $result['post_id'] . "'");
-                if (0 != mysql_num_rows($query)) {
-                    $detail = mysql_fetch_assoc($product_detail);
-                    $reference_result['result'] = 'success';
-                    $reference_result['data'] = $detail['ID'];
-                }
+                $reference_result = $this->check_product_variant($result['post_id'], $parent_id);
             }
         } else {
             $reference_result['result'] = 'error';
@@ -208,7 +205,22 @@ class linksync_class {
         return $reference_result;
     }
 
-    // VEND Order Fuctions
+    public function check_product_variant($variant_id, $parent_id) {
+        global $wpdb;
+//Example: SELECT * FROM `pxxf_posts` WHERE post_type='product_variation' AND ID='4359' AND `post_parent`='4350' AND post_status!='trash'
+        $product_detail = mysql_query("SELECT ID,post_parent FROM `" . $wpdb->prefix . "posts` WHERE post_type='product_variation' AND ID='" . $variant_id . "' AND `post_parent`='" . $parent_id . "'  AND post_status!='trash'");
+        if (0 != mysql_num_rows($product_detail)) {
+            while ($detail = mysql_fetch_assoc($product_detail)) {
+                $reference_result['result'] = 'success';
+                $reference_result['data'] = $detail['ID'];
+            }
+        } else {
+            $reference_result['result'] = 'error';
+        }
+        return $reference_result;
+    }
+
+// VEND Order Fuctions
     public function linksync_getOrder($param) {
         $url = $this->testmode == 'on' ? $this->testingURL : $this->URL;
         if (isset($param) && !empty($param)) {
@@ -305,7 +317,7 @@ class linksync_class {
             $name = $product['name'];
             $description = $product['description'];
             $reference = $product['sku'];
-            // $list_price = $product['list_price'];
+// $list_price = $product['list_price'];
             $sell_price = $product['sell_price'];
             if (count($product['outlets']) != 0) {
                 $quantity = 0;
@@ -341,7 +353,7 @@ class linksync_class {
                 $outlet_checker = 'noOutlet';
             }
             $tax_name = $product['tax_name'];
-            #Checking for Price Entered With Tax
+#Checking for Price Entered With Tax
             if (get_option('woocommerce_calc_taxes') == 'yes') {
                 if (get_option('linksync_woocommerce_tax_option') == 'on') {
                     if (get_option('woocommerce_prices_include_tax') == 'yes') {
@@ -355,7 +367,7 @@ class linksync_class {
             } else {
                 $excluding_tax = get_option('excluding_tax');
             }
-            # @return product id if reference exists 
+# @return product id if reference exists 
             $result_reference = self::isReferenceExists($reference); #  Check if already exist product into woocommerce 
 
             include_once(ABSPATH . 'wp-admin/includes/image.php');
@@ -367,667 +379,652 @@ class linksync_class {
                  * Update exists product into WC
                  */
 
-                #Delete the product from the woocommerce with the value delected_at of the product
+#Delete the product from the woocommerce with the value delected_at of the product
                 if (get_option('ps_delete') == 'on') {
                     if (!empty($product['deleted_at'])) {
-                        wp_delete_post($result_reference['data']); //use the product Id and delete the product
+                        global $wpdb;
+                        $product_detail = mysql_query("SELECT ID,post_parent FROM `" . $wpdb->prefix . "posts` WHERE post_type='product_variation' AND  `post_parent`='" . $result_reference['data'] . "'");
+                        if (0 != mysql_num_rows($product_detail)) {
+                            while ($detail = mysql_fetch_assoc($product_detail)) {
+                                wp_delete_post($detail['ID']);
+                            }
+                        }
+                        wp_delete_post($result_reference['data'], true);
                     }
                 }
-                #-----Delete All Relationship--------#
-                if (get_option('ps_attribute') == 'on') {
-                    $product_attributes = get_post_meta($result_reference['data'], '_product_attributes', TRUE);
-                    if (isset($product_attributes) && !empty($product_attributes)) {
-                        foreach ($product_attributes as $taxonomy_name => $taxonomy_detail) {
-                            $taxonomy_query = mysql_query("SELECT term_taxonomy_id FROM `" . $wpdb->prefix . "term_taxonomy` WHERE `taxonomy`='$taxonomy_name'");
-                            if (mysql_num_rows($taxonomy_query) != 0) {
-                                while ($term_taxonmy_id_db = mysql_fetch_assoc($taxonomy_query)) {
-                                    mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $term_taxonmy_id_db['term_taxonomy_id'] . "'");
-                                }
-                            }
-                        }
-                    }
-                }
-                #-------------------------VARIENT DATA--------------------------------# 
-
-                if (isset($product['variants']) && !empty($product['variants'])) {
-                    wp_set_object_terms($result_reference['data'], 'variable', 'product_type'); //this will create a variable product
-                    $result_data = $this->variant_sku_check($product['variants'], $result_reference['data']);
-                    if (isset($result_data) && !empty($result_data)) {
-                        if (isset($result_data['thedata']) && !empty($result_data['thedata'])) {
-                            $product_attributes = get_post_meta($result_reference['data'], '_product_attributes', TRUE);
-                            if (isset($product_attributes) && !empty($product_attributes)) {
-                                foreach ($result_data['thedata'] as $exists_attribute_key => $exists_attribute_value) {
-                                    $exists_attribute[] = $exists_attribute_key;
-                                    $var[$exists_attribute_key] = $exists_attribute_value;
-                                }
-                                for ($i = 0; $i < COUNT($exists_attribute); $i++) {
-                                    foreach ($product_attributes as $key => $p_attribute) {
-                                        if ($exists_attribute[$i] == $key) {
-                                            $thedata[$key] = $p_attribute;
-                                            break;
-                                        } else {
-                                            $thedata[$exists_attribute[$i]] = $var[$exists_attribute[$i]];
-                                        }
-                                    }
-                                }
-                                if (get_option('ps_attribute') == 'off') {
-                                    $thedata = array_merge($thedata, $product_attributes);
-                                }
-                                if (get_option('linksync_visiable_attr') == 0) {
-                                    foreach ($thedata as $visible) {
-                                        $thedata[$visible['name']]['is_visible'] = 0;
-                                    }
-                                }
-                            } else {
-                                $thedata = $result_data['thedata'];
-                            }
-                            update_post_meta($result_reference['data'], '_product_attributes', $thedata); //ADD Product Attribute
-                            unset($thedata);
-                            unset($result_data['thedata']);
-                            unset($exists_attribute);
-                            unset($var);
-                        }
-                        /*
-                         * Max and Min variation prices
-                         */
-                        $variant_product_id_query = mysql_query("SELECT * FROM  `" . $wpdb->prefix . "posts` WHERE  `post_parent` ='" . $result_reference['data'] . "' AND  `post_type` =  'product_variation'");
-                        $variant = array();
-                        while ($variant_product_ids = mysql_fetch_assoc($variant_product_id_query)) {
-                            $variant[] = $variant_product_ids['ID'];
-                        }
-                        $price_list = array('_price', '_sale_price', '_regular_price');
-                        $max_and_min = array('max', 'min');
-                        foreach ($max_and_min as $check) {
-                            foreach ($price_list as $price) {
-                                $db_prices_query = mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  `meta_key` =  '$price' AND  `post_id` IN (" . implode(',', $variant) . ")");
-                                $max_min_price_handle = array();
-                                while ($db_prices = mysql_fetch_assoc($db_prices_query)) {
-                                    if (isset($db_prices['meta_value']) && !empty($db_prices['meta_value'])) {
-                                        $max_min_price_handle[$price][$db_prices['post_id']] = $db_prices['meta_value'];
-                                    }
-                                }
-                                if (isset($max_min_price_handle[$price]) && !empty($max_min_price_handle[$price])) {
-                                    $set_price_id = array_keys($max_min_price_handle[$price], $check($max_min_price_handle[$price]));
-                                    $set_price = $check($max_min_price_handle[$price]);
-                                    if ($price == '_price' || $check == 'min')
-                                        update_post_meta($result_reference['data'], '_price', $set_price);
-
-                                    update_post_meta($result_reference['data'], '_' . $check . '_variation' . $price, $set_price);
-                                    update_post_meta($result_reference['data'], '_' . $check . $price . '_variation_id', $set_price_id[0]);
-                                }
-                            }
-                        }
-                        // if all variants has qty is 0
-                        if (isset($result_data['var_quantity'])) {
-                            if ($result_data['var_quantity'] <= 0) {
-                                if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
-                                    
-                                } else {
-                                    update_post_meta($result_reference['data'], '_stock_status', 'outofstock');
-                                    if (get_option('ps_unpublish') == 'on')
-                                        $status = 'draft';
-                                }
-                            }else {
-                                update_post_meta($result_reference['data'], '_stock_status', 'instock');
-                            }
-                        }
-                    }
-                    #----------------------------------------END VARIENT DATA----------------------------------------# 
-                }
-
-                #Tag of the Products
-                if (get_option('ps_tags') == 'on') {
-                    $term_exists['term_id'] = 0; # default parent id is 0
-                    if (isset($product['tags'])) {
-                        $data = mysql_query("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_tag'");
-                        while ($term_taxonmy_id = mysql_fetch_assoc($data)) {
-                            mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $term_taxonmy_id['term_taxonomy_id'] . "'");
-                        }
-                        foreach ($product['tags'] as $tag) {
-                            if (isset($tag['name']) && !empty($tag['name']) && isset($term_exists['term_id'])) {
-                                $check_term_exists = term_exists($tag['name'], 'product_tag', $term_exists['term_id']); # just check if tag with name already created 
-                                if (!is_array($check_term_exists)) {
-                                    $term_exists = (array) wp_insert_term($tag['name'], 'product_tag');
-                                    if (isset($term_exists['term_taxonomy_id']) && $term_exists['term_id']) {
-                                        mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $term_exists['term_taxonomy_id'] . "',0)");
-                                        mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id='" . $term_exists['term_id'] . "'");
-                                    }
-                                } else {
-                                    mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $check_term_exists['term_taxonomy_id'] . "',0)");
-                                    mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id='" . $check_term_exists['term_id'] . "'");
-                                }
-                            }
-                        }
-                    }
-                }
-                # BRAND syncing ( update ) 
-                if (in_array('woocommerce-brands/woocommerce-brands.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-                    if (get_option('ps_brand') == 'on') {
-                        // Delete existing brand then create 
-                        $term_taxonmy_id = array();
-                        $data = mysql_query("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_brand'");
-                        while ($exists_brands = mysql_fetch_assoc($data)) {
-                            mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $exists_brands['term_taxonomy_id'] . "'");
-                        }
-
-                        if (isset($product['brands']) && !empty($product['brands'])) {
-                            $brands = $product['brands'];
-
-                            foreach ($brands as $brand) {
-                                if (isset($brand['name']) && !empty($brand['name'])) {
-                                    if (!ctype_space($brand['name'])) { // if coming with white space 
-                                        $termid_taxonomy = term_exists($brand['name'], 'product_brand');
-                                        if (!is_array($termid_taxonomy)) {
-                                            $termid_taxonomy = @wp_insert_term($brand['name'], 'product_brand');
-                                        }
-                                        if (!isset($termid_taxonomy->errors)) {
-                                            //print_r($termid_taxonomy);
-                                            if (isset($termid_taxonomy['term_taxonomy_id']) && isset($termid_taxonomy['term_id'])) {
-                                                mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $termid_taxonomy['term_taxonomy_id'] . "',0)") or die('Error in Line: ' . __LINE__ . " " . mysql_error());
-                                                mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1  WHERE term_id='" . $termid_taxonomy['term_id'] . "'") or die('Error in Line: ' . __LINE__ . " " . mysql_error());
-                                            }
-                                        }
+                if (empty($product['deleted_at'])) {
+#-----Delete All Relationship--------#
+                    if (get_option('ps_attribute') == 'on') {
+                        $product_attributes = get_post_meta($result_reference['data'], '_product_attributes', TRUE);
+                        if (isset($product_attributes) && !empty($product_attributes)) {
+                            foreach ($product_attributes as $taxonomy_name => $taxonomy_detail) {
+                                $taxonomy_query = mysql_query("SELECT term_taxonomy_id FROM `" . $wpdb->prefix . "term_taxonomy` WHERE `taxonomy`='$taxonomy_name'");
+                                if (mysql_num_rows($taxonomy_query) != 0) {
+                                    while ($term_taxonmy_id_db = mysql_fetch_assoc($taxonomy_query)) {
+                                        mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $term_taxonmy_id_db['term_taxonomy_id'] . "'");
                                     }
                                 }
                             }
                         }
+                    }
+#-------------------------VARIENT DATA--------------------------------# 
 
-                        unset($termid_taxonomy);
-                    }
-                }
-
-                #Category
-                if (get_option('ps_categories') == 'on') {
-                    $data = mysql_query("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_cat'");
-                    while ($term_taxonmy_id = mysql_fetch_assoc($data)) {
-                        mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $term_taxonmy_id['term_taxonomy_id'] . "'");
-                    }
-                    if (get_option('cat_radio') == 'ps_cat_product_type') {
-                        if (isset($product['product_type']) && !empty($product['product_type'])) {
-                            $term_exists = term_exists($product['product_type'], 'product_cat');
-                            if (is_array($term_exists)) {
-                                mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $term_exists['term_taxonomy_id'] . "',0)");
-                                mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy`  SET count=count+1  WHERE term_id='" . $term_exists['term_id'] . "'");
-                            }
-                        }
-                    }
-                    if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
-                        if (isset($product['tags']) && !empty($product['tags'])) {
-                            foreach ($product['tags'] as $tag) {
-                                $cat_parent_id = 0;
-                                $flag_cat = array();
-                                if (isset($tag['name']) && !empty($tag['name'])) {
-                                    $tags = explode('/', $tag['name']);
-                                    if (isset($tags) && !empty($tags)) {
-                                        foreach ($tags as $cat_key => $cat_name) {
-                                            $check_term_exists = term_exists($cat_name, 'product_cat', $cat_parent_id);
-                                            if (is_array($check_term_exists)) {
-                                                $flag_cat[] = 'yes';
-                                                $cat_parent_id = $check_term_exists['term_id'];
-                                                $cat_taxonmy = $check_term_exists;
+                    if (isset($product['variants']) && !empty($product['variants'])) {
+                        wp_set_object_terms($result_reference['data'], 'variable', 'product_type'); //this will create a variable product
+                        $result_data = $this->variant_sku_check($product['variants'], $result_reference['data']);
+                        if (isset($result_data) && !empty($result_data)) {
+                            if (isset($result_data['thedata']) && !empty($result_data['thedata'])) {
+                                $product_attributes = get_post_meta($result_reference['data'], '_product_attributes', TRUE);
+                                if (isset($product_attributes) && !empty($product_attributes)) {
+                                    foreach ($result_data['thedata'] as $exists_attribute_key => $exists_attribute_value) {
+                                        $exists_attribute[] = $exists_attribute_key;
+                                        $var[$exists_attribute_key] = $exists_attribute_value;
+                                    }
+                                    for ($i = 0; $i < COUNT($exists_attribute); $i++) {
+                                        foreach ($product_attributes as $key => $p_attribute) {
+                                            if ($exists_attribute[$i] == $key) {
+                                                $thedata[$key] = $p_attribute;
+                                                break;
                                             } else {
-                                                $flag_cat[] = 'no';
-                                                $cat_parent_id = 0;
+                                                $thedata[$exists_attribute[$i]] = $var[$exists_attribute[$i]];
                                             }
                                         }
-                                        if (!in_array('no', $flag_cat)) {
+                                    }
+                                    if (get_option('ps_attribute') == 'off') {
+                                        $thedata = array_merge($thedata, $product_attributes);
+                                    }
+                                    if (get_option('linksync_visiable_attr') == 0) {
+                                        foreach ($thedata as $visible) {
+                                            $thedata[$visible['name']]['is_visible'] = 0;
+                                        }
+                                    }
+                                } else {
+                                    $thedata = $result_data['thedata'];
+                                }
+                                update_post_meta($result_reference['data'], '_product_attributes', $thedata); //ADD Product Attribute
+                                unset($thedata);
+                                unset($result_data['thedata']);
+                                unset($exists_attribute);
+                                unset($var);
+                            }
+                            /*
+                             * Max and Min variation prices
+                             */
+                            $variant_product_id_query = mysql_query("SELECT * FROM  `" . $wpdb->prefix . "posts` WHERE  `post_parent` ='" . $result_reference['data'] . "' AND  `post_type` =  'product_variation'");
+                            $variant = array();
+                            while ($variant_product_ids = mysql_fetch_assoc($variant_product_id_query)) {
+                                $variant[] = $variant_product_ids['ID'];
+                            }
+                            $price_list = array('_price', '_sale_price', '_regular_price');
+                            $max_and_min = array('max', 'min');
+                            foreach ($max_and_min as $check) {
+                                foreach ($price_list as $price) {
+                                    $db_prices_query = mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  `meta_key` =  '$price' AND  `post_id` IN (" . implode(',', $variant) . ")");
+                                    $max_min_price_handle = array();
+                                    while ($db_prices = mysql_fetch_assoc($db_prices_query)) {
+                                        if (isset($db_prices['meta_value']) && !empty($db_prices['meta_value'])) {
+                                            $max_min_price_handle[$price][$db_prices['post_id']] = $db_prices['meta_value'];
+                                        }
+                                    }
+                                    if (isset($max_min_price_handle[$price]) && !empty($max_min_price_handle[$price])) {
+                                        $set_price_id = array_keys($max_min_price_handle[$price], $check($max_min_price_handle[$price]));
+                                        $set_price = $check($max_min_price_handle[$price]);
+                                        if ($price == '_price' || $check == 'min')
+                                            update_post_meta($result_reference['data'], '_price', $set_price);
 
-                                            mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $cat_taxonmy['term_taxonomy_id'] . "',0)");
-                                            mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id='" . $cat_taxonmy['term_id'] . "'");
+                                        update_post_meta($result_reference['data'], '_' . $check . '_variation' . $price, $set_price);
+                                        update_post_meta($result_reference['data'], '_' . $check . $price . '_variation_id', $set_price_id[0]);
+                                    }
+                                }
+                            }
+// if all variants has qty is 0
+                            if (isset($result_data['var_quantity'])) {
+                                if ($result_data['var_quantity'] <= 0) {
+                                    if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
+                                        
+                                    } else {
+                                        update_post_meta($result_reference['data'], '_stock_status', 'outofstock');
+                                        if (get_option('ps_unpublish') == 'on')
+                                            $status = 'draft';
+                                    }
+                                }else {
+                                    update_post_meta($result_reference['data'], '_stock_status', 'instock');
+                                }
+                            }
+                        }
+#----------------------------------------END VARIENT DATA----------------------------------------# 
+                    }
+
+#Tag of the Products
+                    if (get_option('ps_tags') == 'on') {
+                        $term_exists['term_id'] = 0; # default parent id is 0
+                        if (isset($product['tags'])) {
+                            $data = mysql_query("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_tag'");
+                            while ($term_taxonmy_id = mysql_fetch_assoc($data)) {
+                                mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $term_taxonmy_id['term_taxonomy_id'] . "'");
+                            }
+                            foreach ($product['tags'] as $tag) {
+                                if (isset($tag['name']) && !empty($tag['name']) && isset($term_exists['term_id'])) {
+                                    $check_term_exists = term_exists($tag['name'], 'product_tag', $term_exists['term_id']); # just check if tag with name already created 
+                                    if (!is_array($check_term_exists)) {
+                                        $term_exists = (array) wp_insert_term($tag['name'], 'product_tag');
+                                        if (isset($term_exists['term_taxonomy_id']) && $term_exists['term_id']) {
+                                            mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $term_exists['term_taxonomy_id'] . "',0)");
+                                            mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id='" . $term_exists['term_id'] . "'");
+                                        }
+                                    } else {
+                                        mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $check_term_exists['term_taxonomy_id'] . "',0)");
+                                        mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id='" . $check_term_exists['term_id'] . "'");
+                                    }
+                                }
+                            }
+                        }
+                    }
+# BRAND syncing ( update ) 
+                    if (in_array('woocommerce-brands/woocommerce-brands.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+                        if (get_option('ps_brand') == 'on') {
+// Delete existing brand then create 
+                            $term_taxonmy_id = array();
+                            $data = mysql_query("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_brand'");
+                            while ($exists_brands = mysql_fetch_assoc($data)) {
+                                mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $exists_brands['term_taxonomy_id'] . "'");
+                            }
+
+                            if (isset($product['brands']) && !empty($product['brands'])) {
+                                $brands = $product['brands'];
+
+                                foreach ($brands as $brand) {
+                                    if (isset($brand['name']) && !empty($brand['name'])) {
+                                        if (!ctype_space($brand['name'])) { // if coming with white space 
+                                            $termid_taxonomy = term_exists($brand['name'], 'product_brand');
+                                            if (!is_array($termid_taxonomy)) {
+                                                $termid_taxonomy = @wp_insert_term($brand['name'], 'product_brand');
+                                            }
+                                            if (!isset($termid_taxonomy->errors)) {
+//print_r($termid_taxonomy);
+                                                if (isset($termid_taxonomy['term_taxonomy_id']) && isset($termid_taxonomy['term_id'])) {
+                                                    mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $termid_taxonomy['term_taxonomy_id'] . "',0)") or die('Error in Line: ' . __LINE__ . " " . mysql_error());
+                                                    mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1  WHERE term_id='" . $termid_taxonomy['term_id'] . "'") or die('Error in Line: ' . __LINE__ . " " . mysql_error());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            unset($termid_taxonomy);
+                        }
+                    }
+
+#Category
+                    if (get_option('ps_categories') == 'on') {
+                        include_once(ABSPATH . 'wp-admin/includes/taxonomy.php');
+                        wp_delete_object_term_relationships($result_reference['data'], 'product_cat');
+                        if (get_option('cat_radio') == 'ps_cat_product_type') {
+                            if (isset($product['product_type']) && !empty($product['product_type'])) {
+                                $term = get_term_by('name', $product['product_type'], 'product_cat');
+                                if (isset($term) && !empty($term)) {
+                                    wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat');
+                                }
+                            }
+                        }
+                        if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
+                            if (isset($product['tags']) && !empty($product['tags'])) {
+                                foreach ($product['tags'] as $tag) {
+                                    $cat_parent_id = 0;
+                                    $flag_cat = array();
+                                    if (isset($tag['name']) && !empty($tag['name'])) {
+                                        $tags = explode('/', $tag['name']);
+                                        if (isset($tags) && !empty($tags)) {
+                                            foreach ($tags as $cat_key => $cat_name) {
+                                                $check_term_exists = term_exists($cat_name, 'product_cat', $cat_parent_id);
+                                                if (is_array($check_term_exists)) {
+                                                    $flag_cat[] = 'yes';
+                                                    $cat_parent_id = $check_term_exists['term_id'];
+                                                    $cat_taxonmy = $check_term_exists;
+                                                } else {
+                                                    $flag_cat[] = 'no';
+                                                    $cat_parent_id = 0;
+                                                }
+                                            }
+                                            if (!in_array('no', $flag_cat)) {
+                                                $term = get_term_by('ID', $cat_taxonmy['term_id'], 'product_cat');
+                                                wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat', TRUE);
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                if (isset($product['variants']) && !empty($product['variants'])) {
-                    update_post_meta($result_reference['data'], '_regular_price', '');
-                    update_post_meta($result_reference['data'], '_sale_price', '');
-                } else {
-                    # defined fundtion to update existing product 
-                    if (get_option('ps_price') == 'on') {
-                        $update_tax_classes = get_option('tax_class');
-                        if (isset($update_tax_classes) && !empty($update_tax_classes)) {
-                            $taxes_all = explode(',', $update_tax_classes);
-                            if (isset($taxes_all) && !empty($taxes_all)) {
-                                foreach ($taxes_all as $taxes) {
-                                    $tax = explode('|', $taxes);
-                                    if (isset($tax) && !empty($tax)) {
-                                        $explode_tax_name = explode('-', $tax[0]); //GST-1.0 to explode GST and 1.0
-                                        if (in_array($tax_name, $explode_tax_name)) {
-                                            $explode = explode(' ', $tax[1]);
-                                            $implode = implode('-', $explode);
-                                            $tax_mapping_name = strtolower($implode);
-                                            update_post_meta($result_reference['data'], '_tax_status', 'taxable');
-                                            if ($tax_mapping_name == 'standard-tax') {
-                                                $tax_mapping_name = '';
+                    if (isset($product['variants']) && !empty($product['variants'])) {
+                        update_post_meta($result_reference['data'], '_regular_price', '');
+                        update_post_meta($result_reference['data'], '_sale_price', '');
+                    } else {
+# defined fundtion to update existing product 
+                        if (get_option('ps_price') == 'on') {
+                            $update_tax_classes = get_option('tax_class');
+                            if (isset($update_tax_classes) && !empty($update_tax_classes)) {
+                                $taxes_all = explode(',', $update_tax_classes);
+                                if (isset($taxes_all) && !empty($taxes_all)) {
+                                    foreach ($taxes_all as $taxes) {
+                                        $tax = explode('|', $taxes);
+                                        if (isset($tax) && !empty($tax)) {
+                                            $explode_tax_name = explode('-', $tax[0]); //GST-1.0 to explode GST and 1.0
+                                            if (in_array($tax_name, $explode_tax_name)) {
+                                                $explode = explode(' ', $tax[1]);
+                                                $implode = implode('-', $explode);
+                                                $tax_mapping_name = strtolower($implode);
+                                                update_post_meta($result_reference['data'], '_tax_status', 'taxable');
+                                                if ($tax_mapping_name == 'standard-tax') {
+                                                    $tax_mapping_name = '';
+                                                }
+                                                update_post_meta($result_reference['data'], '_tax_class', $tax_mapping_name);
                                             }
-                                            update_post_meta($result_reference['data'], '_tax_class', $tax_mapping_name);
                                         }
                                     }
                                 }
                             }
-                        }
-                        $db_sale_price = mysql_query("SELECT * FROM `" . $wpdb->prefix . "postmeta` WHERE `post_id` = '" . $result_reference['data'] . "' AND meta_key='_sale_price'");
-                        if ($excluding_tax == 'on') {
-                            //If 'yes' then product price SELL Price(excluding any taxes.)  
-                            if (0 != mysql_num_rows($db_sale_price)) {
-                                $result_sale_price = mysql_fetch_assoc($db_sale_price);
-                                if ($result_sale_price['meta_value'] == NULL) {
+                            $db_sale_price = mysql_query("SELECT * FROM `" . $wpdb->prefix . "postmeta` WHERE `post_id` = '" . $result_reference['data'] . "' AND meta_key='_sale_price'");
+                            if ($excluding_tax == 'on') {
+//If 'yes' then product price SELL Price(excluding any taxes.)  
+                                if (0 != mysql_num_rows($db_sale_price)) {
+                                    $result_sale_price = mysql_fetch_assoc($db_sale_price);
+                                    if ($result_sale_price['meta_value'] == NULL) {
+                                        update_post_meta($result_reference['data'], '_price', $sell_price);
+                                    }
+                                } else {
                                     update_post_meta($result_reference['data'], '_price', $sell_price);
                                 }
+                                if (get_option('price_field') == 'regular_price') {
+                                    update_post_meta($result_reference['data'], '_regular_price', $sell_price);
+                                } else {
+                                    update_post_meta($result_reference['data'], '_price', $sell_price);
+                                    update_post_meta($result_reference['data'], '_sale_price', $sell_price);
+                                }
                             } else {
-                                update_post_meta($result_reference['data'], '_price', $sell_price);
-                            }
-                            if (get_option('price_field') == 'regular_price') {
-                                update_post_meta($result_reference['data'], '_regular_price', $sell_price);
-                            } else {
-                                update_post_meta($result_reference['data'], '_price', $sell_price);
-                                update_post_meta($result_reference['data'], '_sale_price', $sell_price);
-                            }
-                        } else {
-                            //If 'no' then product price SELL Price(including any taxes.) 
-                            $tax_and_sell_price_product = $sell_price + $product['tax_value'];
-                            if (0 != mysql_num_rows($db_sale_price)) {
-                                $result_sale_price = mysql_fetch_assoc($db_sale_price);
-                                if ($result_sale_price['meta_value'] == NULL) {
+//If 'no' then product price SELL Price(including any taxes.) 
+                                $tax_and_sell_price_product = $sell_price + $product['tax_value'];
+                                if (0 != mysql_num_rows($db_sale_price)) {
+                                    $result_sale_price = mysql_fetch_assoc($db_sale_price);
+                                    if ($result_sale_price['meta_value'] == NULL) {
+                                        update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
+                                    }
+                                } else {
                                     update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
                                 }
-                            } else {
-                                update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
-                            }
-                            if (get_option('price_field') == 'regular_price') {
-                                update_post_meta($result_reference['data'], '_regular_price', $tax_and_sell_price_product);
-                            } else {
-                                update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
-                                update_post_meta($result_reference['data'], '_sale_price', $tax_and_sell_price_product);
-                            }
-                        }
-                    }
-                }
-                #Product Quantity 
-                if (get_option('ps_quantity') == 'on') {
-                    if (isset($product['variants']) && !empty($product['variants'])) {
-                        
-                    } else {
-                        if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
-                            update_post_meta($result_reference['data'], '_manage_stock', 'no');
-                            update_post_meta($result_reference['data'], '_stock', NULL);
-                            update_post_meta($result_reference['data'], '_stock_status', 'instock');
-                        } else {
-                            update_post_meta($result_reference['data'], '_manage_stock', 'yes');
-                            update_post_meta($result_reference['data'], '_stock', $quantity);
-                            update_post_meta($result_reference['data'], '_stock_status', ($quantity > 0 ? 'instock' : 'outofstock'));
-                            if (get_option('ps_unpublish') == 'on' && $quantity < 1) {
-                                $status = 'draft';
-                            }
-                        }
-                        unset($outlet_checker);
-                    }
-                }
-                #Product Image  
-                if (get_option('ps_images') == 'on') {
-                    //Product Gallery Image
-                    $woo_filename_gallery = array();
-                    $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'");
-                    $result_image = mysql_num_rows($image_query);
-                    if (isset($result_image) && !empty($result_image)) {
-                        $image = mysql_fetch_assoc($image_query);
-                        if (isset($image['meta_value']) && !empty($image['meta_value'])) {
-                            if (strpos($image['meta_value'], ','))
-                                $images_postId = explode(',', $image['meta_value']);
-                            else
-                                $images_postId[] = $image['meta_value'];
-
-                            if (isset($images_postId) && !empty($images_postId)) {
-                                foreach ($images_postId as $value) {
-                                    $wp_attached_file = get_post_meta($value, '_wp_attached_file', true); // returns an array  
-                                    if (isset($wp_attached_file) && !empty($wp_attached_file)) {
-                                        $woo_filename_gallery[$value] = basename($wp_attached_file);
-                                    }
+                                if (get_option('price_field') == 'regular_price') {
+                                    update_post_meta($result_reference['data'], '_regular_price', $tax_and_sell_price_product);
+                                } else {
+                                    update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
+                                    update_post_meta($result_reference['data'], '_sale_price', $tax_and_sell_price_product);
                                 }
                             }
                         }
                     }
-                    $current_user_id = get_current_user_id();
-                    foreach ($product['images'] as $key => $images) {
-                        $vend_image_data[$key . '|' . $images['url']] = basename($images['url']);
+#Product Quantity 
+                    if (get_option('ps_quantity') == 'on') {
+                        if (isset($product['variants']) && !empty($product['variants'])) {
+                            
+                        } else {
+                            if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
+                                update_post_meta($result_reference['data'], '_manage_stock', 'no');
+                                update_post_meta($result_reference['data'], '_stock', NULL);
+                                update_post_meta($result_reference['data'], '_stock_status', 'instock');
+                            } else {
+                                update_post_meta($result_reference['data'], '_manage_stock', 'yes');
+                                update_post_meta($result_reference['data'], '_stock', $quantity);
+                                update_post_meta($result_reference['data'], '_stock_status', ($quantity > 0 ? 'instock' : 'outofstock'));
+                                if (get_option('ps_unpublish') == 'on' && $quantity < 1) {
+                                    $status = 'draft';
+                                }
+                            }
+                            unset($outlet_checker);
+                        }
                     }
-                    if ($current_user_id == 0) {
-                        // logged_one is 'System'; 
-                        if (isset($product['images']) && !empty($product['images'])) {
+#Product Image  
+                    if (get_option('ps_images') == 'on') {
+//Product Gallery Image
+                        $woo_filename_gallery = array();
+                        $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'");
+                        $result_image = mysql_num_rows($image_query);
+                        if (isset($result_image) && !empty($result_image)) {
+                            $image = mysql_fetch_assoc($image_query);
+                            if (isset($image['meta_value']) && !empty($image['meta_value'])) {
+                                if (strpos($image['meta_value'], ','))
+                                    $images_postId = explode(',', $image['meta_value']);
+                                else
+                                    $images_postId[] = $image['meta_value'];
+
+                                if (isset($images_postId) && !empty($images_postId)) {
+                                    foreach ($images_postId as $value) {
+                                        $wp_attached_file = get_post_meta($value, '_wp_attached_file', true); // returns an array  
+                                        if (isset($wp_attached_file) && !empty($wp_attached_file)) {
+                                            $woo_filename_gallery[$value] = basename($wp_attached_file);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        $current_user_id = get_current_user_id();
+                        foreach ($product['images'] as $key => $images) {
+                            $vend_image_data[$key . '|' . $images['url']] = basename($images['url']);
+                        }
+                        if ($current_user_id == 0) {
+// logged_one is 'System'; 
+                            if (isset($product['images']) && !empty($product['images'])) {
 //Thumbnail Image data
-                            if (isset($product['images'][0]['url']) && !empty($product['images'][0]['url'])) {
-                                /*
-                                 *  Ongoing Seleted->This option provides the same function as 'Once',
-                                 *  but will update product images if the they are modified in Vend.
-                                 *  For example, if you update an image for a product in Vend, then that update images will be synced to the corresponding 
-                                 *  product in WooCommerce.
-                                 */
-                                if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                    $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
-                                    if (mysql_num_rows($image_query) > 1) {
-                                        while ($images = mysql_fetch_assoc($image_query)) {
-                                            if (isset($images['meta_value']) && !empty($images['meta_value'])) {
-                                                $image_attributes = get_post_meta($images['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
-                                                if (isset($image_attributes) && !empty($image_attributes)) {
-                                                    $path_parts = pathinfo($image_attributes);
-                                                    $wp_upload_dir = @wp_upload_dir();
-                                                    $ext = substr($image_attributes, strrpos($image_attributes, "."));
-                                                    $filename = $wp_upload_dir['basedir'] . '/' . $path_parts['dirname'] . '/' . basename($image_attributes, $ext);
-                                                    foreach (glob("$filename*") as $filename) {
-                                                        if (file_exists($filename)) {
-                                                            unlink($filename);
+                                if (isset($product['images'][0]['url']) && !empty($product['images'][0]['url'])) {
+                                    /*
+                                     *  Ongoing Seleted->This option provides the same function as 'Once',
+                                     *  but will update product images if the they are modified in Vend.
+                                     *  For example, if you update an image for a product in Vend, then that update images will be synced to the corresponding 
+                                     *  product in WooCommerce.
+                                     */
+                                    if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                        $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
+                                        if (mysql_num_rows($image_query) > 1) {
+                                            while ($images = mysql_fetch_assoc($image_query)) {
+                                                if (isset($images['meta_value']) && !empty($images['meta_value'])) {
+                                                    $image_attributes = get_post_meta($images['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
+                                                    if (isset($image_attributes) && !empty($image_attributes)) {
+                                                        $path_parts = pathinfo($image_attributes);
+                                                        $wp_upload_dir = @wp_upload_dir();
+                                                        $ext = substr($image_attributes, strrpos($image_attributes, "."));
+                                                        $filename = $wp_upload_dir['basedir'] . '/' . $path_parts['dirname'] . '/' . basename($image_attributes, $ext);
+                                                        foreach (glob("$filename*") as $filename) {
+                                                            if (file_exists($filename)) {
+                                                                unlink($filename);
+                                                            }
                                                         }
                                                     }
+                                                    delete_post_meta($result_reference['data'], '_thumbnail_id');
                                                 }
-                                                delete_post_meta($result_reference['data'], '_thumbnail_id');
                                             }
                                         }
-                                    }
-                                    $image = mysql_fetch_assoc($image_query);
-                                    if (isset($image['meta_value']) && !empty($image['meta_value'])) {
-                                        $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
-                                        if (isset($image_attributes) && !empty($image_attributes)) {
-                                            checkAndDelete_attachement(basename($image_attributes));
-                                            if (in_array(basename($image_attributes), $vend_image_data)) {
-                                                $product_image_search = array_search(basename($image_attributes), $vend_image_data);
-                                                $result_image_search = explode('|', $product_image_search);
-                                                unset($product['images'][$result_image_search[0]]);
-                                            } else {
-                                                $thumbnail_id = addImage_thumbnail($product['images'][0]['url'], $result_reference['data']);
-                                                update_post_meta($result_reference['data'], '_thumbnail_id', $thumbnail_id);
-                                                unset($product['images'][0]);
+                                        $image = mysql_fetch_assoc($image_query);
+                                        if (isset($image['meta_value']) && !empty($image['meta_value'])) {
+                                            $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
+                                            if (isset($image_attributes) && !empty($image_attributes)) {
+                                                checkAndDelete_attachement(basename($image_attributes));
+                                                if (in_array(basename($image_attributes), $vend_image_data)) {
+                                                    $product_image_search = array_search(basename($image_attributes), $vend_image_data);
+                                                    $result_image_search = explode('|', $product_image_search);
+                                                    unset($product['images'][$result_image_search[0]]);
+                                                } else {
+                                                    addImage_thumbnail($product['images'][0]['url'], $result_reference['data']);
+                                                    unset($product['images'][0]);
+                                                }
                                             }
-                                        }
-                                    } else {
-                                        if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
-                                            $thumbnail_id = addImage_thumbnail($product['images'][0]['url'], $result_reference['data']);
-                                            update_post_meta($result_reference['data'], '_thumbnail_id', $thumbnail_id);
-                                            unset($product['images'][0]);
                                         } else {
-                                            $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
-                                            foreach ($left_upload as $upload => $value_upload) {
-                                                $image_left = explode('|', $upload);
-                                                $thumbnail_id = addImage_thumbnail($image_left[1], $result_reference['data']);
-                                                update_post_meta($result_reference['data'], '_thumbnail_id', $thumbnail_id);
-                                                unset($product['images'][$image_left[0]]);
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    unset($thumbnail_id);
-                                }
-                                /*
-                                 * Enable (Once)-> This option will sync images from Vend to WooCommerce products on creation of a new product,
-                                 *  or if an existing product in WooCommerce does not have an image.
-                                 */ elseif (get_option('ps_import_image_radio') == 'Enable') {
-                                    $thumb_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
-                                    $image = mysql_num_rows($thumb_query);
-                                    if ($image != 0) {
-                                        $image_id = mysql_fetch_assoc($thumb_query);
-                                        $image_name = get_post_meta($image_id['meta_value'], '_wp_attached_file', TRUE);
-                                        $unsetvalue = array_search(basename($image_name), $vend_image_data);
-                                        if ($unsetvalue) {
-                                            $image_left = explode('|', $unsetvalue);
-                                            unset($product['images'][$image_left[0]]);
-                                        }
-                                    } else {
-                                        if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
-                                            $attach_id = addImage_thumbnail($product['images'][0]['url'], $result_reference['data']);
-                                            add_post_meta($result_reference['data'], '_thumbnail_id', $attach_id);
-                                            unset($product['images'][0]);
-                                        } else {
-                                            $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
-                                            foreach ($left_upload as $upload => $value_upload) {
-                                                $image_left = explode('|', $upload);
-                                                $attach_id = addImage_thumbnail($image_left[1], $result_reference['data']);
-                                                add_post_meta($result_reference['data'], '_thumbnail_id', $attach_id);
-                                                unset($product['images'][$image_left[0]]);
-                                                break;
-                                            }
-                                        }
-                                        unset($attach_id);
-                                    }
-                                }
-                            }
-                            if (isset($product['images']) && !empty($product['images'])) {
-                                foreach ($product['images'] as $images) {
-                                    if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                        if (!in_array(basename($images['url']), $woo_filename_gallery)) {
-                                            $attach_ids[] = linksync_insert_image($images['url'], $result_reference['data']);
-                                        } else {
-                                            $attach_ids[] = array_search(basename($images['url']), $woo_filename_gallery);
-                                        }
-                                    } elseif (get_option('ps_import_image_radio') == 'Enable') {
-                                        $image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'"));
-                                        if ($image != 0) {
-                                            
-                                        } else {
-                                            $attach_ids[] = linksync_insert_image($images['url'], $result_reference['data']);
-                                        }
-                                    }
-                                }
-                            }
-                            if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                if (isset($attach_ids) && !empty($attach_ids)) {
-                                    $product_image_gallery = implode(",", $attach_ids);
-                                    update_post_meta($result_reference['data'], '_product_image_gallery', $product_image_gallery);
-                                } else {
-                                    update_post_meta($result_reference['data'], '_product_image_gallery', '');
-                                }
-                            } elseif (get_option('ps_import_image_radio') == 'Enable') {
-                                if (isset($attach_ids) && !empty($attach_ids)) {
-                                    $product_image_gallery = implode(",", $attach_ids);
-                                    add_post_meta($result_reference['data'], '_product_image_gallery', $product_image_gallery);
-                                }
-                            }
-                            unset($attach_ids);
-                            unset($product_image_gallery);
-                        } else {
-                            if (get_option('product_sync_type') != 'two_way') {
-                                if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                    $image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'"));
-                                    if ($image != 0) {
-                                        update_post_meta($result_reference['data'], '_product_image_gallery', '');
-                                    }
-                                    $thumbnail_image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'"));
-                                    if ($thumbnail_image != 0) {
-                                        update_post_meta($result_reference['data'], '_thumbnail_id', '');
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        if (isset($product['images']) && !empty($product['images'])) {
-                            //logged_one is current_user 
-                            if (isset($product['images'][0]['url']) && !empty($product['images'][0]['url'])) {
-                                if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                    $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
-                                    $image = mysql_fetch_assoc($image_query);
-                                    if (isset($image['meta_value']) && !empty($image['meta_value'])) {
-                                        $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
-                                        if (isset($image_attributes) && !empty($image_attributes)) {
-                                            if (in_array(basename($image_attributes), $vend_image_data)) {
-                                                $product_image_search = array_search(basename($image_attributes), $vend_image_data);
-                                                $result_image_search = explode('|', $product_image_search);
-                                                unset($product['images'][$result_image_search[0]]);
-                                                unset($vend_image_data);
-                                                unset($product_image_search);
-                                            } else {
-                                                update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
-                                                unset($product['images'][0]);
-                                            }
-                                        }
-                                    } else {
-                                        if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
                                             if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
-                                                update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
+                                                addImage_thumbnail($product['images'][0]['url'], $result_reference['data']);
                                                 unset($product['images'][0]);
                                             } else {
                                                 $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
                                                 foreach ($left_upload as $upload => $value_upload) {
                                                     $image_left = explode('|', $upload);
-                                                    update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $image_left[1]);
+                                                    addImage_thumbnail($image_left[1], $result_reference['data']);
                                                     unset($product['images'][$image_left[0]]);
                                                     break;
                                                 }
                                             }
-                                        } else {
-                                            update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
-                                            unset($product['images'][0]);
                                         }
                                     }
-                                } elseif (get_option('ps_import_image_radio') == 'Enable') {
-                                    $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
-                                    $image = mysql_fetch_assoc($image_query);
-                                    if (isset($image['meta_value']) && !empty($image['meta_value'])) {
-                                        $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
-                                        if (isset($image_attributes) && !empty($image_attributes)) {
-                                            if (in_array(basename($image_attributes), $vend_image_data)) {
-                                                $product_image_search = array_search(basename($image_attributes), $vend_image_data);
-                                                $result_image_search = explode('|', $product_image_search);
-                                                unset($product['images'][$result_image_search[0]]);
-                                                unset($vend_image_data);
-                                                unset($product_image_search);
+                                    /*
+                                     * Enable (Once)-> This option will sync images from Vend to WooCommerce products on creation of a new product,
+                                     *  or if an existing product in WooCommerce does not have an image.
+                                     */ elseif (get_option('ps_import_image_radio') == 'Enable') {
+                                        $thumb_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
+                                        $image = mysql_num_rows($thumb_query);
+                                        if ($image != 0) {
+                                            $image_id = mysql_fetch_assoc($thumb_query);
+                                            $image_name = get_post_meta($image_id['meta_value'], '_wp_attached_file', TRUE);
+                                            $unsetvalue = array_search(basename($image_name), $vend_image_data);
+                                            if ($unsetvalue) {
+                                                $image_left = explode('|', $unsetvalue);
+                                                unset($product['images'][$image_left[0]]);
+                                            }
+                                        } else {
+                                            if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
+                                                addImage_thumbnail($product['images'][0]['url'], $result_reference['data']);
+                                                unset($product['images'][0]);
                                             } else {
-                                                if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
-                                                    if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
-                                                        update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
-                                                        unset($product['images'][0]);
-                                                    } else {
-                                                        $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
-                                                        foreach ($left_upload as $upload => $value_upload) {
-                                                            $image_left = explode('|', $upload);
-                                                            update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $image_left[1]);
-                                                            unset($product['images'][$image_left[0]]);
-                                                            break;
-                                                        }
-                                                    }
+                                                $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
+                                                foreach ($left_upload as $upload => $value_upload) {
+                                                    $image_left = explode('|', $upload);
+                                                    addImage_thumbnail($image_left[1], $result_reference['data']);
+                                                    unset($product['images'][$image_left[0]]);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if (isset($product['images']) && !empty($product['images'])) {
+                                    foreach ($product['images'] as $images) {
+                                        if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                            if (!in_array(basename($images['url']), $woo_filename_gallery)) {
+                                                $attach_ids[] = linksync_insert_image($images['url'], $result_reference['data']);
+                                            } else {
+                                                $attach_ids[] = array_search(basename($images['url']), $woo_filename_gallery);
+                                            }
+                                        } elseif (get_option('ps_import_image_radio') == 'Enable') {
+                                            $image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'"));
+                                            if ($image != 0) {
+                                                
+                                            } else {
+                                                $attach_ids[] = linksync_insert_image($images['url'], $result_reference['data']);
+                                            }
+                                        }
+                                    }
+                                }
+                                if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                    if (isset($attach_ids) && !empty($attach_ids)) {
+                                        $product_image_gallery = implode(",", $attach_ids);
+                                        update_post_meta($result_reference['data'], '_product_image_gallery', $product_image_gallery);
+                                    } else {
+                                        update_post_meta($result_reference['data'], '_product_image_gallery', '');
+                                    }
+                                } elseif (get_option('ps_import_image_radio') == 'Enable') {
+                                    if (isset($attach_ids) && !empty($attach_ids)) {
+                                        $product_image_gallery = implode(",", $attach_ids);
+                                        add_post_meta($result_reference['data'], '_product_image_gallery', $product_image_gallery);
+                                    }
+                                }
+                                unset($attach_ids);
+                                unset($product_image_gallery);
+                            } else {
+                                if (get_option('product_sync_type') != 'two_way') {
+                                    if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                        $image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'"));
+                                        if ($image != 0) {
+                                            update_post_meta($result_reference['data'], '_product_image_gallery', '');
+                                        }
+                                        $thumbnail_image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'"));
+                                        if ($thumbnail_image != 0) {
+                                            update_post_meta($result_reference['data'], '_thumbnail_id', '');
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            if (isset($product['images']) && !empty($product['images'])) {
+//logged_one is current_user 
+                                if (isset($product['images'][0]['url']) && !empty($product['images'][0]['url'])) {
+                                    if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                        $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
+                                        $image = mysql_fetch_assoc($image_query);
+                                        if (isset($image['meta_value']) && !empty($image['meta_value'])) {
+                                            $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
+                                            if (isset($image_attributes) && !empty($image_attributes)) {
+                                                if (in_array(basename($image_attributes), $vend_image_data)) {
+                                                    $product_image_search = array_search(basename($image_attributes), $vend_image_data);
+                                                    $result_image_search = explode('|', $product_image_search);
+                                                    unset($product['images'][$result_image_search[0]]);
+                                                    unset($vend_image_data);
+                                                    unset($product_image_search);
                                                 } else {
                                                     update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
                                                     unset($product['images'][0]);
                                                 }
                                             }
-                                        }
-                                    } else {
-                                        if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
-                                            if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
+                                        } else {
+                                            if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
+                                                if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
+                                                    update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
+                                                    unset($product['images'][0]);
+                                                } else {
+                                                    $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
+                                                    foreach ($left_upload as $upload => $value_upload) {
+                                                        $image_left = explode('|', $upload);
+                                                        update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $image_left[1]);
+                                                        unset($product['images'][$image_left[0]]);
+                                                        break;
+                                                    }
+                                                }
+                                            } else {
                                                 update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
                                                 unset($product['images'][0]);
-                                            } else {
-                                                $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
-                                                foreach ($left_upload as $upload => $value_upload) {
-                                                    $image_left = explode('|', $upload);
-                                                    update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $image_left[1]);
-                                                    unset($product['images'][$image_left[0]]);
-                                                    break;
+                                            }
+                                        }
+                                    } elseif (get_option('ps_import_image_radio') == 'Enable') {
+                                        $image_query = mysql_query("SELECT meta_value FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_thumbnail_id' AND `post_id` ='" . $result_reference['data'] . "'");
+                                        $image = mysql_fetch_assoc($image_query);
+                                        if (isset($image['meta_value']) && !empty($image['meta_value'])) {
+                                            $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);  
+                                            if (isset($image_attributes) && !empty($image_attributes)) {
+                                                if (in_array(basename($image_attributes), $vend_image_data)) {
+                                                    $product_image_search = array_search(basename($image_attributes), $vend_image_data);
+                                                    $result_image_search = explode('|', $product_image_search);
+                                                    unset($product['images'][$result_image_search[0]]);
+                                                    unset($vend_image_data);
+                                                    unset($product_image_search);
+                                                } else {
+                                                    if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
+                                                        if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
+                                                            update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
+                                                            unset($product['images'][0]);
+                                                        } else {
+                                                            $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
+                                                            foreach ($left_upload as $upload => $value_upload) {
+                                                                $image_left = explode('|', $upload);
+                                                                update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $image_left[1]);
+                                                                unset($product['images'][$image_left[0]]);
+                                                                break;
+                                                            }
+                                                        }
+                                                    } else {
+                                                        update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
+                                                        unset($product['images'][0]);
+                                                    }
                                                 }
                                             }
                                         } else {
-                                            update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
-                                            unset($product['images'][0]);
+                                            if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
+                                                if (!in_array(basename($product['images'][0]['url']), $woo_filename_gallery)) {
+                                                    update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
+                                                    unset($product['images'][0]);
+                                                } else {
+                                                    $left_upload = array_diff($vend_image_data, $woo_filename_gallery);
+                                                    foreach ($left_upload as $upload => $value_upload) {
+                                                        $image_left = explode('|', $upload);
+                                                        update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $image_left[1]);
+                                                        unset($product['images'][$image_left[0]]);
+                                                        break;
+                                                    }
+                                                }
+                                            } else {
+                                                update_post_meta($result_reference['data'], 'Vend_thumbnail_image', $product['images'][0]['url']);
+                                                unset($product['images'][0]);
+                                            }
                                         }
                                     }
+                                } else {
+                                    if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                        update_post_meta($result_reference['data'], '_thumbnail_id', '');
+                                    }
                                 }
-                            } else {
-                                if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                    update_post_meta($result_reference['data'], '_thumbnail_id', '');
-                                }
-                            }
-                            if (isset($product['images']) && !empty($product['images'])) {
-                                delete_post_meta($result_reference['data'], 'Vend_product_image_gallery');
-                                foreach ($product['images'] as $images) {
-                                    $vend_gallery_image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='Vend_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'"));
-                                    if ($vend_gallery_image != 0)
-                                        mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$images[url]') WHERE post_id='" . $result_reference['data'] . "' AND meta_key='Vend_product_image_gallery'");
-                                    else
-                                        add_post_meta($result_reference['data'], 'Vend_product_image_gallery', $images['url']);
-                                }
-                            }else {
-                                update_post_meta($result_reference['data'], '_product_image_gallery', '');
-                            }
-
-                            unset($product['images']);
-                        } else {
-                            if (get_option('product_sync_type') != 'two_way') {
-                                if (get_option('ps_import_image_radio') == 'Ongoing') {
-                                    update_post_meta($result_reference['data'], '_thumbnail_id', '');
+                                if (isset($product['images']) && !empty($product['images'])) {
+                                    delete_post_meta($result_reference['data'], 'Vend_product_image_gallery');
+                                    foreach ($product['images'] as $images) {
+                                        $vend_gallery_image = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='Vend_product_image_gallery' AND `post_id` ='" . $result_reference['data'] . "'"));
+                                        if ($vend_gallery_image != 0)
+                                            mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$images[url]') WHERE post_id='" . $result_reference['data'] . "' AND meta_key='Vend_product_image_gallery'");
+                                        else
+                                            add_post_meta($result_reference['data'], 'Vend_product_image_gallery', $images['url']);
+                                    }
+                                }else {
                                     update_post_meta($result_reference['data'], '_product_image_gallery', '');
+                                }
+
+                                unset($product['images']);
+                            } else {
+                                if (get_option('product_sync_type') != 'two_way') {
+                                    if (get_option('ps_import_image_radio') == 'Ongoing') {
+                                        update_post_meta($result_reference['data'], '_thumbnail_id', '');
+                                        update_post_meta($result_reference['data'], '_product_image_gallery', '');
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                // if product in vend having status : inactive ( active==0  ) it should be not displayed (mark as draft in woo) 
-                if ($product['active'] == '0') {
-                    $status = 'draft';
-                }
-                #---------GET product Status-------------#
-                $product_status_db = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE post_status ='pending' AND ID='" . $result_reference['data'] . "'");
-                if (mysql_num_rows($product_status_db) != 0) {
-                    $status = 'pending';
-                }
-                if (get_option('ps_unpublish') == 'on') {
-                    $status = isset($status) && !empty($status) ? $status : 'publish';
-                } else {
-                    $product_status_db = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE ID='" . $result_reference['data'] . "'");
+// if product in vend having status : inactive ( active==0  ) it should be not displayed (mark as draft in woo) 
+                    if ($product['active'] == '0') {
+                        $status = 'draft';
+                    }
+#---------GET product Status-------------#
+                    $product_status_db = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE post_status ='pending' AND ID='" . $result_reference['data'] . "'");
                     if (mysql_num_rows($product_status_db) != 0) {
-                        $product_status = mysql_fetch_assoc($product_status_db);
-                        $status = $product_status['post_status'];
+                        $status = 'pending';
                     }
-                }
-//                $product_detail = mysql_query("SELECT post_content,post_excerpt FROM `" . $wpdb->prefix . "posts` WHERE post_type='product' AND ID='" . $result_reference['data'] . "'");
-//                 if (0 != mysql_num_rows($query)) {
-//                    $detail = mysql_fetch_assoc($product_detail);
-//                    if (isset($detail['post_content']) && !empty($detail['post_content'])) {
-//                        $description_status = 'yes';
-//                    }  
-//                    if (isset($detail['post_excerpt']) && !empty($detail['post_excerpt'])) {
-//                        $description_excerpt = 'yes';
-//                    } 
-//                }
-                $my_product = array();
-                $my_product['ID'] = $result_reference['data'];
-                $my_product['post_status'] = $status;
-                $my_product['post_modified'] = current_time('mysql');
-                $my_product['post_modified_gmt'] = gmdate('Y-m-d h:i:s');
-                if (get_option('ps_name_title') == 'on')
-                    $my_product['post_title'] = $name;
-                //Import Description
-                if (get_option('ps_description') == 'on') {
-                    if (isset($description) && !empty($description)) {
-                        //if(isset($description_status)&&$description_status=='yes'){
-                        $my_product['post_content'] = $description;
-                        // } 
+                    if (get_option('ps_unpublish') == 'on') {
+                        $status = isset($status) && !empty($status) ? $status : 'publish';
+                    } else {
+                        $check_product_pending_status = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE post_status ='pending' AND ID='" . $result_reference['data'] . "'");
+                        if (mysql_num_rows($check_product_pending_status) != 0) {
+                            $status = 'pending';
+                        } else {
+                            if ($product['active'] == '0') {
+                                $status = 'draft';
+                            } elseif ($product['active'] == '1') {
+                                $status = 'publish';
+                            }
+                        }
                     }
-                }
-                // Import Copy Short Description
-                if (get_option('ps_desc_copy') == 'on') {
-                    if (isset($description) && !empty($description)) {
-                        // if(isset($description_excerpt)&&$description_excerpt=='yes'){
-                        $my_product['post_excerpt'] = $description;
-                        //}
+                    $my_product = array();
+                    $my_product['ID'] = $result_reference['data'];
+                    $my_product['post_status'] = $status;
+                    $my_product['post_modified'] = current_time('mysql');
+                    $my_product['post_modified_gmt'] = gmdate('Y-m-d h:i:s');
+                    if (get_option('ps_name_title') == 'on')
+                        $my_product['post_title'] = $name;
+//Import Description
+                    if (get_option('ps_description') == 'on') {
+                        $my_product['post_content'] = isset($description) && !empty($description) ? $description : '';
                     }
-                }
-                if (get_option('ps_unpublish') == 'on')
+// Import Copy Short Description
+                    if (get_option('ps_desc_copy') == 'on') {
+                        $my_product['post_excerpt'] = isset($description) && !empty($description) ? $description : '';
+                    }
+
                     update_post_meta($result_reference['data'], '_visibility', ($status == 'publish' ? 'visible' : ''));
 
-                //Update product Post
-                wp_update_post($my_product);
-                unset($status);
-                wc_delete_product_transients($result_reference['data']);
-                /*
-                 * Ending Update product
-                 */
+//Update product Post
+                    wp_update_post($my_product);
+                    unset($status);
+                    wc_delete_product_transients($result_reference['data']);
+                    /*
+                     * Ending Update product
+                     */
+                }
             } elseif ($result_reference['result'] == 'error') {
                 /*
                  * New Product Creation if "Create New" option enabled 
                  */
                 if ($ps_create_new == 'on' && empty($product['deleted_at'])) { # it's new product
                     $status = '';
-                    // code for adding new product int WC  
+// code for adding new product int WC  
                     $my_post = array(
                         'post_author' => 1,
 //                        'post_date' => current_time('mysql'),
@@ -1036,20 +1033,20 @@ class linksync_class {
 //                        'post_modified_gmt' => gmdate('Y-m-d h:i:s'),
                         'post_type' => 'product'
                     );
-                    //Import Name
-                    //  if (get_option('ps_name_title') == 'on') #we have used wp_insert_post() function that required at least one parameters
+//Import Name
+//  if (get_option('ps_name_title') == 'on') #we have used wp_insert_post() function that required at least one parameters
                     $my_post['post_title'] = $product['name'];
-                    //Import Description
+//Import Description
                     if (get_option('ps_description') == 'on')
-                        $my_post['post_content'] = $description;
-                    // Import Copy Short Description
+                        $my_post['post_content'] = isset($description) && !empty($description) ? $description : '';
+// Import Copy Short Description
                     if (get_option('ps_desc_copy') == 'on')
-                        $my_post['post_excerpt'] = $description;
+                        $my_post['post_excerpt'] = isset($description) && !empty($description) ? $description : '';
                     $product_ID = wp_insert_post($my_post);
                     $product_ids[] = $product_ID . '|new_id';
                     if ($product_ID) {
                         add_post_meta($product_ID, '_sku', $product['sku']);
-                        #Tag of the Products
+#Tag of the Products
                         if (get_option('ps_tags') == 'on') {
                             $term_exists['term_id'] = 0;
                             foreach ($product['tags'] as $tag) {
@@ -1065,7 +1062,7 @@ class linksync_class {
                                 }
                             }
                         }
-                        # BRAND syncing
+# BRAND syncing
                         if (in_array('woocommerce-brands/woocommerce-brands.php', apply_filters('active_plugins', get_option('active_plugins')))) {
                             if (get_option('ps_brand') == 'on') {
                                 if (isset($product['brands']) && !empty($product['brands'])) {
@@ -1091,14 +1088,14 @@ class linksync_class {
                             }
                         }
 
-                        #Category
+#Category
                         if (get_option('ps_categories') == 'on') {
+                            include_once(ABSPATH . 'wp-admin/includes/taxonomy.php');
                             if (get_option('cat_radio') == 'ps_cat_product_type') {
                                 if (isset($product['product_type']) && !empty($product['product_type'])) {
-                                    $term_exists = term_exists($product['product_type'], 'product_cat');
-                                    if (is_array($term_exists)) {
-                                        mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $product_ID . "','" . $term_exists['term_taxonomy_id'] . "',0)");
-                                        mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy`  SET count=count+1  WHERE term_id='" . $term_exists['term_id'] . "'");
+                                    $term = get_term_by('name', $product['product_type'], 'product_cat');
+                                    if (isset($term) && !empty($term)) {
+                                        wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat');
                                     }
                                 }
                             }
@@ -1122,8 +1119,8 @@ class linksync_class {
                                                     }
                                                 }
                                                 if (!in_array('no', $flag_cat)) {
-                                                    mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $product_ID . "','" . $cat_taxonmy['term_taxonomy_id'] . "',0)");
-                                                    mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id='" . $cat_taxonmy['term_id'] . "'");
+                                                    $term = get_term_by('ID', $cat_taxonmy['term_id'], 'product_cat');
+                                                    wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat', TRUE);
                                                 }
                                             }
                                         }
@@ -1160,7 +1157,7 @@ class linksync_class {
                                 }
 
                                 if ($excluding_tax == 'on') {
-                                    //If 'yes' then product price SELL Price(excluding any taxes.) 
+//If 'yes' then product price SELL Price(excluding any taxes.) 
                                     add_post_meta($product_ID, '_price', $sell_price);
                                     if (get_option('price_field') == 'regular_price') {
                                         add_post_meta($product_ID, '_regular_price', $sell_price);
@@ -1168,7 +1165,7 @@ class linksync_class {
                                         add_post_meta($product_ID, '_sale_price', $sell_price);
                                     }
                                 } else {
-                                    //If 'no' then product price SELL Price(including any taxes.) 
+//If 'no' then product price SELL Price(including any taxes.) 
                                     $tax_and_sell_price_product = $sell_price + $product['tax_value'];
                                     add_post_meta($product_ID, '_price', $tax_and_sell_price_product);
                                     if (get_option('price_field') == 'regular_price') {
@@ -1180,19 +1177,17 @@ class linksync_class {
                             }
                         }
 
-                        #Product Image
+#Product Image
                         if (get_option('ps_images') == 'on') {
                             $current_user_id = get_current_user_id();
                             if (get_option('ps_import_image_radio') == 'Enable' || get_option('ps_import_image_radio') == 'Ongoing') {
                                 if (isset($product['images']) && !empty($product['images'])) {
                                     if (isset($product['images'][0]['url']) && !empty($product['images'][0]['url'])) {
                                         if ($current_user_id == 0) {
-                                            $attach_id = addImage_thumbnail($product['images'][0]['url'], $product_ID);
-                                            add_post_meta($product_ID, '_thumbnail_id', $attach_id);
+                                            addImage_thumbnail($product['images'][0]['url'], $product_ID);
                                         } else {
                                             add_post_meta($product_ID, 'Vend_thumbnail_image', $product['images'][0]['url']);
                                         }
-                                        unset($attach_id);
                                     }
                                     unset($product['images'][0]);
                                     foreach ($product['images'] as $images) {
@@ -1217,7 +1212,7 @@ class linksync_class {
                             }
                         }
 
-                        #-------------------------VARIENT DATA--------------------------------#
+#-------------------------VARIENT DATA--------------------------------#
                         if (isset($product['variants']) && !empty($product['variants'])) {
                             $thedata = array();
                             $var_qty = 0;
@@ -1233,7 +1228,7 @@ class linksync_class {
                             foreach ($product['variants'] as $product_variants) {
                                 if ($product_variants['deleted_at'] == null) {
                                     $variant_status = 'publish';
-                                    //  $list_price = $product_variants['list_price'];
+//  $list_price = $product_variants['list_price'];
                                     $sell_price = $product_variants['sell_price'];
                                     if (count($product_variants['outlets']) != 0) {
                                         $variant_quantity = 0;
@@ -1276,8 +1271,7 @@ class linksync_class {
                                     $variation_product_id = wp_insert_post($my_post);
                                     if ($variation_product_id) {
                                         add_post_meta($variation_product_id, '_sku', $product_variants['sku']);
-                                        if (get_option('ps_unpublish') == 'on')
-                                            add_post_meta($variation_product_id, '_visibility', ($variant_status == 'publish' ? 'visible' : ''));
+                                        add_post_meta($variation_product_id, '_visibility', ($variant_status == 'publish' ? 'visible' : ''));
 
                                         if (get_option('ps_price') == 'on') {
                                             $new_variant_taxes = get_option('tax_class');
@@ -1320,7 +1314,7 @@ class linksync_class {
                                                     $price_max['min'] = $sell_price;
                                                     $price_max['min_variable_id'] = $variation_product_id;
                                                 }
-                                                //If 'yes' then product price SELL Price(excluding any taxes.) 
+//If 'yes' then product price SELL Price(excluding any taxes.) 
                                                 add_post_meta($variation_product_id, '_price', $sell_price);
                                                 if (get_option('price_field') == 'regular_price') {
                                                     add_post_meta($variation_product_id, '_regular_price', $sell_price);
@@ -1328,7 +1322,7 @@ class linksync_class {
                                                     add_post_meta($variation_product_id, '_sale_price', $sell_price);
                                                 }
                                             } else {
-                                                //If 'no' then product price SELL Price(including any taxes.)
+//If 'no' then product price SELL Price(including any taxes.)
                                                 $tax_and_sell_price_variant = $sell_price + $product_variants['tax_value'];
                                                 if ($price_max['max'] == 0) {
                                                     $price_max['max'] = $tax_and_sell_price_variant;
@@ -1354,7 +1348,7 @@ class linksync_class {
                                                 }
                                             }
                                         }
-                                        #Product Quantity 
+#Product Quantity 
                                         if (get_option('ps_quantity') == 'on') {
                                             if (isset($outlet_checker_variant) && $outlet_checker_variant == 'noOutlet') {
                                                 add_post_meta($variation_product_id, '_manage_stock', 'no');
@@ -1431,7 +1425,7 @@ class linksync_class {
                                 add_post_meta($product_ID, '_max_sale_price_variation_id', '');
                             }
 
-                            // $thedata = array();
+// $thedata = array();
 
                             if ($var_qty <= 0) {
                                 if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
@@ -1446,8 +1440,8 @@ class linksync_class {
                                 add_post_meta($product_ID, '_stock_status', 'instock');
                             }
                         }
-                        #----------------------------------------END VARIENT DATA----------------------------------------# 
-                        #Product Quantity 
+#----------------------------------------END VARIENT DATA----------------------------------------# 
+#Product Quantity 
                         if (get_option('ps_quantity') == 'on') {
                             if (isset($product['variants']) && !empty($product['variants'])) { # if it's variable  product then ignore qty for parent product 
                             } else {
@@ -1471,10 +1465,10 @@ class linksync_class {
                         /*
                          * Product Status Dealing
                          */
-                        //If the Pending is checked 
+//If the Pending is checked 
                         if (get_option('ps_pending') == 'on')
                             $status = 'pending';
-                        // if product in vend having status : inactive ( active==0  ) it should be not displayed (mark as draft in woo) 
+// if product in vend having status : inactive ( active==0  ) it should be not displayed (mark as draft in woo) 
                         if ($product['active'] == '0')
                             $status = 'draft';
 
@@ -1485,8 +1479,8 @@ class linksync_class {
                             'post_status' => $status
                         );
                         wp_update_post($my_post);
-                        if (get_option('ps_unpublish') == 'on')
-                            add_post_meta($product_ID, '_visibility', ($status == 'publish' ? 'visible' : ''));
+
+                        add_post_meta($product_ID, '_visibility', ($status == 'publish' ? 'visible' : ''));
 
                         unset($status);
                     }
@@ -1503,17 +1497,17 @@ class linksync_class {
         return $product_ids;
     }
 
-    // Helper functions 
+// Helper functions 
     public function linksync_check_attribute_label($attribute_label) {
         global $wpdb;
-        //Return Slug of attribute  
+//Return Slug of attribute  
         $check_attribute_label = mysql_query("SELECT attribute_name FROM `" . $wpdb->prefix . "woocommerce_attribute_taxonomies` WHERE BINARY attribute_label='" . mysql_real_escape_string($attribute_label) . "'");
         if (mysql_num_rows($check_attribute_label) != 0) {
-            //Exists an attribute label
+//Exists an attribute label
             $attribute_name = mysql_fetch_assoc($check_attribute_label);
             $attribute_label_slug = $attribute_name['attribute_name'];
         } else {
-            //Create new attribute label 
+//Create new attribute label 
             $attribute_label_slug = iconv('UTF-8', 'ASCII//TRANSLIT', $attribute_label);
             if (strpos($attribute_label_slug, ' ')) {
                 $attribute_label_slug = str_replace(' ', '', $attribute_label_slug);
@@ -1653,7 +1647,7 @@ class linksync_class {
                             'comment_status' => 'open'
                         );
                         $order_id = wp_insert_post($order_data, true);
-                        // create order
+// create order
 
                         if (is_wp_error($order_id)) {
                             $order->errors = $order_id;
@@ -1772,7 +1766,7 @@ class linksync_class {
                                 add_post_meta($order_id, '_order_currency', $order['currency'], true);
                             }
 
-                            // billing info
+// billing info
 
                             if (isset($order['user_name']) && !empty($order['user_name'])) {
                                 add_post_meta($order_id, '_billing_email', $order['user_name'], true);
@@ -1788,7 +1782,7 @@ class linksync_class {
                                     }
                                     $wcproduct = $product->post;
                                     if ($product) {
-                                        // add item
+// add item
                                         $item_id = wc_add_order_item($order_id, array(
                                             'order_item_name' => $wcproduct->post_title,
                                             'order_item_type' => 'line_item',
@@ -1796,7 +1790,7 @@ class linksync_class {
                                         if ($item_id) {
                                             $line_tax = array();
                                             $line_subtax = array();
-                                            // add item meta data
+// add item meta data
                                             if (isset($products['price']) && !empty($products['price'])) {
                                                 $products['price'] = (float) ($products['price'] * $products['quantity']);
                                             }
@@ -1831,7 +1825,7 @@ class linksync_class {
                                     }
                                 } elseif ($products['sku'] == 'shipping') {
                                     $taxes = array();
-                                    // add item
+// add item
                                     $shipping_id = wc_add_order_item($order_id, array(
                                         'order_item_name' => $products['title'],
                                         'order_item_type' => 'shipping',
@@ -1854,7 +1848,7 @@ class linksync_class {
                                     if ($i == 0) {
                                         $tax_class_name = $this->linksync_tax_classes_vend_to_wc($products['taxId']);
                                         if ($tax_class_name['result'] == 'success') {
-                                            // add item
+// add item
                                             $tax_id = wc_add_order_item($order_id, array(
                                                 'order_item_name' => $tax_class_name['tax_class_name'] . '-' . $tax_class_name['tax_rate_id'],
                                                 'order_item_type' => 'tax',
@@ -1881,7 +1875,7 @@ class linksync_class {
         return true;
     }
 
-    // WooCommerce Functions
+// WooCommerce Functions
     function linksync_tax_classes_vend_to_wc($tax_id) {
         global $wpdb;
         $wc_taxes = get_option('vend_to_wc_tax');
@@ -1958,16 +1952,16 @@ class linksync_class {
         $jsondata = curl_exec($curl);
         $http_response = curl_getinfo($curl);
         if ((int) $http_response['http_code'] == 200) {
-            //$this->addrawlogs(date('Y-m-d H:i:s'), 'GET', $requesturl,'HTTP Code : '.@$http_response['http_code'],'HTTP Response result :  '.  @serialize($http_response), $this->LAID, 'Technicaly Debuging'); 
+//$this->addrawlogs(date('Y-m-d H:i:s'), 'GET', $requesturl,'HTTP Code : '.@$http_response['http_code'],'HTTP Response result :  '.  @serialize($http_response), $this->LAID, 'Technicaly Debuging'); 
             return true;
         } else {
             $this->addrawlogs(date('Y-m-d H:i:s'), 'NULL', $requesturl, 'HTTP Code : ' . @$http_response['http_code'], 'HTTP Response result :  ' . @serialize($http_response), @$this->LAID);
-            //$this->addrawlogs(date('Y-m-d H:i:s'), $method, $requesturl, isset($user_data) ? $user_data : 'No POST Data', isset($jsondata) ? $jsondata : 'No Response', $this->LAID, 'Technicaly Debuging');
+//$this->addrawlogs(date('Y-m-d H:i:s'), $method, $requesturl, isset($user_data) ? $user_data : 'No POST Data', isset($jsondata) ? $jsondata : 'No Response', $this->LAID, 'Technicaly Debuging');
             return false;
         }
     }
 
-    // Calling Function
+// Calling Function
     private function _CalltoAPIArray($url, $appendurl, $method, $data = NULL) {
 //        $http_code = $this->__checkStatus($url);
 //        if (!$http_code) {
@@ -1998,7 +1992,7 @@ class linksync_class {
             "Content-Type:application/json",
             "LAID: " . $this->LAID
         ));
-        //sleep(10);
+//sleep(10);
         $jsondata = curl_exec($curl);
         if (isset($appendurl) && $appendurl != 'laid/sendLog') {
             if (isset($data) && !empty($data)) {
@@ -2028,7 +2022,7 @@ class linksync_class {
         return $arr; # Output XML Response as Array
     }
 
-    //Function
+//Function
     public static function releaseOptions() {
         update_option('linksync_status', "");
         update_option('linksync_last_test_time', '');
@@ -2117,9 +2111,9 @@ class linksync_class {
                 3 => 'three'
             );
 
-            // Creating new variants if it's new added 
+// Creating new variants if it's new added 
             $status = 'publish';
-            //  $list_price = $product_variants['list_price'];  
+//  $list_price = $product_variants['list_price'];  
             $sell_price = $product_variants['sell_price'];
             if (count($product_variants['outlets']) != 0) {
                 $variant_quantity = 0;
@@ -2160,8 +2154,7 @@ class linksync_class {
             $variation_product_id = wp_insert_post($my_post);
             if ($variation_product_id) {
                 add_post_meta($variation_product_id, '_sku', $product_variants['sku']);
-                if (get_option('ps_unpublish') == 'on')
-                    add_post_meta($variation_product_id, '_visibility', ($status == 'publish' ? 'visible' : ''));
+                add_post_meta($variation_product_id, '_visibility', ($status == 'publish' ? 'visible' : ''));
 
                 if (get_option('ps_price') == 'on') {
                     $tax_classes = get_option('tax_class');
@@ -2188,7 +2181,7 @@ class linksync_class {
                     }
 
                     if ($excluding_tax == 'on') {
-                        //If 'yes' then product price SELL Price(excluding any taxes.)
+//If 'yes' then product price SELL Price(excluding any taxes.)
                         add_post_meta($variation_product_id, '_price', $sell_price);
                         if (get_option('price_field') == 'regular_price') {
                             add_post_meta($variation_product_id, '_regular_price', $sell_price);
@@ -2197,7 +2190,7 @@ class linksync_class {
                         }
                     } else {
                         $tax_and_sell_price_variant = $sell_price + $product_variants['tax_value'];
-                        //If 'no' then product price SELL Price(including any taxes.) 
+//If 'no' then product price SELL Price(including any taxes.) 
                         add_post_meta($variation_product_id, '_price', $tax_and_sell_price_variant);
                         if (get_option('price_field') == 'regular_price') {
                             add_post_meta($variation_product_id, '_regular_price', $tax_and_sell_price_variant);
@@ -2206,7 +2199,7 @@ class linksync_class {
                         }
                     }
                 }
-                #Product Quantity 
+#Product Quantity 
                 if (get_option('ps_quantity') == 'on') {
                     if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
                         add_post_meta($variation_product_id, '_manage_stock', 'no');
@@ -2264,7 +2257,7 @@ class linksync_class {
             }// end creating new variatns
 
             $return['thedata'] = isset($thedata) ? $thedata : ' ';
-            //$return['array_name'] = isset($array_name) ? $array_name : ' ';
+//$return['array_name'] = isset($array_name) ? $array_name : ' ';
             $return['var_quantity'] = $var_qty;
             return $return;
         }
@@ -2297,7 +2290,8 @@ class linksync_class {
 
         foreach ($product_variant as $product_variants) {
             if (empty($product_variants['deleted_at'])) {
-                $variant_reference = $this->variantSku($product_variants['sku']);
+                $variant_reference = $this->variantSkuHandler($product_variants['sku'], $product_ID);
+//                variantSku($product_variants['sku']);
                 if ($variant_reference['result'] == 'success') {
                     $result_reference['data'] = $product_ID;
                     $sell_price = $product_variants['sell_price'];
@@ -2325,7 +2319,7 @@ class linksync_class {
                         $outlet_checker = 'noOutlet';
                     }
 
-                    //$quantity = (int) ($product_variants['quantity']);
+//$quantity = (int) ($product_variants['quantity']);
                     $tax_name = $product_variants['tax_name'];
                     if (isset($quantity)) {
                         $var_qty+=$quantity;
@@ -2340,10 +2334,8 @@ class linksync_class {
                     );
                     $variation_product_id = wp_update_post($my_post);
 
-                    if ($variation_product_id) {
-                        //   update_post_meta($variation_product_id, '_sku', $reference);
-                        if (get_option('ps_unpublish') == 'on')
-                            update_post_meta($variation_product_id, '_visibility', ($status == 'publish' ? 'visible' : ''));
+                    if ($variation_product_id) { 
+                        update_post_meta($variation_product_id, '_visibility', ($status == 'publish' ? 'visible' : ''));
 
                         if (get_option('ps_price') == 'on') {
                             $variant_tax_classes = get_option('tax_class');
@@ -2370,7 +2362,7 @@ class linksync_class {
                             }
                             $db_sale_price = mysql_query("SELECT * FROM `" . $wpdb->prefix . "postmeta` WHERE `post_id` = '" . $variation_product_id . "' AND meta_key='_sale_price'");
                             if ($excluding_tax == 'on') {
-                                //If 'yes' then product price SELL Price(excluding any taxes.)
+//If 'yes' then product price SELL Price(excluding any taxes.)
                                 if (0 != mysql_num_rows($db_sale_price)) {
                                     $result_sale_price = mysql_fetch_assoc($db_sale_price);
                                     if ($result_sale_price['meta_value'] == NULL) {
@@ -2386,7 +2378,7 @@ class linksync_class {
                                     update_post_meta($variation_product_id, '_sale_price', $sell_price);
                                 }
                             } else {
-                                //If 'no' then product price SELL Price(including any taxes.)
+//If 'no' then product price SELL Price(including any taxes.)
                                 $tax_and_sell_price = $sell_price + $product_variants['tax_value'];
                                 if (0 != mysql_num_rows($db_sale_price)) {
                                     $result_sale_price = mysql_fetch_assoc($db_sale_price);
@@ -2404,7 +2396,7 @@ class linksync_class {
                                 }
                             }
                         }
-                        #Product Quantity 
+#Product Quantity 
 
                         if (get_option('ps_quantity') == 'on') {
                             if (isset($outlet_checker) && $outlet_checker == 'noOutlet') {
@@ -2418,7 +2410,7 @@ class linksync_class {
                             }
                             unset($outlet_checker);
                         }
-                        #----------Remove Post Meta----Attribute----# 
+#----------Remove Post Meta----Attribute----# 
                         if (get_option('ps_attribute') == 'on') {
                             mysql_query("DELETE FROM `" . $wpdb->prefix . "postmeta` WHERE post_id='" . $variation_product_id . "' AND meta_key LIKE 'attribute_pa_%'");
                         }
@@ -2487,7 +2479,7 @@ class linksync_class {
         return $return;
     }
 
-    // Log Management Functions
+// Log Management Functions
     public static function add($method, $status, $message, $LAID) {
         global $wpdb;
         $log = $wpdb->insert(
@@ -2609,103 +2601,55 @@ class linksync_class {
  * Insert Image to database and upload to Upload folder
  */
 
-function linksync_insert_image($filename, $parent_post_id) {
-    // Check the type of tile. We'll use this as the 'post_mime_type'. 
-    include_once(ABSPATH . 'wp-admin/includes/image.php');
-    include_once(ABSPATH . 'wp-includes/class-wp-image-editor.php');
-    include_once(ABSPATH . 'wp-includes/media.php'); #wp_get_image_editor
-    $image_size = array();
-    $wp_upload_dir = wp_upload_dir();
-    $content = @file_get_contents($filename);
-    $upload_file = @wp_upload_bits(basename($filename), null, $content);
-    $filetype = @wp_check_filetype(basename($filename), null);
-    $date = date("Y") . '/' . date('m');
+function linksync_insert_image($image_url, $post_id) {
+    $upload_dir = wp_upload_dir();
+    $image_data = file_get_contents($image_url);
+    $filename = basename($image_url);
+    if (wp_mkdir_p($upload_dir['path']))
+        $file = $upload_dir['path'] . '/' . $filename;
+    else
+        $file = $upload_dir['basedir'] . '/' . $filename;
+    file_put_contents($file, $image_data);
+
+    $wp_filetype = wp_check_filetype($filename, null);
     $attachment = array(
-        'guid' => $wp_upload_dir['url'] . '/' . basename($filename),
-        'post_mime_type' => $filetype['type'],
-        'post_title' => preg_replace('/\.[^.]+$/', '', basename($filename)),
+        'post_mime_type' => $wp_filetype['type'],
+        'post_title' => sanitize_file_name($filename),
         'post_content' => '',
         'post_status' => 'inherit'
     );
-
-    $image_size['shop_thumbnail'] = wc_get_image_size('shop_thumbnail');
-    $image_size['shop_catalog'] = wc_get_image_size('shop_catalog');
-    $image_size['shop_single'] = wc_get_image_size('shop_single');
-    $fileName = preg_replace('/^.*?\/(\d{4})\/(\d\d)\/(.*)$/', $wp_upload_dir['basedir'] . '/$1/$2/$3', $filename);
-    foreach ($image_size as $image_key => $size) {
-        $image = @wp_get_image_editor($fileName);
-        if (!is_wp_error($image)) {
-            $image->resize($size['width'], $size['height'], $size['crop']);
-            $image->save($wp_upload_dir['basedir'] . "/" . $date . '/' . basename($filename, "." . $filetype['ext']) . "-" . $size['width'] . "x" . $size['height'] . "." . $filetype['ext']);
-        }
-        $image_size[$image_key]['file'] = basename($filename, "." . $filetype['ext']) . "-" . $size['width'] . "x" . $size['height'] . "." . $filetype['ext'];
-        $image_size[$image_key]['mime-type'] = $filetype['type'];
-        // To unset the crop in the array image_size
-        unset($image_size[$image_key]['crop']);
-    } foreach ($image_size as $image_key => $size) {
-        if ($image_key == 'shop_catalog') {
-            $image_size['thumbnail'] = $size;
-        }
-        if ($image_key == 'shop_single') {
-            $image_size['medium'] = $size;
-        }
-    }
-    $attach_id = @wp_insert_attachment($attachment, $date . '/' . basename($filename), $parent_post_id);
-    $attach_data = @wp_generate_attachment_metadata($attach_id, $wp_upload_dir['url'] . '/' . basename($filename));
-
-// Generate the metadata for the attachment, and update the database record.
-    $attach_data['sizes'] = $image_size;
-    @wp_update_attachment_metadata($attach_id, $attach_data);
-    unset($filename);
-    unset($parent_post_id);
+    $attach_id = wp_insert_attachment($attachment, $file, $post_id);
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    $attach_data = wp_generate_attachment_metadata($attach_id, $file);
+    wp_update_attachment_metadata($attach_id, $attach_data);
+    unset($image_url);
+    unset($post_id);
     return $attach_id;
 }
 
 //Image Update Function
-function addImage_thumbnail($filename, $parent_post_id) {
-    include_once(ABSPATH . 'wp-admin/includes/image.php'); #wp_insert_attachment
-    include_once(ABSPATH . 'wp-includes/class-wp-image-editor.php');
-    include_once(ABSPATH . 'wp-includes/media.php'); #wp_get_image_editor
-    //Upload Image in uploads folder
-    // Check the type of tile. We'll use this as the 'post_mime_type'. 
-    $image_size = array();
-    $wp_upload_dir = @wp_upload_dir();
-    $content = @file_get_contents($filename);
-    $upload_file = @wp_upload_bits(basename($filename), null, $content);
-    $filetype = @wp_check_filetype(basename($filename), null);
-    $date = date("Y") . '/' . date('m');
+function addImage_thumbnail($image_url, $post_id) {
+    $upload_dir = wp_upload_dir();
+    $image_data = file_get_contents($image_url);
+    $filename = basename($image_url);
+    if (wp_mkdir_p($upload_dir['path']))
+        $file = $upload_dir['path'] . '/' . $filename;
+    else
+        $file = $upload_dir['basedir'] . '/' . $filename;
+    file_put_contents($file, $image_data);
+
+    $wp_filetype = wp_check_filetype($filename, null);
     $attachment = array(
-        'guid' => $wp_upload_dir['url'] . '/' . basename($filename),
-        'post_mime_type' => $filetype['type'],
-        'post_title' => preg_replace('/\.[^.]+$/', '', basename($filename)),
+        'post_mime_type' => $wp_filetype['type'],
+        'post_title' => sanitize_file_name($filename),
         'post_content' => '',
         'post_status' => 'inherit'
     );
-
-    $image_size['shop_thumbnail'] = wc_get_image_size('shop_thumbnail');
-    $image_size['shop_catalog'] = wc_get_image_size('shop_catalog');
-    $image_size['shop_single'] = wc_get_image_size('shop_single');
-    $fileName = preg_replace('/^.*?\/(\d{4})\/(\d\d)\/(.*)$/', $wp_upload_dir['basedir'] . '/$1/$2/$3', $filename);
-    foreach ($image_size as $image_key => $size) {
-        $image = @wp_get_image_editor($fileName);
-        if (!is_wp_error($image)) {
-            $image->resize($size['width'], $size['height'], $size['crop']);
-            $image->save($wp_upload_dir['basedir'] . "/" . $date . '/' . basename($filename, "." . $filetype['ext']) . "-" . $size['width'] . "x" . $size['height'] . "." . $filetype['ext']);
-        }
-        $image_size[$image_key]['file'] = basename($filename, "." . $filetype['ext']) . "-" . $size['width'] . "x" . $size['height'] . "." . $filetype['ext'];
-        $image_size[$image_key]['mime-type'] = $filetype['type'];
-        // To unset the crop in the array image_size
-        unset($image_size[$image_key]['crop']);
-    }
-    $attach_id = @wp_insert_attachment($attachment, $date . '/' . basename($filename), $parent_post_id);
-    $attach_data = @wp_generate_attachment_metadata($attach_id, $wp_upload_dir['url'] . '/' . basename($filename));
-
-// Generate the metadata for the attachment, and update the database record.
-    $attach_data['sizes'] = $image_size;
-    @wp_update_attachment_metadata($attach_id, $attach_data);
-    unset($filename);
-    unset($parent_post_id);
-    return $attach_id;
+    $attach_id = wp_insert_attachment($attachment, $file, $post_id);
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    $attach_data = wp_generate_attachment_metadata($attach_id, $file);
+    wp_update_attachment_metadata($attach_id, $attach_data);
+    set_post_thumbnail($post_id, $attach_id);
 }
 
 function checkAndDelete_attachement($image_name) {
