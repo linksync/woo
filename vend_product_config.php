@@ -1304,12 +1304,6 @@ update_option('product_image_ids', NULL);
             },
             error: function(xhr, status, error) {  
                 console.log("Error Empty Response");
-                console.log('xhr:>');
-                console.log(xhr);
-                console.log('status:>');
-                console.log(status);
-                console.log('error');
-                console.log(error); 
                 status='resend';
                 console.log('Resend Request for the same product');
             },
@@ -1363,13 +1357,6 @@ update_option('product_image_ids', NULL);
                 } 
             },error: function(xhr, status, error) {  
                 console.log("Error Empty Response");
-                console.log('xhr:>');
-                console.log(xhr);
-                console.log('status:>');
-                console.log(status);
-                console.log('error');
-                console.log(error); 
-                console.log('Error');
                 uploading_process_start_for_image(product_count);
             }
         }); 

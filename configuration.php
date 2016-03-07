@@ -516,12 +516,6 @@ update_option('prod_last_page', NULL);
             },
             error: function(xhr, status, error) {  
                 console.log("Error Empty Response");
-                console.log('xhr:>');
-                console.log(xhr);
-                console.log('status:>');
-                console.log(status);
-                console.log('error');
-                console.log(error); 
                 importProductQBO(); 
             },
             statusCode: {
