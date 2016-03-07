@@ -162,6 +162,7 @@ class linksync_class {
 
     public function isReferenceExists($reference) {
         global $wpdb;
+        $reference_result['result'] = 'error';
         $query = mysql_query("SELECT post_id FROM `" . $wpdb->prefix . "postmeta` WHERE meta_key='_sku' AND BINARY meta_value='" . $reference . "'");
         if (0 != mysql_num_rows($query)) {
             while ($result = mysql_fetch_assoc($query)) {
@@ -175,6 +176,7 @@ class linksync_class {
             }
         } else {
             $reference_result['result'] = 'error';
+            //$reference_result['data'] = $detail['ID'];
         }
         return $reference_result;
     }
@@ -319,8 +321,9 @@ class linksync_class {
             $reference = $product['sku'];
 // $list_price = $product['list_price'];
             $sell_price = $product['sell_price'];
+            $quantity = 0;
             if (count($product['outlets']) != 0) {
-                $quantity = 0;
+
                 foreach ($product['outlets'] as $outlet) {
                     $product_type = get_option('product_sync_type');
                     if ($product_type == 'two_way') {
@@ -562,7 +565,10 @@ class linksync_class {
                         wp_delete_object_term_relationships($result_reference['data'], 'product_cat');
                         if (get_option('cat_radio') == 'ps_cat_product_type') {
                             if (isset($product['product_type']) && !empty($product['product_type'])) {
-                                $term = get_term_by('name', $product['product_type'], 'product_cat');
+                                $ls_product_type = esc_html($product['product_type']);
+
+                                $term = get_term_by('name', $ls_product_type, 'product_cat');
+                                //$term = get_term_by('name', $product['product_type'], 'product_cat');
                                 if (isset($term) && !empty($term)) {
                                     wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat');
                                 }
@@ -571,25 +577,15 @@ class linksync_class {
                         if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
                             if (isset($product['tags']) && !empty($product['tags'])) {
                                 foreach ($product['tags'] as $tag) {
-                                    $cat_parent_id = 0;
-                                    $flag_cat = array();
                                     if (isset($tag['name']) && !empty($tag['name'])) {
                                         $tags = explode('/', $tag['name']);
                                         if (isset($tags) && !empty($tags)) {
-                                            foreach ($tags as $cat_key => $cat_name) {
-                                                $check_term_exists = term_exists($cat_name, 'product_cat', $cat_parent_id);
-                                                if (is_array($check_term_exists)) {
-                                                    $flag_cat[] = 'yes';
-                                                    $cat_parent_id = $check_term_exists['term_id'];
-                                                    $cat_taxonmy = $check_term_exists;
-                                                } else {
-                                                    $flag_cat[] = 'no';
-                                                    $cat_parent_id = 0;
+                                            foreach($tags as $cat_key => $cat_name){
+                                                $cat_name = esc_html(trim($cat_name));
+                                                $ls_term = get_term_by('name', $cat_name, 'product_cat');
+                                                if($ls_term){
+                                                    wp_set_object_terms($result_reference['data'], $ls_term->term_id, 'product_cat', TRUE);
                                                 }
-                                            }
-                                            if (!in_array('no', $flag_cat)) {
-                                                $term = get_term_by('ID', $cat_taxonmy['term_id'], 'product_cat');
-                                                wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat', TRUE);
                                             }
                                         }
                                     }
@@ -627,15 +623,23 @@ class linksync_class {
                             }
                             $db_sale_price = mysql_query("SELECT * FROM `" . $wpdb->prefix . "postmeta` WHERE `post_id` = '" . $result_reference['data'] . "' AND meta_key='_sale_price'");
                             if ($excluding_tax == 'on') {
-//If 'yes' then product price SELL Price(excluding any taxes.)  
-                                if (0 != mysql_num_rows($db_sale_price)) {
+//If 'yes' then product price SELL Price(excluding any taxes.) 
+                                /*
+                                    Get the meta key from database
+                                */ 
+                                $price_meta = get_post_meta($result_reference['data'],'_price',true);
+                                //Check if the product has been set to no price('') and price from api is equal to zero
+                                $sell_price = $price_meta == '' && $sell_price == 0 ? '': $sell_price;
+
+                                 if (0 != mysql_num_rows($db_sale_price)) {
                                     $result_sale_price = mysql_fetch_assoc($db_sale_price);
                                     if ($result_sale_price['meta_value'] == NULL) {
-                                        update_post_meta($result_reference['data'], '_price', $sell_price);
+                                        update_post_meta($result_reference['data'], '_price', $sell_price);//$sell_price);
                                     }
                                 } else {
-                                    update_post_meta($result_reference['data'], '_price', $sell_price);
+                                    update_post_meta($result_reference['data'], '_price', $sell_price);//$sell_price);
                                 }
+
                                 if (get_option('price_field') == 'regular_price') {
                                     update_post_meta($result_reference['data'], '_regular_price', $sell_price);
                                 } else {
@@ -662,7 +666,11 @@ class linksync_class {
                             }
                         }
                     }
-#Product Quantity 
+#Product Quantity Update
+                    /*
+                        Reference: Product Quantity Updated
+                        Product quantity updated if "Sync product Quantity between apps" is checked
+                    */
                     if (get_option('ps_quantity') == 'on') {
                         if (isset($product['variants']) && !empty($product['variants'])) {
                             
@@ -682,6 +690,7 @@ class linksync_class {
                             unset($outlet_checker);
                         }
                     }
+#End Product Quantity Update
 #Product Image  
                     if (get_option('ps_images') == 'on') {
 //Product Gallery Image
@@ -974,24 +983,38 @@ class linksync_class {
                         $status = 'draft';
                     }
 #---------GET product Status-------------#
+                    /*
+                        Reference: Update Product status
+                    */
                     $product_status_db = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE post_status ='pending' AND ID='" . $result_reference['data'] . "'");
                     if (mysql_num_rows($product_status_db) != 0) {
                         $status = 'pending';
                     }
+                    /*
+                        If 'Change product status in WooCommerce based on stock quantity' is checked or on
+                    */
                     if (get_option('ps_unpublish') == 'on') {
                         $status = isset($status) && !empty($status) ? $status : 'publish';
-                    } else {
-                        $check_product_pending_status = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE post_status ='pending' AND ID='" . $result_reference['data'] . "'");
-                        if (mysql_num_rows($check_product_pending_status) != 0) {
-                            $status = 'pending';
-                        } else {
-                            if ($product['active'] == '0') {
-                                $status = 'draft';
-                            } elseif ($product['active'] == '1') {
-                                $status = 'publish';
-                            }
+                        //Check quantity less or equal to zero
+                        //Note $quantity came from `Reference: Product Quantity Updated` line number 667
+                        if($quantity <= 0){
+                            $status = 'draft';
+                            //Product variation should be 'Out of Stock'
+                            $product__stock_status = 'outofstock';
+                           
+                        }else if($quantity > 0){
+                            $status = 'publish';
+                            //Make user that variation should be 'instock'
+                            $product__stock_status = 'instock';
                         }
+                        //Update products _stock_status
+                        update_post_meta($result_reference['data'],'_stock_status',$product__stock_status);
+                    } else {
+
+                        $status = get_post_status($result_reference['data']);//Just use the woocommerce status data
+                    
                     }
+
                     $my_product = array();
                     $my_product['ID'] = $result_reference['data'];
                     $my_product['post_status'] = $status;
@@ -1102,25 +1125,15 @@ class linksync_class {
                             if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
                                 if (isset($product['tags']) && !empty($product['tags'])) {
                                     foreach ($product['tags'] as $tag) {
-                                        $cat_parent_id = 0;
-                                        $flag_cat = array();
                                         if (isset($tag['name']) && !empty($tag['name'])) {
                                             $tags = explode('/', $tag['name']);
                                             if (isset($tags) && !empty($tags)) {
-                                                foreach ($tags as $cat_key => $cat_name) {
-                                                    $check_term_exists = term_exists($cat_name, 'product_cat', $cat_parent_id);
-                                                    if (is_array($check_term_exists)) {
-                                                        $flag_cat[] = 'yes';
-                                                        $cat_parent_id = $check_term_exists['term_id'];
-                                                        $cat_taxonmy = $check_term_exists;
-                                                    } else {
-                                                        $flag_cat[] = 'no';
-                                                        $cat_parent_id = 0;
+                                                foreach($tags as $cat_key => $cat_name){
+                                                    $cat_name = esc_html(trim($cat_name));
+                                                    $ls_term = get_term_by('name', $cat_name, 'product_cat');
+                                                    if($ls_term){
+                                                      wp_set_object_terms($product_ID, $ls_term->term_id, 'product_cat', TRUE);
                                                     }
-                                                }
-                                                if (!in_array('no', $flag_cat)) {
-                                                    $term = get_term_by('ID', $cat_taxonmy['term_id'], 'product_cat');
-                                                    wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat', TRUE);
                                                 }
                                             }
                                         }
@@ -1536,6 +1549,8 @@ class linksync_class {
 
     public function linksync_check_term_value($term_value_check) {
         global $wpdb;
+        $result['term_id']  = 0;
+        $result['slug']     = '';
         $query_select = mysql_query("SELECT * FROM `" . $wpdb->prefix . "terms` WHERE BINARY name='" . mysql_real_escape_string($term_value_check) . "'");
         if (0 == mysql_num_rows($query_select)) {
             /*
@@ -2295,8 +2310,9 @@ class linksync_class {
                 if ($variant_reference['result'] == 'success') {
                     $result_reference['data'] = $product_ID;
                     $sell_price = $product_variants['sell_price'];
+                    $quantity = 0;
                     if (count($product_variants['outlets']) != 0) {
-                        $quantity = 0;
+
                         foreach ($product_variants['outlets'] as $outlet) {
                             $product_type = get_option('product_sync_type');
                             if ($product_type == 'two_way') {

@@ -450,8 +450,8 @@ update_option('product_image_ids', NULL);
                     uploading_process_start_for_image(dataupper.product_count);
                 }
             },
-            error: function() {         
-                console.log("Error Empty Response");  
+            error: function(xhr, status, error) {         
+                console.log("Error Empty Response");
                 if(check_error==10){
                     check_error =0; 
                     ajaxupdate.abort();
@@ -514,8 +514,14 @@ update_option('prod_last_page', NULL);
                 linksync_jQuery("#pop_up_syncll").hide(1500);
                 linksync_jQuery("#syncing_loader").hide(1500);
             },
-            error: function() {         
-                console.log("Error Empty Response"); 
+            error: function(xhr, status, error) {  
+                console.log("Error Empty Response");
+                console.log('xhr:>');
+                console.log(xhr);
+                console.log('status:>');
+                console.log(status);
+                console.log('error');
+                console.log(error); 
                 importProductQBO(); 
             },
             statusCode: {
@@ -573,7 +579,8 @@ update_option('prod_last_page', NULL);
                 }  
                  
             },
-            error: function() { 
+            error: function(xhr, status, error) {  
+                console.log("Error Empty Response");
                 status='resend';
                 console.log('Resend Request for the same product');
             },

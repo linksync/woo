@@ -804,8 +804,8 @@ if (get_option('product_sync_type_QBO') == 'disabled_sync') {
                 linksynProduct_jquery("#pop_up").fadeOut(2000); 
                 linksynProduct_jquery("#pop_up_two-way").hide(1500);
             },
-            error: function() {         
-                console.log("Error Empty Response"); 
+            error: function(xhr, status, error) {  
+                console.log("Error Empty Response");
                 importProduct(); 
             },
             statusCode: {

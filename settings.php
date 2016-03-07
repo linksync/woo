@@ -133,8 +133,6 @@ margin-bottom: 10px;'><form method='POST'><input type='submit' class='button' st
 <script type="text/javascript" src="../wp-content/plugins/linksync/jquery-tiptip/jquery-1.10.2.js"></script>
 <script type="text/javascript" src="../wp-content/plugins/linksync/jquery-tiptip/jquery-ui.js"></script>
 ' . "<fieldset><legend>Linksync Log</legend>" . linksync_class::printallLogs() . "</fieldset>";
-    } elseif ($_GET['page'] == 'linksync' && $_GET['setting'] == 'other_setting') {
-        include_once(dirname(__FILE__) . '/other_setting.php');
     }
 } else {
     include_once(dirname(__FILE__) . '/configuration.php');

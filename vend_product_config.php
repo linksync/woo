@@ -1244,8 +1244,8 @@ update_option('product_image_ids', NULL);
                     importProduct();
                 }
             },
-            error: function() {  
-                console.log("Error Empty Response");  
+            error: function(xhr, status, error) {  
+                console.log("Error Empty Response");
                 if(check_error==10){
                     check_error =0; 
                     ajaxupdate.abort();
@@ -1302,7 +1302,14 @@ update_option('product_image_ids', NULL);
                 }   
                  
             },
-            error: function() { 
+            error: function(xhr, status, error) {  
+                console.log("Error Empty Response");
+                console.log('xhr:>');
+                console.log(xhr);
+                console.log('status:>');
+                console.log(status);
+                console.log('error');
+                console.log(error); 
                 status='resend';
                 console.log('Resend Request for the same product');
             },
@@ -1354,7 +1361,14 @@ update_option('product_image_ids', NULL);
                     var totalreq=dataupper.total_post_id;  
                     ajaxRequestForproduct_image(1,totalreq,dataupper.total_product,product_count,'send'); 
                 } 
-            },error: function() {  
+            },error: function(xhr, status, error) {  
+                console.log("Error Empty Response");
+                console.log('xhr:>');
+                console.log(xhr);
+                console.log('status:>');
+                console.log(status);
+                console.log('error');
+                console.log(error); 
                 console.log('Error');
                 uploading_process_start_for_image(product_count);
             }
