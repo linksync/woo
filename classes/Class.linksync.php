@@ -299,6 +299,33 @@ class linksync_class {
     }
 
     /**
+     * @param array the variants array
+     * returns overall total quantity of a variant product
+     */
+    public function get_total_variants_quantity($variants){
+        $quantity = 0;
+        if(!empty($variants)){
+            /**
+             *Loop through the available variants to get the quantity
+             */
+            foreach($variants as $variant){
+                if(isset($variant['outlets'])){
+                    /**
+                     * Loop through to get the quantity on each available outlet
+                     */
+                    foreach($variant['outlets'] as $outlet){
+                        //add the outlets quantity
+                        $quantity += $outlet['quantity'];
+                    }
+                }
+            }
+
+        }
+
+        return $quantity;
+    }
+
+    /**
      * The function used to Add / Update product in woocommerce 
      *
      * @param array product
@@ -995,9 +1022,25 @@ class linksync_class {
                     */
                     if (get_option('ps_unpublish') == 'on') {
                         $status = isset($status) && !empty($status) ? $status : 'publish';
+
+
+                        if (isset($product['variants']) && !empty($product['variants'])){
+                            $quantity = $this->get_total_variants_quantity($product['variants']);
+                            if($quantity <= 0){
+                                $status = 'draft';
+                                //Product variation should be 'Out of Stock'
+                                $product__stock_status = 'outofstock';
+
+                            }else if($quantity > 0){
+                                $status = 'publish';
+                                //Make user that variation should be 'instock'
+                                $product__stock_status = 'instock';
+                            }
+
+
                         //Check quantity less or equal to zero
                         //Note $quantity came from `Reference: Product Quantity Updated` line number 667
-                        if($quantity <= 0){
+                        }else if($quantity <= 0){
                             $status = 'draft';
                             //Product variation should be 'Out of Stock'
                             $product__stock_status = 'outofstock';
