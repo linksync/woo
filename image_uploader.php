@@ -1,8 +1,6 @@
 <?php
 
-require(dirname(__FILE__) . '../../../../wp-load.php'); # WordPress Configuration File   
-@mysql_connect(DB_HOST, DB_USER, DB_PASSWORD);
-@mysql_select_db(DB_NAME);
+require(dirname(__FILE__) . '../../../../wp-load.php'); # WordPress Configuration File
 include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Class file having API Call functions 
 global $wp;
 // Initializing 
@@ -68,15 +66,39 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
                             if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
                                 if (!in_array(basename($image), $woo_filename_gallery)) {
                                     $attach_ids = linksync_insert_image($image, $product_ID);
-                                    mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
+                                    $wpdb->query(
+                                        $wpdb->prepare(
+                                            "UPDATE `" . $wpdb->postmeta . "`
+                                            SET meta_value=CONCAT(meta_value,',%d')
+                                            WHERE post_id=%d AND meta_key='_product_image_gallery'",
+                                            $attach_ids,$product_ID
+                                        )
+                                    );
                                 }
                             } else {
                                 $attach_ids = linksync_insert_image($image, $product_ID);
-                                $imageDb = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $product_ID . "'"));
-                                if ($imageDb != 0)
-                                    mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
-                                else
+                                $imageDb = $wpdb->get_results(
+                                                $wpdb->prepare(
+                                                    "SELECT * FROM  `" . $wpdb->postmeta . "`
+                                                    WHERE  meta_key='_product_image_gallery' AND `post_id` = %d ",
+                                                    $product_ID
+                                                )
+                                );
+
+                                $imageDb = $wpdb->num_rows;
+                                if (0 != $imageDb){
+                                    $wpdb->query(
+                                        $wpdb->prepare(
+                                            "UPDATE `" . $wpdb->postmeta . "`
+                                            SET meta_value=CONCAT(meta_value,',%d')
+                                            WHERE post_id= %d AND meta_key='_product_image_gallery'",
+                                            $attach_ids,$product_ID
+                                        )
+                                    );
+                                }else{
                                     add_post_meta($product_ID, '_product_image_gallery', $attach_ids);
+                                }
+
                             }
                         } elseif (get_option('ps_import_image_radio') == 'Enable') {
                             if ($_POST['check_status'] == 'send') {
@@ -84,25 +106,65 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
                                     
                                 } else {
                                     $attach_ids = linksync_insert_image($image, $product_ID);
-                                    $imageDb = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $product_ID . "'"));
-                                    if ($imageDb != 0)
-                                        mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
-                                    else
+                                    $imageDb = $wpdb->get_results(
+                                                    $wpdb->prepare(
+                                                        "SELECT * FROM  `" . $wpdb->postmeta . "`
+                                                        WHERE  meta_key='_product_image_gallery' AND `post_id` = %d ",
+                                                        $product_ID)
+                                    );
+                                    $imageDb = $wpdb->num_rows;
+                                    if ($imageDb != 0){
+                                        $wpdb->query(
+                                            $wpdb->prepare(
+                                                "UPDATE `" . $wpdb->postmeta . "`
+                                                SET meta_value=CONCAT(meta_value,',%d')
+                                                WHERE post_id= %d AND meta_key='_product_image_gallery'",
+                                                $attach_ids,$product_ID
+                                            )
+                                        );
+
+                                    }else{
                                         add_post_meta($product_ID, '_product_image_gallery', $attach_ids);
+                                    }
+
                                 }
                             } else {
                                 if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
                                     if (!in_array(basename($image), $woo_filename_gallery)) {
                                         $attach_ids = linksync_insert_image($image, $product_ID);
-                                        mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
+                                        $wpdb->query(
+                                            $wpdb->prepare(
+                                                "UPDATE `" . $wpdb->postmeta . "`
+                                                SET meta_value=CONCAT(meta_value,',%d')
+                                                WHERE post_id= %d AND meta_key='_product_image_gallery'",
+                                                $attach_ids,$product_ID
+                                            )
+                                        );
                                     }
                                 } else {
                                     $attach_ids = linksync_insert_image($image, $product_ID);
-                                    $imageDb = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $product_ID . "'"));
-                                    if ($imageDb != 0)
-                                        mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
-                                    else
+                                    $imageDb = $wpdb->get_results(
+                                                $wpdb->prepare(
+                                                    "SELECT * FROM  `" . $wpdb->postmeta . "`
+                                                    WHERE  meta_key='_product_image_gallery' AND `post_id` = %d ",
+                                                    $product_ID
+                                                )
+                                    );
+                                    $imageDb = $wpdb->num_rows;
+                                    if ($imageDb != 0){
+                                        $wpdb->query(
+                                            $wpdb->prepare(
+                                                "UPDATE `" . $wpdb->postmeta . "`
+                                                SET meta_value=CONCAT(meta_value,',%d')
+                                                WHERE post_id= %d AND meta_key='_product_image_gallery'",
+                                                $attach_ids,$product_ID
+                                            )
+                                        );
+
+                                    }else{
                                         add_post_meta($product_ID, '_product_image_gallery', $attach_ids);
+                                    }
+
                                 }
                             }
                         }
@@ -151,15 +213,36 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
                             if (isset($woo_filename_gallery) && !empty($woo_filename_gallery)) {
                                 if (!in_array(basename($image), $woo_filename_gallery)) {
                                     $attach_ids = linksync_insert_image($image, $product_ID);
-                                    mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
+                                    $wpdb->query(
+                                        $wpdb->prepare(
+                                            "UPDATE `" . $wpdb->postmeta . "`
+                                            SET meta_value=CONCAT(meta_value,',%d')
+                                            WHERE post_id= %d AND meta_key='_product_image_gallery'",
+                                            $attach_ids,$product_ID)
+                                    );
                                 }
                             } else {
                                 $attach_ids = linksync_insert_image($image, $product_ID);
-                                $imageDb = mysql_num_rows(mysql_query("SELECT * FROM  `" . $wpdb->prefix . "postmeta` WHERE  meta_key='_product_image_gallery' AND `post_id` ='" . $product_ID . "'"));
-                                if ($imageDb != 0)
-                                    mysql_query("UPDATE `" . $wpdb->prefix . "postmeta` SET meta_value=CONCAT(meta_value,',$attach_ids') WHERE post_id='" . $product_ID . "' AND meta_key='_product_image_gallery'");
-                                else
+                                $imageDb = $wpdb->get_results(
+                                                    $wpdb->prepare(
+                                                        "SELECT * FROM  `" . $wpdb->postmeta . "`
+                                                        WHERE  meta_key='_product_image_gallery' AND `post_id` = %d ",
+                                                        $product_ID
+                                                    )
+                                );
+                                $imageDb = $wpdb->num_rows;
+                                if ($imageDb != 0){
+                                    $wpdb->query(
+                                        $wpdb->prepare(
+                                            "UPDATE `" . $wpdb->postmeta . "`
+                                            SET meta_value=CONCAT(meta_value,',%d')
+                                            WHERE post_id= %d AND meta_key='_product_image_gallery'",
+                                            $attach_ids, $product_ID
+                                        )
+                                    );
+                                }else{
                                     add_post_meta($product_ID, '_product_image_gallery', $attach_ids);
+                                }
                             }
                         }
                         unset($gallery_data);

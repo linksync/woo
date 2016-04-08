@@ -1,0 +1,126 @@
+.loader-please-wait {
+    background-image: url(../../images/linksync/shader.png);
+    position: fixed;
+    display: none;
+    z-index: 1000000000;
+    height: 100%;
+    width: 100%;
+    left: 0;
+    top: 0;
+}
+
+#h2_linksync{
+    font-size: 17px !important;
+    font-weight: 400;
+    padding: 0px 0px 0px 0;  
+    font-style: normal;
+    color: #333;
+    font-family: Helvetica,Arial,sans-serif;
+    margin: 0 0 5px;
+    text-align: center;
+    line-height: 1.3em !important; 
+}
+.loader-please-wait .loader-content {
+
+    border-radius: 10px; 
+    box-shadow: 3px 6px 8px #555;
+    position: relative;
+    top: 200px;
+    width: 300px;
+    margin: auto;
+    padding: 20px 0;
+    text-align: center;
+    background-color: #fff;
+    border: 1px solid #666;
+}
+
+/*
+============================================================================================
+    TIPTIP
+*/
+#tiptip_holder{
+    margin:183px 185px 64px 608px !important;
+    display: none;
+}
+
+#tiptip_arrow{
+    margin-left: 74.5px; 
+    margin-top: 47px;
+}
+
+/*
+    Modal style in Entering Api key
+*/
+.reveal-modal > form > center:nth-child(1) > span{
+    color: #0074a2;
+    font-size: 18px;       
+}
+.reveal-modal > form > div:nth-child(3){
+    float: left;
+    font-size: 14px;
+    color: #0074a2;
+    text-align: right;
+    margin-top: 4px;
+}
+
+.reveal-modal > form > div:nth-child(4){
+    float: left;
+    margin-left: 10px;
+}
+
+#wpbody-content > div.wrap > div.wrap > fieldset:nth-child(2) > div{
+    float: right;
+    padding: 9px;
+}
+
+/*
+    POP UP SYNC ALL
+*/
+#pop_up_syncll{
+    width: 600px !important;
+    top: 24% !important;
+    display: none;
+    z-index: 999999999;
+    position: fixed !important;
+    padding: 10px !important;
+    line-height: 30px !important;
+    left: 25%;
+    position: absolute;
+    top: 100%;
+    float: left;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    -webkit-background-clip: padding-box;
+    -moz-background-clip: padding;
+    background-clip: padding-box;
+}
+#syncing_close{
+    display: none;
+    height: 13px;
+    float: right;
+}
+
+#button > input:nth-child(1){
+    color: green;
+    margin-left: 168px;
+    width: 90px;
+    font-weight: 900;
+    float: left;
+}
+
+#button > input:nth-child(2){
+    color: red;
+    margin-left: 83px;
+    width: 90px;
+    font-weight: 900;
+}
+/*
+ ===========================================================================================
+*/

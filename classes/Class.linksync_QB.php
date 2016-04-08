@@ -61,11 +61,11 @@ class linksync_class_QB extends linksync_class {
                         }
                     }
                 }
-                $db_sale_price = mysql_query("SELECT * FROM `" . $wpdb->prefix . "postmeta` WHERE `post_id` = '" . $result_reference['data'] . "' AND meta_key='_sale_price'");
+                $db_sale_price = $wpdb->get_results($wpdb->prepare("SELECT * FROM `" . $wpdb->prefix . "postmeta` WHERE `post_id` = %d AND meta_key='_sale_price'",$result_reference['data']), ARRAY_A);
                 if (get_option('excluding_tax') == 'on') {
                     //If 'yes' then product price SELL Price(excluding any taxes.)  
-                    if (0 != mysql_num_rows($db_sale_price)) {
-                        $result_sale_price = mysql_fetch_assoc($db_sale_price);
+                    if (0 != $wpdb->num_rows) {
+                        $result_sale_price = $db_sale_price[0];
                         if ($result_sale_price['meta_value'] == NULL) {
                             update_post_meta($result_reference['data'], '_price', $cost_price);
                         }
@@ -81,8 +81,8 @@ class linksync_class_QB extends linksync_class {
                 } else {
                     //If 'no' then product price SELL Price(including any taxes.) 
                     $tax_and_cost_price_product = $cost_price + $product['tax_value'];
-                    if (0 != mysql_num_rows($db_sale_price)) {
-                        $result_sale_price = mysql_fetch_assoc($db_sale_price);
+                    if (0 != $wpdb->num_rows) {
+                        $result_sale_price = $db_sale_price[0];
                         if ($result_sale_price['meta_value'] == NULL) {
                             update_post_meta($result_reference['data'], '_price', $tax_and_cost_price_product);
                         }
@@ -102,9 +102,10 @@ class linksync_class_QB extends linksync_class {
                 if (get_option('ps_brand') == 'on') {
                     // Delete existing brand then create 
                     $term_taxonmy_id = array();
-                    $data = mysql_query("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_brand'");
-                    while ($exists_brands = mysql_fetch_assoc($data)) {
-                        mysql_query("DELETE FROM `" . $wpdb->prefix . "term_relationships` WHERE object_id='" . $result_reference['data'] . "' AND term_taxonomy_id='" . $exists_brands['term_taxonomy_id'] . "'");
+                    $data = $wpdb->get_results("SELECT term_taxonomy_id FROM  `" . $wpdb->prefix . "term_taxonomy` WHERE taxonomy='product_brand'", ARRAY_A);
+                    foreach($data as $exists_brands) {
+                        $sql = "DELETE FROM `" . $wpdb->term_relationships . "` WHERE object_id= %d AND term_taxonomy_id= %d ";
+                        $wpdb->query($wpdb->prepare($sql,$result_reference['data'],$exists_brands['term_taxonomy_id']));
                     }
 
                     if (isset($product['brands']) && !empty($product['brands'])) {
@@ -120,8 +121,23 @@ class linksync_class_QB extends linksync_class {
                                     if (!isset($termid_taxonomy->errors)) {
                                         //print_r($termid_taxonomy);
                                         if (isset($termid_taxonomy['term_taxonomy_id']) && isset($termid_taxonomy['term_id'])) {
-                                            mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $result_reference['data'] . "','" . $termid_taxonomy['term_taxonomy_id'] . "',0)") or die('Error in Line: ' . __LINE__ . " " . mysql_error());
-                                            mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1  WHERE term_id='" . $termid_taxonomy['term_id'] . "'") or die('Error in Line: ' . __LINE__ . " " . mysql_error());
+                                            $wpdb->insert(
+                                                    $wpdb->term_relationships,
+                                                    array(
+                                                        'object_id'         =>  $result_reference['data'],
+                                                        'term_taxonomy_id'  =>  $termid_taxonomy['term_taxonomy_id'],
+                                                        'term_order'        =>  0
+                                                    )
+                                            );
+
+                                            $wpdb->query(
+                                                $wpdb->prepare(
+                                                    "UPDATE `" . $wpdb->term_taxonomy .
+                                                    "` SET count=count+1  WHERE term_id= %d ",
+                                                    $termid_taxonomy['term_id']
+                                                )
+                                            );
+
                                         }
                                     }
                                 }
@@ -137,9 +153,9 @@ class linksync_class_QB extends linksync_class {
                 $status = 'draft';
 
             #---------GET product Status-------------#
-            $product_status_db = mysql_query("SELECT post_status FROM `" . $wpdb->prefix . "posts` WHERE post_status ='pending' AND ID='" . $result_reference['data'] . "'");
+            $product_status_db = $wpdb->get_results($wpdb->prepare("SELECT post_status FROM `" . $wpdb->posts . "` WHERE post_status ='pending' AND ID= %d ", $result_reference['data']), ARRAY_A);
 
-            if (mysql_num_rows($product_status_db) != 0) {
+            if (0 != $wpdb->num_rows) {
                 if (get_option('ps_pending') == 'on')
                     $status = 'pending';
             }
@@ -260,8 +276,22 @@ class linksync_class_QB extends linksync_class {
                                         }
                                         if (!isset($termid_taxonomy->errors)) {
                                             if (isset($termid_taxonomy['term_taxonomy_id']) && isset($termid_taxonomy['term_id'])) {
-                                                mysql_query("INSERT INTO `" . $wpdb->prefix . "term_relationships`(object_id,term_taxonomy_id,term_order) VALUES('" . $product_ID . "','" . $termid_taxonomy['term_taxonomy_id'] . "',0)");
-                                                mysql_query("UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1  WHERE term_id='" . $termid_taxonomy['term_id'] . "'");
+                                                $wpdb->insert(
+                                                        $wpdb->term_relationships,
+                                                        array(
+                                                            'object_id'         => $product_ID,
+                                                            'term_taxonomy_id'  => $termid_taxonomy['term_taxonomy_id'],
+                                                            'term_order'        => 0
+                                                        )
+                                                );
+
+                                                $wpdb->query(
+                                                        $wpdb->prepare(
+                                                            "UPDATE `" . $wpdb->term_taxonomy .
+                                                            "` SET count=count+1  WHERE term_id= %d ",
+                                                            $termid_taxonomy['term_id']
+                                                        )
+                                                );
                                             }
                                         }
                                     }
@@ -320,7 +350,7 @@ class linksync_class_QB extends linksync_class {
 
 //        $prod_update_suc = get_option('prod_update_suc'); # it has NULL or DATETIME 
 //        if (isset($prod_update_suc) && !empty($prod_update_suc)) {
-//            linksync_class::add('Product Sync Vend to Woo', 'success', 'Product synced SKU:' . $product['sku'], get_option('linksync_laid'));
+//            LSC_Log::add('Product Sync Vend to Woo', 'success', 'Product synced SKU:' . $product['sku'], get_option('linksync_laid'));
 //        }
     }
 

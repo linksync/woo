@@ -1,0 +1,23 @@
+ fieldset{
+    border: 2px groove threedface;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+p{
+    margin-top: 10px;
+}
+
+.stock_control_div{
+	padding-left: 25px;
+}
+
+#response{
+	padding: 15px; 
+	margin-top: 25px; 
+	display: none;
+}
+
+#wpbody-content > div.wrap > form > fieldset > p > label{
+	width: auto;
+}

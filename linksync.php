@@ -5,12 +5,14 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.3.2
+  Version: 2.4.0
  */
-// RE-CONNECT because it's wp set on mysqli
-@mysql_connect(DB_HOST, DB_USER, DB_PASSWORD);
-@mysql_select_db(DB_NAME);
-@mysql_set_charset('utf8');
+include 'ls-constants.php';
+include 'functions.php';
+include 'ls-linksync.php';
+
+
+
 /*
  * To handle all languages
  */
@@ -19,16 +21,7 @@ mb_http_output('UTF-8');
 mb_http_input('UTF-8');
 mb_language('uni');
 mb_regex_encoding('UTF-8');
-//include_once(dirname(__FILE__) . '/linksync_add_action_product.php'); #POST Product hook file
-if (!@include_once(dirname(__FILE__) . '/linksync_add_action_order.php')) {
-    echo ("<p style='text-align:center;'>Linksync : linksync_add_action_order.php File Not Found !</p>");
-}  // GET Order hook file
-if (!@include_once(dirname(__FILE__) . '/linksync_add_action_delete.php')) {
-    echo ("<p style='text-align:center;'>Linksync : linksync_add_action_delete.php File Not Found !</p>");
-}
-if (!@include_once(dirname(__FILE__) . '/linksync_add_action_product_QB.php')) {
-    echo ("<p style='text-align:center;'>Linksync : linksync_add_action_product_QB.php File Not Found !</p>");
-}
+
 if (!@include_once(dirname(__FILE__) . '/linksync_plugin_updater/linksync_plugin_updater.php')) {
     echo ("<p style='text-align:center;'>Linksync : linksync Plugin Updater File Not Found !</p>");
 }
@@ -41,12 +34,42 @@ class linksync {
         add_action('admin_menu', array(&$this, 'linksync_wooVersion_check'));
         add_action('admin_notices', array('linksync', 'linksync_show_message'));
         add_action('plugins_loaded', array(&$this, 'linsksyncVend_init'), 0);
-// add_action('wp', array('linksync', 'linksync_dailyCron'));
-// add_action('linksync_logs_clear', array('linksync', 'clearLogsDetails'));
+        
         add_action('admin_notices', array('linksync', 'linksync_video_message'));
         add_filter('contextual_help', array('linksync', 'linksync_help'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array(&$this, 'plugin_action_links'));
+
+        /**
+         * Add Styles and Javascript files to wp-admin area
+         */
+         add_action( 'admin_enqueue_scripts', array($this, 'ls_custom_styles_and_scripts') );
     }
+
+    public function ls_custom_styles_and_scripts(){
+       //Check for linksync plugin page before adding the styles and scripts to wp-admin
+       if(isset($_GET['page']) && $_GET['page'] == 'linksync'){
+
+            //local wp-content url path
+            $wp_content_url = content_url().'/';
+
+            wp_enqueue_style( 'ls-styles', LS_ASSETS_URL.'css/style.css' );
+            
+            //settings tab styles and scripts
+            wp_enqueue_style( 'ls-settings-tab', LS_ASSETS_URL.'css/admin-tabs/ls-plugins-setting.css' );
+            wp_enqueue_style( 'ls-reveal-style', LS_ASSETS_URL.'css/admin-tabs/ls-reveal.css' );
+            wp_enqueue_script( 'ls-tiptip-plugin', LS_ASSETS_URL.'js/jquery-tiptip/jquery.tipTip.min.js', array( 'jquery' ) );
+            wp_enqueue_script( 'ls-reveal-script', LS_ASSETS_URL.'js/jquery-tiptip/jquery.reveal.js', array( 'jquery' ) );
+            wp_enqueue_script( 'ls-jquery-ui-plugin', LS_ASSETS_URL.'js/jquery-tiptip/jquery-ui.js', array( 'jquery' ) );
+            wp_enqueue_script( 'ls-custom-scripts', LS_ASSETS_URL.'js/ls-custom.js', array( 'jquery' ) );
+            
+            //ls-plugins-tab-configuration styles and scripts
+            wp_enqueue_style( 'ls-jquery-ui', LS_ASSETS_URL.'css/jquery-ui/jquery-ui.css' );
+            wp_enqueue_style( 'ls-tab-configuration-style', LS_ASSETS_URL.'css/admin-tabs/ls-plugins-tab-configuration.css' );
+
+            
+       }    
+    }
+
 
     public static function activate() {
         global $wpdb;
@@ -168,22 +191,16 @@ class linksync {
         $webhook_url_code = linksync::linksync_autogenerate_code();
         add_option('webhook_url_code', $webhook_url_code);
 // Logs Record Table 
-        $sql1 = 'CREATE TABLE IF NOT EXISTS `' . $wpdb->prefix . 'linksync_log`(
-			`id_linksync_log` int(10) unsigned NOT NULL auto_increment,
-			`method` varchar(200),
-			`result` varchar(200),
-                        `laid` varchar(50),
-			`message` text,
-			`date_add` datetime,
-			PRIMARY KEY (`id_linksync_log`)) DEFAULT CHARSET=utf8';
-        $sql2 = 'CREATE TABLE IF NOT EXISTS `' . $wpdb->prefix . 'linksync_laidKey`(
-			`id` int(10) unsigned NOT NULL auto_increment,
-			`api_key` varchar(200),
-                        `status` varchar(50),
-                        `date_add` date,
-			PRIMARY KEY (`id`)) DEFAULT CHARSET=utf8';
-        dbDelta($sql1);
-        dbDelta($sql2);
+
+        /**
+         * Create table for logs
+         */
+        LSC_Log::instance()->create_table();
+
+        /**
+         * Create the table for api keys
+         */
+        LS_Vend_Api_Key::create_table();
 // Removing Spaces b/w  sku value of product 
 // linksync::linksync_removespaces_of_exists_product();
     }
@@ -227,7 +244,7 @@ class linksync {
                         }
                         fclose($fp);
                     }
-                    linksync_class::add('Daily Cron', 'Success', 'Older 10000 Lines Removed!', '-');
+                    LSC_Log::add('Daily Cron', 'Success', 'Older 10000 Lines Removed!', '-');
                 }
             }
         }
@@ -253,7 +270,7 @@ class linksync {
     }
 
     public function linksync_settings() {
-        include(sprintf("%s/settings.php", dirname(__FILE__)));
+        include LS_INC_DIR.'view/admin-tabs/ls-plugins-setting.php';
     }
 
     public static function check_required_plugins() {
@@ -300,7 +317,7 @@ class linksync {
 
     public function linksync_logs() {
         include_once(dirname(__FILE__) . '/classes/Class.linksync.php');
-        linksync_class::printallLogs();
+        LSC_Log::printallLogs();
     }
 
     public static function appid_app($app_id) {
@@ -413,13 +430,13 @@ class linksync {
 #------------------------PRODUCT POST---------------------------#
 
     public static function linksync_productPost() {
-        include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Handle Module Functions
-        include_once(dirname(__FILE__) . '/linksync_add_action_product.php'); #POST Product hook file
+        include_once dirname(__FILE__) . '/classes/Class.linksync.php'; # Handle Module Functions
+        include_once  LS_INC_DIR. 'apps/vend/functions/ls-add-action-product.php'; #POST Product hook file
     }
 
     public static function linksync_productPost_QBO() {
-        include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Handle Module Functions
-        include_once(dirname(__FILE__) . '/linksync_add_action_product_QB.php'); #POST Product hook file
+        include_once dirname(__FILE__) . '/classes/Class.linksync.php'; # Handle Module Functions
+        include_once LS_INC_DIR. 'apps/qbo/functions/ls-add-action-product-QB.php'; #POST Product hook file
     }
 
 // Function to used to remove space b/w sku 
@@ -572,7 +589,9 @@ class linksync {
         $result = $apicall->testConnection();
         if (isset($result) && !empty($result)) {
             if (isset($result['errorCode']) && !empty($result['userMessage'])) {
-                mysql_query("UPDATE `" . $wpdb->prefix . "linksync_laidKey` SET status='Invalid' WHERE api_key='$LAIDKey'");
+                
+                LS_Vend_Api_Key::update_status('Invalid',$LAIDKey);
+
                 update_option('linksync_status', "Inactive");
                 update_option('linksync_last_test_time', current_time('mysql'));
                 update_option('linksync_connected_url', "");
@@ -580,7 +599,7 @@ class linksync {
                 update_option('linksync_connectionwith', '');
                 update_option('linksync_addedfile', '');
                 update_option('linksync_frequency', $result['userMessage']);
-                linksync_class::add('checkAPI Key', 'Fail', $result['userMessage'], $LAIDKey);
+                LSC_Log::add('checkAPI Key', 'Fail', $result['userMessage'], $LAIDKey);
                 $class1 = 'updated';
                 $class2 = 'error';
                 $response['error'] = 'Connection Not Established because of ' . $result['userMessage'];
@@ -617,7 +636,7 @@ class linksync {
                     $webhook = $apicall->webhookConnection(content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'no');
                     if (isset($webhook) && !empty($webhook)) {
                         if (isset($webhook['result']) && $webhook['result'] == 'success') {
-                            linksync_class::add('WebHookConnection', 'success', 'Connected to a file ' . content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
+                            LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
                             update_option('linksync_addedfile', '<a href="' . content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . content_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
                         }
                     }
@@ -626,7 +645,7 @@ class linksync {
                         $server_response = strtotime($result['time']);
                         $server_time = time();
                         $time = $server_response - $server_time;
-                        linksync_class::add('Time Offset', 'success', 'Server Response:' . $result['time'] . ' Current Server Time:' . date("Y-m-d H:i:s") . ' Time Offset: ' . date("H:i:s", abs($time)), $LAIDKey);
+                        LSC_Log::add('Time Offset', 'success', 'Server Response:' . $result['time'] . ' Current Server Time:' . date("Y-m-d H:i:s") . ' Time Offset: ' . date("H:i:s", abs($time)), $LAIDKey);
                         update_option('linksync_time_offset', $time);
                     }
 
@@ -638,7 +657,7 @@ class linksync {
                                 if (isset($response_outlets['errorCode']) && !empty($response_outlets['userMessage'])) {
                                     update_option('ps_outlet_details', 'off');
                                     $response_ = $response_outlets['userMessage'];
-                                    linksync_class::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
+                                    LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                                 } else {
                                     foreach ($response_outlets['outlets'] as $key => $value) {
                                         $oulets["{$key}"] = $value['id'];
@@ -660,7 +679,7 @@ class linksync {
                             if (isset($response_outlets['errorCode']) && !empty($response_outlets['userMessage'])) {
                                 update_option('wc_to_vend_outlet_detail', 'off');
                                 $response_ = $response_outlets['userMessage'];
-                                linksync_class::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
+                                LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                             } else {
                                 $two_way_wc_to_vend = $response_outlets['outlets'][0]['name'] . '|' . $response_outlets['outlets'][0]['id'];
                                 update_option('wc_to_vend_outlet_detail', $two_way_wc_to_vend);
@@ -680,19 +699,23 @@ class linksync {
                             }
                         }
                     }
-                    mysql_query("UPDATE `" . $wpdb->prefix . "linksync_laidKey` SET status='connected' WHERE api_key='$LAIDKey'");
+                    
+                    LS_Vend_Api_Key::update_status('connected',$LAIDKey);
+                    
                     update_option('linksync_status', 'Active');
                     update_option('linksync_last_test_time', current_time('mysql'));
                     update_option('linksync_connected_url', get_option('linksync_connected_url'));
                     update_option('linksync_frequency', 'Valid API Key');
                     update_option('laid_message', isset($result['message']) ? $result['message'] : null);
-                    linksync_class::add('isConnected', 'success', 'Connected URL is ' . get_option('linksync_connected_url'), $LAIDKey);
+                    LSC_Log::add('isConnected', 'success', 'Connected URL is ' . get_option('linksync_connected_url'), $LAIDKey);
                     $class2 = 'updated';
                     $class1 = 'error';
                     update_option('linksync_laid', $LAIDKey);
                     $response['success'] = 'Connection is established Successfully!!';
                 } else {
-                    mysql_query("UPDATE `" . $wpdb->prefix . "linksync_laidKey` SET status='Invalid' WHERE api_key='$LAIDKey'");
+                   
+                    LS_Vend_Api_Key::update_status('Invalid',$LAIDKey);
+
                     update_option('linksync_status', "Inactive");
                     update_option('linksync_last_test_time', current_time('mysql'));
                     update_option('linksync_connected_url', get_option('linksync_connected_url'));
@@ -700,14 +723,16 @@ class linksync {
                     update_option('linksync_connectedto', "The supplied API Key is not valid for use with linksync for WooCommerce.");
                     update_option('linksync_connectionwith', 'Supplied API Key not valid');
                     update_option('linksync_frequency', 'Invalid API Key');
-                    linksync_class::add('checkAPI Key', 'fail', 'Invalid API Key', '-');
+                    LSC_Log::add('checkAPI Key', 'fail', 'Invalid API Key', '-');
                     $class1 = 'updated';
                     $class2 = 'error';
                     $response['error'] = "The supplied API Key is not valid for use with linksync for WooCommerce.";
                 }
             }
         } else {
-            mysql_query("UPDATE `" . $wpdb->prefix . "linksync_laidKey` SET status='Invalid' WHERE api_key='$LAIDKey'");
+           
+            LS_Vend_Api_Key::update_status('Invalid',$LAIDKey);
+
             update_option('linksync_status', "Inactive");
             update_option('linksync_last_test_time', current_time('mysql'));
             update_option('linksync_connected_url', get_option('linksync_connected_url'));
@@ -715,7 +740,7 @@ class linksync {
             update_option('linksync_connectedto', "The supplied API Key is not valid for use with linksync for WooCommerce.");
             update_option('linksync_connectionwith', 'Supplied API Key not valid');
             update_option('linksync_frequency', 'Invalid API Key');
-            linksync_class::add('checkAPI Key', 'fail', 'Invalid API Key', '-');
+            LSC_Log::add('checkAPI Key', 'fail', 'Invalid API Key', '-');
             $class1 = 'updated';
             $class2 = 'error';
             $response['error'] = "The supplied API Key is not valid for use with linksync for WooCommerce.";

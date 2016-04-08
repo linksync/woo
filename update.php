@@ -23,17 +23,17 @@ if (flock($fp, LOCK_EX)) {  // acquire an exclusive lock
         die('Access is denied');
     }
     if (!isset($_REQUEST['c']) || @get_option('webhook_url_code') != $_REQUEST['c']) {
-        linksync_class::add('Webhook Triggered', 'error', 'Invalid Request', ''); # Error to be loggged 
-        die('Access is denied');
+        LSC_Log::add('Webhook Triggered', 'error', 'Invalid Request', ''); # Error to be loggged 
+        die('Access is denied, Webhook is not the same');
     }
     $status = get_option('linksync_sycning_status');
     if (isset($status) && $status == 'running') {
-        die('Access is denied');
+        die('Access is denied, status running');
     }
 
     $image_process = get_option('image_process');
     if (isset($image_process) && $image_process == 'running') {
-        die('Access is denied');
+        die('Access is denied, image process still running');
     }
 
     if (isset($_REQUEST['sendlog'])) {
@@ -52,10 +52,10 @@ if (flock($fp, LOCK_EX)) {  // acquire an exclusive lock
             $apicall_result = $apicall->linksync_sendLog($json);
             if (isset($apicall_result['result']) && $apicall_result['result'] == 'success') {
                 $response = 'Logs Sent Successfully !';
-                linksync_class::add('Webhook Triggered', 'success', $response, ''); # success to be loggged 
+                LSC_Log::add('Webhook Triggered', 'success', $response, ''); # success to be loggged 
             } else {
                 $response = "Error:Unable to Send Logs Details";
-                linksync_class::add('Webhook Triggered', 'error', $response, ''); # error to be loggged  
+                LSC_Log::add('Webhook Triggered', 'error', $response, ''); # error to be loggged  
             }
         }
     }
@@ -205,7 +205,7 @@ if (flock($fp, LOCK_EX)) {  // acquire an exclusive lock
                     update_option('prod_update_suc', get_option('prod_update_suc'));
                 }
                 if (isset($products['pagination']['results']) && $products['pagination']['results'] != 0)
-                    linksync_class::add('Product Sync Vend to Woo', 'success', $products['pagination']['results'] . ' Product(s) synced.', $LAIDKey);
+                    LSC_Log::add('Product Sync Vend to Woo', 'success', $products['pagination']['results'] . ' Product(s) synced.', $LAIDKey);
 
                 $message['message'].= 'Product Sync:Complete Successfully!!';
             } else {
@@ -255,7 +255,7 @@ if (flock($fp, LOCK_EX)) {  // acquire an exclusive lock
                             }
                             update_option('prod_last_page', NULL);
                             if (isset($products['pagination']['results']) && $products['pagination']['results'] != 0)
-                                linksync_class::add('Product Sync Vend to Woo', 'success', $products['pagination']['results'] . ' Product(s) synced.', $LAIDKey);
+                                LSC_Log::add('Product Sync Vend to Woo', 'success', $products['pagination']['results'] . ' Product(s) synced.', $LAIDKey);
                             $message['message'] = isset($order_message) ? $order_message . 'Product Sync:Complete Successfully!!' : 'Product Sync:Complete Successfully!!';
                         }elseif (isset($api_response) && !empty($api_response)) { 
                             $message['image_process'] = 'running';
@@ -352,14 +352,14 @@ if (flock($fp, LOCK_EX)) {  // acquire an exclusive lock
                 update_option('prod_update_suc', get_option('prod_update_suc'));
             }
             if (isset($products['pagination']['results']) && $products['pagination']['results'] != 0)
-                linksync_class::add('Product Sync Vend to Woo', 'success', $products['pagination']['results'] . ' Product(s) synced.', $LAIDKey);
+                LSC_Log::add('Product Sync Vend to Woo', 'success', $products['pagination']['results'] . ' Product(s) synced.', $LAIDKey);
 
             $message['message'].= 'Product Sync:Complete Successfully!!';
         } else {
             $message['message'].= '<span style="color:#d54e21;">Product Sync has been Disabled Or Not Selected</span>';
         }
     } else {
-        linksync_class::add('Webhook Triggered', 'error', 'Invalid Request', ''); # Error to be loggged 
+        LSC_Log::add('Webhook Triggered', 'error', 'Invalid Request', ''); # Error to be loggged 
     }
     fflush($fp);            // flush output before releasing the lock 
     flock($fp, LOCK_UN);    // release the lock
