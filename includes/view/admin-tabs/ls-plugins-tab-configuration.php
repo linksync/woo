@@ -162,7 +162,7 @@ $laid = LS_Vend_Api_Key::select_all('OBJECT');
                    title=' Unsure about how to generate an API Key? Click the icon for a specific guidelines to get you up and running with linksync Vend & WooCommerce.'>
                     <img class="help_tip" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16">
                 </a>
-                <input type="text" size="30 name="apikey" " value="<?php echo $laid[0]->api_key; ?>">
+                <input type="text" size="30" name="apikey"  value="<?php echo $laid[0]->api_key; ?>">
                 <input type="hidden" value="<?php echo $laid[0]->id; ?>" name="id">
                 <input type="submit" value="Update" class='button color-green'  name="apikey_update">
             </div>

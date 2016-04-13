@@ -368,8 +368,8 @@ if (isset($message) && !empty($message)) {
                     <img style="margin-bottom:-4px;" title="WooCommerce is the 'master' when it comes to managing product and inventory, and product updates are one-way, from WooCommerce to Vend - product and inventory data does not update back to WooCommerce to Vend. You must enable Order Syncing from Vend to WooCommerce for this option to work correctly. " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16">
                 </a>&nbsp;&nbsp; &nbsp;&nbsp;  
 
-            <input type="radio" id="ls-product-disable" <?php echo ($product_sync_type == 'disabled_sync' ? 'checked' : ''); ?> name="product_sync_type" value="disabled_sync" id="disabled_sync_id"> 
-                <label for="ls-product-disable">Disabled</label> 
+            <input type="radio" id="disabled_sync_id" <?php echo ($product_sync_type == 'disabled_sync' ? 'checked' : ''); ?> name="product_sync_type" value="disabled_sync" >
+                <label for="disabled_sync_id">Disabled</label>
                 <a  href="https://www.linksync.com/help/woocommerce">
                     <img style="margin-bottom:-4px;" title="Prevent any product syncing from taking place between your Vend and WooCommerce stores. " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16">
                 </a>
