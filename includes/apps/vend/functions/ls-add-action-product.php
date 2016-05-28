@@ -472,7 +472,7 @@ if (get_option('linksync_status') == 'Active') {
 
                                                         $attribute_query = $wpdb->get_results($wpdb->prepare($query,$attribute_name), ARRAY_A);
                                                         if (0 != $wpdb->num_rows) {
-                                                            $attribute_name_result = $attribute_queryp[0];
+                                                            $attribute_name_result = $attribute_query[0];
                                                             $attributeName = $attribute_name_result['attribute_label'];
                                                         }
                                                         $variant['option_' . $option[$check] . '_name'] = isset($attributeName) ? $attributeName : '';

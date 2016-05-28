@@ -162,6 +162,7 @@ class linksync_class {
 
     public function isReferenceExists($reference) {
         global $wpdb;
+        $reference_result = null;
         $sql_query = "SELECT post_id
                       FROM `" . $wpdb->postmeta . "`
                       WHERE meta_key='_sku' AND BINARY meta_value= %s ";
@@ -1915,7 +1916,7 @@ class linksync_class {
             $db_insert = $wpdb->query($wpdb->prepare(
                                         "INSERT INTO `" . $wpdb->terms . "`
                                           (name,slug,term_group)
-                                          VALUES(%s ,%s ,0)"
+                                          VALUES(%s ,%s ,%d)"
                                         , $term_value_check
                                         , strtolower($slug), 0
                          ));
@@ -2815,7 +2816,7 @@ class linksync_class {
                         if (get_option('ps_attribute') == 'on') {
                             $wpdb->query($wpdb->prepare(
                                 "DELETE FROM `" . $wpdb->postmeta . "`
-                                WHERE post_id= %d AND meta_key LIKE 'attribute_pa_%'"
+                                WHERE post_id= %d AND meta_key LIKE 'attribute_pa_%%'"
                                 , $variation_product_id
                             ));
                         }
@@ -3011,25 +3012,27 @@ function addImage_thumbnail($image_url, $post_id) {
 
 function checkAndDelete_attachement($image_name) {
     global $wpdb;
-    $image_query = $wpdb->get_results($wpdb->prepare(
+    $image_query = $wpdb->get_results(
                             "SELECT * FROM  `" . $wpdb->postmeta . "`
-                            WHERE  meta_key='_wp_attached_file' AND `meta_value` LIKE '%" . $image_name . "'"
-                    ));
-    foreach ($image_query as $images) {
+                            WHERE  meta_key='_wp_attached_file' AND `meta_value` LIKE '%" . $image_name . "'",ARRAY_A
+                    );
+	if(!empty($image_query)){
+		foreach ($image_query as $images) {
 
-        $check_attachment = $wpdb->get_results($wpdb->prepare(
-                                        "SELECT * FROM  `" . $wpdb->postmeta . "`
+			$check_attachment = $wpdb->get_results($wpdb->prepare(
+				"SELECT * FROM  `" . $wpdb->postmeta . "`
                                         WHERE  meta_key = '_thumbnail_id'  AND meta_value= %s "
-                                        , $images['post_id']
-                            ),ARRAY_A);
-        if ($wpdb->num_rows == 0) {
-            delete_post_meta($images['post_id'], '_wp_attached_file');
-            $wpdb->query($wpdb->prepare(
-                "DELECT FROM `" . $wpdb->posts . "` WHERE ID = %d "
-                , $images['post_id']
-            ));
-        }
-    }
+				, $images['post_id']
+			),ARRAY_A);
+			if ($wpdb->num_rows == 0) {
+				delete_post_meta($images['post_id'], '_wp_attached_file');
+				$wpdb->query($wpdb->prepare(
+					"DELETE FROM `" . $wpdb->posts . "` WHERE ID = %d "
+					, $images['post_id']
+				));
+			}
+		}
+	}
 }
 
 ?>
