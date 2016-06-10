@@ -19,6 +19,9 @@ if (get_option('linksync_status') == 'Active') {
                         $_POST['_sku'] = 'sku_' . $_POST['post_ID'];
                         update_post_meta($_POST['post_ID'], '_sku', 'sku_' . $_POST['post_ID']);
                     }
+					if( isset($_POST['post_title']) ){
+						$_POST['post_title'] = remove_escaping_str($_POST['post_title']);
+					}
                     $product['sku'] = html_entity_decode($_POST['_sku']); //SKU(unique Key/Numbers) 
 
                     if (get_option('woocommerce_calc_taxes') == 'yes') {

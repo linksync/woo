@@ -1337,7 +1337,7 @@ update_option('product_image_ids', NULL);
                         jQuery.ajax({
                             url:  '../wp-content/plugins/linksync/image_uploader.php',
                             type: 'POST',
-                            data: { "get_total": "1",'communication_key':communication_key},
+                            data: { get_total: "1",communication_key:communication_key},
                             success: function(response) { 
                                 jQuery("#please-wait").css("display", "block");
                                 importProduct();

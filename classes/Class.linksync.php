@@ -162,7 +162,7 @@ class linksync_class {
 
     public function isReferenceExists($reference) {
         global $wpdb;
-        $reference_result = null;
+		$reference_result['result'] = 'error';
         $sql_query = "SELECT post_id
                       FROM `" . $wpdb->postmeta . "`
                       WHERE meta_key='_sku' AND BINARY meta_value= %s ";
@@ -453,7 +453,7 @@ class linksync_class {
                 $excluding_tax = get_option('excluding_tax');
             }
 # @return product id if reference exists
-            $result_reference = self::isReferenceExists($reference); #  Check if already exist product into woocommerce
+            $result_reference = $this->isReferenceExists($reference); #  Check if already exist product into woocommerce
 
             include_once(ABSPATH . 'wp-admin/includes/image.php');
 
@@ -1293,18 +1293,16 @@ class linksync_class {
 // code for adding new product int WC
                     $my_post = array(
                         'post_author' => 1,
-//                        'post_date' => current_time('mysql'),
-//                        'post_date_gmt' => gmdate('Y-m-d h:i:s'),
-//                        'post_modified' => current_time('mysql'),
-//                        'post_modified_gmt' => gmdate('Y-m-d h:i:s'),
                         'post_type' => 'product'
                     );
 //Import Name
 //  if (get_option('ps_name_title') == 'on') #we have used wp_insert_post() function that required at least one parameters
                     $my_post['post_title'] = $product['name'];
 //Import Description
-                    if (get_option('ps_description') == 'on')
-                        $my_post['post_content'] = isset($description) && !empty($description) ? $description : '';
+                    if (get_option('ps_description') == 'on'){
+						$my_post['post_content'] = isset($description) && !empty($description) ? $description : '';
+					}
+
 // Import Copy Short Description
                     if (get_option('ps_desc_copy') == 'on')
                         $my_post['post_excerpt'] = isset($description) && !empty($description) ? $description : '';
@@ -2604,7 +2602,10 @@ class linksync_class {
                     if (!empty($product_variants['option_' . $option[$i] . '_value'])) {
                         $term_slug = $this->linksync_check_term_value($product_variants['option_' . $option[$i] . '_value']);
                         if (isset($term_slug) && !empty($term_slug)) {
-                            add_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
+							if( get_option('ps_attribute') == 'on' ){
+								update_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
+							}
+
                             $taxonomy_query = $wpdb->get_results($wpdb->prepare(
                                                             "SELECT * FROM `" . $wpdb->term_taxonomy . "`
                                                             WHERE
@@ -2813,13 +2814,13 @@ class linksync_class {
                             unset($outlet_checker);
                         }
 #----------Remove Post Meta----Attribute----#
-                        if (get_option('ps_attribute') == 'on') {
-                            $wpdb->query($wpdb->prepare(
-                                "DELETE FROM `" . $wpdb->postmeta . "`
-                                WHERE post_id= %d AND meta_key LIKE 'attribute_pa_%%'"
-                                , $variation_product_id
-                            ));
-                        }
+//                        if (get_option('ps_attribute') == 'on') {
+//                            $wpdb->query($wpdb->prepare(
+//                                "DELETE FROM `" . $wpdb->postmeta . "`
+//                                WHERE post_id= %d AND meta_key LIKE 'attribute_pa_%%'"
+//                                , $variation_product_id
+//                            ));
+//                        }
 //                       if (taxonomy_exists('pa_' . strtolower($product_variants['option_' . $option[$i] . '_name']))) {
 //                            wp_delete_object_term_relationships($result_reference['data'], 'pa_' . strtolower($product_variants['option_' . $option[$i] . '_name']));
 //                        }
@@ -2829,16 +2830,7 @@ class linksync_class {
                                  * check attribute lable Exists or Not tbl->woocommerce_attribute_taxonomies
                                  */
                                 $attribute_name = $this->linksync_check_attribute_label($product_variants['option_' . $option[$i] . '_name']);
-                                if (get_option('ps_attribute') == 'off') {
-                                    $wpdb->query($wpdb->prepare(
-                                        "DELETE FROM `" . $wpdb->postmeta . "`
-                                        WHERE
-                                            post_id= %d  AND
-                                            meta_key = %s "
-                                        , $variation_product_id
-                                        , 'attribute_pa_'.strtolower($attribute_name)
-                                    ));
-                                }
+
                                 $visible = get_option('linksync_visiable_attr');
 
                                 $thedata['pa_' . $attribute_name] = Array(
@@ -2854,7 +2846,9 @@ class linksync_class {
                                 if (!empty($product_variants['option_' . $option[$i] . '_value'])) {
                                     $term_slug = $this->linksync_check_term_value($product_variants['option_' . $option[$i] . '_value']);
                                     if (isset($term_slug) && !empty($term_slug)) {
-                                        add_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
+										if( get_option('ps_attribute') == 'on' ){
+											update_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
+										}
                                         $taxonomy_query = $wpdb->get_results($wpdb->prepare(
                                                                              "SELECT * FROM `" . $wpdb->term_taxonomy . "`
                                                                              WHERE term_id= %d AND taxonomy= %s "

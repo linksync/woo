@@ -26,3 +26,19 @@ function ls_print_r($data){
 	echo '</pre>';
 }
 
+
+/**
+ * Remove unneeded string
+ * @param $string
+ * @return mixed|string
+ */
+function remove_escaping_str( $string ){
+	$str_tobe_removed = array("\\");
+	$str = '';
+
+	foreach( $str_tobe_removed as $needle ){
+		$str = str_replace($needle, '', $string );
+	}
+
+	return $str;
+}
