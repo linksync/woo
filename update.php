@@ -9,12 +9,7 @@
 
     include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Class file having API Call functions
     include_once(dirname(__FILE__) . '/classes/Class.linksync_QB.php'); # Class file having API Call functions
-    global $wp;
-// Initializing 
-    $wp->init();
-    $wp->parse_request();
-    $wp->query_posts();
-    $wp->register_globals();
+
     set_time_limit(0);
     if (!in_array('linksync/linksync.php', apply_filters('active_plugins', get_option('active_plugins')))) {
         die('Access is denied');
@@ -60,32 +55,33 @@
     // Check for the Enable app(QuickBook,VEND,etc)
     if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
 
+		$LAIDKey = get_option('linksync_laid'); # Activated LAID KEY
+		$testMode = get_option('linksync_test'); # TEST MODE CHECKS
+
+		$apicall = new linksync_class($LAIDKey, $testMode);
+
+		#-----First Checking For any order---------------#
+		$time_offset = get_option('linksync_time_offset');
+		if (isset($time_offset) && !empty($time_offset)) {
+			$time = $current_date_time_string + $time_offset;
+		} else {
+			$time = $current_date_time_string; # UTC
+		}
+		//for since parameter in getting order and product
+		$result_time = date("Y-m-d H:i:s", $time);
+
         $order_sync_type = get_option('order_sync_type');
         if (isset($order_sync_type) && $order_sync_type == 'vend_to_wc-way') {
-            #-----End Checking valid Webhook Callback -----#
-            $LAIDKey = get_option('linksync_laid'); # Activated LAID KEY
-            $testMode = get_option('linksync_test'); # TEST MODE CHECKS
             update_option('order_detail', '');
-// CREATING OBJECT OF MAIN CLASS
-            $apicall = new linksync_class($LAIDKey, $testMode);
-#-----First Checking For any order---------------#
-            $time_offset = get_option('linksync_time_offset');
-            if (isset($time_offset) && !empty($time_offset)) {
-                $time = $current_date_time_string + $time_offset;
-            } else {
-                $time = $current_date_time_string; # UTC
-            }
-            $result_time = date("Y-m-d H:i:s", $time);
             #order update  Request time
             update_option('order_time_req', $result_time);
             $order_time_suc = get_option('order_time_suc'); # it has NULL or DATETIME
             if (isset($order_time_suc) && !empty($order_time_suc)) {
                 $url = 'since=' . urlencode($order_time_suc);
             }
-            $orderurl = "/api/v1/order/?";
 
             $all_orders = $apicall->linksync_getOrder($url);
-            $orderurl.=isset($url) ? $url : '';
+
             if (isset($all_orders['pagination'])) {
                 if (isset($all_orders['pagination']['results']) && $all_orders['pagination']['results'] != 0) {
                     $vc_to_woocommerce_orders = $apicall->importOrderToWoocommerce($all_orders);
@@ -100,20 +96,6 @@
         $product_sync_type = get_option('product_sync_type');
         if (isset($product_sync_type) && $product_sync_type == 'vend_to_wc-way' || $product_sync_type == 'two_way') { # IT WILL NOT PROCESS IF DISABLED
             update_option('product_detail', NULL);
-#-----End Checking valid Webhook Callback -----#
-            $LAIDKey = get_option('linksync_laid'); # Activated LAID KEY
-            $testMode = get_option('linksync_test'); # TEST MODE CHECKS
-// CREATING OBJECT OF MAIN CLASS 
-
-            $apicall = new linksync_class($LAIDKey, $testMode);
-#-----First Checking For any order---------------#
-            $time_offset = get_option('linksync_time_offset');
-            if (isset($time_offset) && !empty($time_offset)) {
-                $time = $current_date_time_string + $time_offset;
-            } else {
-                $time = $current_date_time_string; # UTC
-            }
-            $result_time = date("Y-m-d H:i:s", $time);
 #Product update  Request time
             update_option('prod_update_req', $result_time);
 
@@ -129,8 +111,8 @@
                     $url.='tags=' . urlencode($value) . '&';
                 }
             }
-
 #----------- End Import by Selected Tags ----------- #
+
             if (@get_option('ps_outlet') == 'on') {
                 if ($product_sync_type == 'vend_to_wc-way') {
                     $outletDb = get_option('ps_outlet_details');
@@ -162,17 +144,18 @@
                 }
             }
             $current_user_id = get_current_user_id();
+
+			$urli = rtrim($url, '&');
+			$urli.='&page=';
+			$page = 1;
+			$last_left_out_page = get_option('prod_last_page');
+			if (isset($last_left_out_page) && !empty($last_left_out_page)) {
+				$page = $last_left_out_page;
+			} else {
+				$page = 1;
+			}
             if ($current_user_id == 0) {
                 // logged_one is 'System'
-                $urli = rtrim($url, '&');
-                $urli.='&page=';
-                $page = 1;
-                $last_left_out_page = get_option('prod_last_page');
-                if (isset($last_left_out_page) && !empty($last_left_out_page)) {
-                    $page = $last_left_out_page;
-                } else {
-                    $page = 1;
-                }
                 do {
                     $requesturl = $urli . $page;
                     $products = $apicall->getProductWithParam($requesturl);
@@ -180,6 +163,14 @@
                         if (!isset($products['errorCode'])) {
                             if (isset($products['products']) && !empty($products['products'])) {
                                 $api_response = $apicall->importProductToWoocommerce($products);
+
+								if (isset($api_response) && !empty($api_response)) {
+									update_option('image_process', 'running');
+									update_option('product_image_ids', $api_response);
+								}else{
+									update_option('image_process', 'complete');
+								}
+
                             }
                             $page++;
                             $products['pagination']['page']++;
@@ -206,15 +197,7 @@
 
                 $message['message'].= 'Product Sync:Complete Successfully!!';
             } else {
-                $urli = rtrim($url, '&');
-                $urli.='&page=';
-                $page = 1;
-                $last_left_out_page = get_option('prod_last_page');
-                if (isset($last_left_out_page) && !empty($last_left_out_page)) {
-                    $page = $last_left_out_page;
-                } else {
-                    $page = 1;
-                }
+
                 $requesturl = $urli . $page;
                 $products = $apicall->getProductWithParam($requesturl);
                 if (isset($products) && !empty($products)) {
@@ -223,19 +206,14 @@
                         $message['product_count'] = ($products['pagination']['page'] - 1) * 50;
                         if (isset($products['products']) && !empty($products['products'])) {
                             $api_response = $apicall->importProductToWoocommerce($products);
-                            $current_user_id = get_current_user_id();
-                            if ($current_user_id == 0) {
-                                // logged_one is 'System'
-                            } else {
-                                //User Manually
-                                if (isset($api_response) && !empty($api_response)) {
-                                    update_option('image_process', 'running');
-                                    update_option('product_image_ids', $api_response);
-                                }else{
-                                    update_option('image_process', 'complete');
-                                }
-                            }
-                            //    echo $product_report = json_encode(array('total_product' => $products['pagination']['results'] . '( ' . $page . 'x' . $products['pagination']['pages'] . ')', 'request_url' => urldecode($requesturl), 'test' => $api_response));
+
+							//User Manually
+							if (isset($api_response) && !empty($api_response)) {
+								update_option('image_process', 'running');
+								update_option('product_image_ids', $api_response);
+							}else{
+								update_option('image_process', 'complete');
+							}
                         }
                         $page++;
                         $products['pagination']['page']++;
@@ -270,6 +248,72 @@
                     echo json_encode($message);
                 }
             }
+        } elseif ( !empty($product_sync_type) && 'wc_to_vend' == $product_sync_type){
+			if (get_option('ps_quantity') == 'on') {
+
+				$url = '';
+				if (isset($result_time) && !empty($result_time)) {
+					$url = 'since=' . urlencode($result_time);
+				}
+
+				$current_page = 1;
+				$total_pages = 0;
+				do{
+					$url .='&page='.$current_page;
+					$products = $apicall->getProductWithParam( $url );
+					if( !empty($products) ){
+						$current_page = $products['pagination']['page'];
+						$total_pages = $products['pagination']['pages'];
+
+						foreach( $products['products'] as $product ){
+
+							if( isset($product['variants']) && !empty( $product['variants'] )){
+
+								foreach( $product['variants'] as $pro_variant ){
+
+									if( !empty($pro_variant['sku']) ){
+										$product_id = ls_get_product_id_by_sku( $pro_variant['sku'] );
+										$product_meta = new LS_Product_Meta($product_id);
+
+										$quantity = 0;
+										if( !empty($pro_variant['outlets']) ){
+											foreach( $pro_variant['outlets'] as $outlet ){
+												if( !empty($outlet['quantity']) ){
+													$quantity += (int)$outlet['quantity'];
+												}
+											}
+										}
+
+										$product_meta->update_stock( $quantity );
+									}
+								}
+							}else{
+								if( !empty($product['sku']) ){
+
+									$product_id = ls_get_product_id_by_sku( $product['sku'] );
+									$product_meta = new LS_Product_Meta($product_id);
+
+									$quantity = 0;
+
+									if( !empty($product['outlets']) ){
+										foreach( $product['outlets'] as $outlet ){
+											if( !empty($outlet['quantity']) ){
+												$quantity += (int)$outlet['quantity'];
+											}
+										}
+									}
+
+									$product_meta->update_stock( $quantity );
+								}
+							}
+						}
+						$current_page++;
+					}
+
+				}while( $current_page <= $total_pages );
+
+
+			}
         }
     } else {
         LSC_Log::add('Webhook Triggered', 'error', 'Invalid Request', ''); # Error to be loggged

@@ -5,12 +5,11 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.3
+  Version: 2.4.4
  */
 include 'ls-constants.php';
 include 'ls-functions.php';
 include 'ls-linksync.php';
-
 
 
 /*
@@ -28,9 +27,15 @@ if (!@include_once(dirname(__FILE__) . '/linksync_plugin_updater/linksync_plugin
 
 class linksync {
 
+	/**
+	 * @var string
+	 */
+	public static $version = '2.4.3';
+
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
-        add_action('admin_menu', array(&$this, 'linksync_add_menu'), 99); # To create custom menu in Wordpress Side Bar  
+		$this->includes();
+		add_action('admin_menu', array(&$this, 'linksync_add_menu'), 99); # To create custom menu in Wordpress Side Bar
         add_action('admin_menu', array(&$this, 'linksync_wooVersion_check'));
         add_action('admin_notices', array('linksync', 'linksync_show_message'));
         add_action('plugins_loaded', array(&$this, 'linsksyncVend_init'), 0);
@@ -44,6 +49,42 @@ class linksync {
          */
          add_action( 'admin_enqueue_scripts', array($this, 'ls_custom_styles_and_scripts') );
     }
+
+	/**
+	 * Include Required files for Linksync
+	 */
+	public function includes(){
+		include_once LS_INC_DIR. 'apps/ls-core-functions.php';
+		include_once LS_INC_DIR. 'apps/class-ls-product-meta.php';
+
+		include_once LS_INC_DIR. 'api/ls-api.php';
+		include_once LS_INC_DIR. 'api/ls-api-controller.php';
+
+		require_once LS_INC_DIR. 'apps/vend/vend.php';
+		require_once LS_INC_DIR. 'apps/vend/ls-vend-api-key.php';
+		require_once LS_INC_DIR. 'apps/vend/ls-vend-log.php';
+		require_once LS_INC_DIR. 'apps/vend/controllers/ls-log.php';
+
+
+
+	}
+
+	/**
+	 * Return the current laid key
+	 * @return mixed|void
+	 */
+	public static function get_current_laid( $default = '' ){
+		return get_option( 'linksync_laid', $default );
+	}
+
+	/**
+	 * Update current laid key
+	 * @param $laid
+	 * @return bool
+	 */
+	public static function update_current_laid( $laid ){
+		return update_option( 'linksync_laid', trim($laid) );
+	}
 
     public function ls_custom_styles_and_scripts(){
        //Check for linksync plugin page before adding the styles and scripts to wp-admin
@@ -832,19 +873,32 @@ if (get_option('linksync_update_notic') == 'on') {
     }
     add_action('admin_notices', array('linksync', 'update_notification_message'));
 }
-$linksync = new linksync();
-$orignal_time = time();
-$save_time = get_option('linksync_user_activity') + 3600;
-if (isset($save_time) && !empty($save_time) && isset($orignal_time) && !empty($orignal_time)) {
-    if ($orignal_time >= $save_time) {
-        $linksync->upgrade_notify_linksync();
-        update_option('linksync_user_activity', $orignal_time);
-    }
-}
-$daily = get_option('linksync_user_activity_daily') + 86400;
-if (isset($daily) && !empty($daily) && isset($orignal_time) && !empty($orignal_time)) {
-    if ($orignal_time >= $daily) {
-        $linksync->clearLogsDetails();
-        update_option('linksync_user_activity_daily', $orignal_time);
-    }
+
+/**
+ * Check if WooCommerce is active
+ */
+if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+
+	add_action('woocommerce_loaded',function(){
+
+		$linksync = new linksync();
+		$orignal_time = time();
+
+		$save_time = get_option('linksync_user_activity') + 3600;
+		if (isset($save_time) && !empty($save_time) && isset($orignal_time) && !empty($orignal_time)) {
+			if ($orignal_time >= $save_time) {
+				$linksync->upgrade_notify_linksync();
+				update_option('linksync_user_activity', $orignal_time);
+			}
+		}
+		$daily = get_option('linksync_user_activity_daily') + 86400;
+		if (isset($daily) && !empty($daily) && isset($orignal_time) && !empty($orignal_time)) {
+			if ($orignal_time >= $daily) {
+				$linksync->clearLogsDetails();
+				update_option('linksync_user_activity_daily', $orignal_time);
+			}
+		}
+
+	});
+
 }

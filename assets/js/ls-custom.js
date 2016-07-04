@@ -1,8 +1,8 @@
 jQuery(document).ready(function($){
-	  /**
-	  	* Tool tip initialization
-	  	*/
-	 $( document ).tooltip();
+    /**
+     * Tool tip initialization
+     */
+    $( '#ls-main-wrapper' ).tooltip();
 });
 
 

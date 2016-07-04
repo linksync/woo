@@ -777,26 +777,31 @@ if ($product_sync_type == 'disabled_sync') {
                             ?>
                             <select style="margin-left:45px;" multiple="multiple" name="import_by_tags_list[]">
                                 <?php
-                                $i = 0;
-                                foreach ($product_tags['tags'] as $tag):
-                                    if (empty($import_tags)) {
-                                        if ($i == 0) {
-                                            $selected = "selected=seleted";
-                                        } else {
-                                            $selected = "";
-                                        }
-                                    } else {
-                                        if (in_array($tag['name'], $tags_import)) {
-                                            $selected = "selected=seleted";
-                                        } else {
-                                            $selected = "";
-                                        }
-                                    }
-                                    ?>
-                                    <option value="<?php echo $tag['name']; ?>" <?php echo $selected ?>><?php echo $tag['name']; ?></option> 
-                                    <?php
-                                    $i++;
-                                endforeach;
+
+                                if( !empty( $product_tags['tags'] ) ){
+									$i = 0;
+									foreach( $product_tags['tags'] as $tag ){
+										if (empty($import_tags)) {
+											if ($i == 0) {
+												$selected = "selected=seleted";
+											} else {
+												$selected = "";
+											}
+										} else {
+											if (in_array($tag['name'], $tags_import)) {
+												$selected = "selected=seleted";
+											} else {
+												$selected = "";
+											}
+										}
+										?>
+										<option value="<?php echo $tag['name']; ?>" <?php echo $selected ?>><?php echo $tag['name']; ?></option>
+										<?php
+										$i++;
+									}
+
+								}
+
                                 ?>
                             </select> </span> </td>
                 </tr> 

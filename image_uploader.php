@@ -15,7 +15,8 @@ global $wpdb;
 if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
     $message = array();
     $product_details = get_option('product_image_ids');
-    $product_ID_check = $product_details[$_POST['product_id'] - 1];
+
+    $product_ID_check = isset($product_details[$_POST['product_id'] - 1]) ? $product_details[$_POST['product_id'] - 1] : null;
     $product_detail = explode('|', $product_ID_check);
     if (isset($product_detail[1]) && !empty($product_detail[1])) {
         if ($product_detail[1] == 'update_id') {
@@ -266,6 +267,22 @@ if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
         $message['response']['update'] = isset($update_again) ? $update_again : 'error';
         echo json_encode($message);
         exit;
+    }else {
+        $product_details = get_option('product_image_ids');
+        if (isset($product_details) && !empty($product_details)) {
+            $total_post = count($product_details);
+            $total_post_id = explode('|', $total_post);
+            $first_post = current($product_details);
+            $first_post_id = explode('|', $first_post);
+            $last_post = end($product_details);
+            $last_post_id = explode('|', $last_post);
+            $product_wc['total_post_id'] = $total_post_id[0];
+            $product_wc['first_post_id'] = $first_post_id[0];
+            $product_wc['last_post_id'] = $last_post_id[0];
+            $product_wc['total_product'] = get_option('product_detail');
+            echo json_encode($product_wc);
+            exit;
+        }
     }
 } elseif (isset($_POST['get_total']) && $_POST['get_total'] == '1') {
     $product_details = get_option('product_image_ids');

@@ -1,9 +1,6 @@
 <?php
 
 require(dirname(__FILE__) . '/../../../../../../wp-load.php');
-@mysql_connect(DB_HOST, DB_USER, DB_PASSWORD);
-@mysql_select_db(DB_NAME);
-@mysql_set_charset('utf8');
 include_once(dirname(__FILE__) . '/../../../classes/Class.linksync.php'); # Class file having API Call functions
 global $wp;
 // Initializing 

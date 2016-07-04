@@ -5,7 +5,7 @@
 
 ?>
 
-<div class="wrap"> 
+<div class="wrap" id="ls-main-wrapper">
     <div id="response"></div>
 
     <?php
@@ -13,8 +13,12 @@
         $linksync = new linksync();
         //Send log feature
         $testMode = get_option('linksync_test');
-        $LAIDKey = get_option('linksync_laid');
+        $LAIDKey = linksync::get_current_laid();
         $apicall = new linksync_class($LAIDKey, $testMode);
+
+		if( !empty($LAIDKey) ){
+			linksync::checkForConnection($LAIDKey);
+		}
 
         if (isset($_GET['setting'],$_GET['page']) && $_GET['page'] == 'linksync') {
             

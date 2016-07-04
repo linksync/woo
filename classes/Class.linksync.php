@@ -380,6 +380,55 @@ class linksync_class {
         }
     }
 
+	/**
+	 * Setting Woocommerce Product Category by Vend tags
+	 * @param $product_id The product Id
+	 * @param $vend_tags The Vend Tag that my contain " parent / child " format of category
+	 */
+    public  function set_woo_product_category( $product_id, $vend_tags ){
+		if ( !empty($vend_tags) ) {
+
+			foreach ($vend_tags as $tag) {
+				if (isset($tag['name']) && !empty($tag['name'])) {
+					$tags = explode('/', $tag['name']);
+					if (isset($tags) && !empty($tags)) {
+						$parent_id = 0;
+
+						foreach($tags as $cat_key => $cat_name){
+							$cat_name = esc_html(trim($cat_name));
+							$ls_term = get_term_by('name', $cat_name, 'product_cat');
+							if($ls_term){
+
+								if( 0 != $parent_id ){
+									$args = array(
+										'hierarchical'		=> 1,
+										'show_option_none'	=> '',
+										'hide_empty'		=> 0,
+										'parent'			=>	$parent_id,
+										'taxonomy'			=>	'product_cat'
+									);
+
+									$child_categories = get_categories( $args );
+									error_log("parent id ".$parent_id." child categories ". json_encode($child_categories) );
+									foreach( $child_categories as $category ){
+										if( $category->name == $cat_name ){
+											wp_set_object_terms( $product_id, $category->term_id, 'product_cat', TRUE);
+											break;
+										}
+									}
+								}else{
+									wp_set_object_terms( $product_id, $ls_term->term_id, 'product_cat', TRUE);
+								}
+								$parent_id = $ls_term->term_id;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+
     /**
      * The function used to Add / Update product in woocommerce
      *
@@ -715,22 +764,7 @@ class linksync_class {
                             }
                         }
                         if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
-                            if (isset($product['tags']) && !empty($product['tags'])) {
-                                foreach ($product['tags'] as $tag) {
-                                    if (isset($tag['name']) && !empty($tag['name'])) {
-                                        $tags = explode('/', $tag['name']);
-                                        if (isset($tags) && !empty($tags)) {
-                                            foreach($tags as $cat_key => $cat_name){
-                                                $cat_name = esc_html(trim($cat_name));
-                                                $ls_term = get_term_by('name', $cat_name, 'product_cat');
-                                                if($ls_term){
-                                                    wp_set_object_terms($result_reference['data'], $ls_term->term_id, 'product_cat', TRUE);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+							$this->set_woo_product_category( $result_reference['data'], $product['tags'] );
                         }
                     }
                     if (isset($product['variants']) && !empty($product['variants'])) {
@@ -762,12 +796,6 @@ class linksync_class {
                                 }
                             }
 
-                            $db_sale_price = $wpdb->get_results($wpdb->prepare(
-                                "SELECT * FROM `" . $wpdb->postmeta . "`
-                                WHERE `post_id` = %d  AND meta_key='_sale_price'"
-                                , $result_reference['data']
-                            ),ARRAY_A);
-                            $db_sale_price_num_rows = $wpdb->num_rows;
 
                             if ($excluding_tax == 'on') {
 //If 'yes' then product price SELL Price(excluding any taxes.)
@@ -778,38 +806,26 @@ class linksync_class {
                                 //Check if the product has been set to no price('')
                                 $sell_price = $price_meta == '' && $sell_price == 0 ? '': $sell_price;
 
-                                if (0 != $db_sale_price_num_rows) {
-                                    $result_sale_price = $db_sale_price[0];
-                                    if ($result_sale_price['meta_value'] == NULL) {
-                                        update_post_meta($result_reference['data'], '_price', $sell_price);//$sell_price);
-                                    }
-                                } else {
-                                    update_post_meta($result_reference['data'], '_price', $sell_price);//$sell_price);
-                                }
+								update_post_meta($result_reference['data'], '_price', $sell_price);//$sell_price);
 
-                                if (get_option('price_field') == 'regular_price') {
+								if (get_option('price_field') == 'regular_price') {
                                     update_post_meta($result_reference['data'], '_regular_price', $sell_price);
                                 } else {
-                                    update_post_meta($result_reference['data'], '_price', $sell_price);
                                     update_post_meta($result_reference['data'], '_sale_price', $sell_price);
                                 }
+
                             } else {
 //If 'no' then product price SELL Price(including any taxes.)
                                 $tax_and_sell_price_product = $sell_price + $product['tax_value'];
-                                if (0 != $db_sale_price_num_rows) {
-                                    $result_sale_price = $db_sale_price[0];
-                                    if ($result_sale_price['meta_value'] == NULL) {
-                                        update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
-                                    }
-                                } else {
-                                    update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
-                                }
+
+								update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
+
                                 if (get_option('price_field') == 'regular_price') {
                                     update_post_meta($result_reference['data'], '_regular_price', $tax_and_sell_price_product);
                                 } else {
-                                    update_post_meta($result_reference['data'], '_price', $tax_and_sell_price_product);
                                     update_post_meta($result_reference['data'], '_sale_price', $tax_and_sell_price_product);
                                 }
+
                             }
                         }
                     }
@@ -1060,7 +1076,7 @@ class linksync_class {
                                                                                     `post_id` = %d "
                                                                             , $result_reference['data']
                                                         ), ARRAY_A);
-                                        $image = $image_query[0];
+                                        $image = isset($image_query[0]) ? $image_query[0] : null;
                                         if (isset($image['meta_value']) && !empty($image['meta_value'])) {
                                             $image_attributes = get_post_meta($image['meta_value'], '_wp_attached_file', true); // returns an array  @wp_get_attachment_image_src($image[0]);
                                             if (isset($image_attributes) && !empty($image_attributes)) {
@@ -1376,24 +1392,7 @@ class linksync_class {
                                 }
                             }
                             if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
-                                if (isset($product['tags']) && !empty($product['tags'])) {
-                                    foreach ($product['tags'] as $tag) {
-                                        if (isset($tag['name']) && !empty($tag['name'])) {
-                                            $tags = explode('/', $tag['name']);
-                                            if (isset($tags) && !empty($tags)) {
-
-                                                foreach($tags as $cat_key => $cat_name){
-                                                    $cat_name = esc_html(trim($cat_name));
-                                                    $ls_term = get_term_by('name', $cat_name, 'product_cat');
-                                                    if($ls_term){
-                                                        wp_set_object_terms($product_ID, $ls_term->term_id, 'product_cat', TRUE);
-                                                    }
-                                                }
-
-                                            }
-                                        }
-                                    }
-                                }
+								$this->set_woo_product_category( $product_ID, $product['tags'] );
                             }
                         }
                         if (isset($product['variants']) && !empty($product['variants'])) {
@@ -1976,19 +1975,46 @@ class linksync_class {
         return ($assoc) ? '{' . $res . '}' : '[' . $res . ']';
     }
 
+	/**
+	 * This method will deduct product stock quantity by the given order quantity
+	 * @param $sku          The sku of the product
+	 * @param $order_qty    Quantity of the product to deduct
+	 */
+	public function deduct_woo_qty_by_vend_order_qty( $sku, $order_qty ){
+		if( !empty($sku) && !empty($order_qty) ){
+			$product_id = ls_get_product_id_by_sku( $sku );
+			$product_meta = new LS_Product_Meta($product_id);
+
+			$current_stock = $product_meta->get_stock();
+			$current_stock = !empty($current_stock) ? $current_stock : 0;
+
+			$stock = (int) $current_stock - (int) $order_qty;
+
+			$product_meta->update_stock( $stock );
+		}
+	}
+
     public function importOrderToWoocommerce($orders) {
         if (isset($orders) && !empty($orders)) {
             $order_status = get_option('order_vend_to_wc'); //Order Status from order config setting
             foreach ($orders['orders'] as $order) {
                 if (isset($order['id']) && !empty($order['id'])) {
                     $OrderIds = get_option("Vend_orderIDs");
-                    if (isset($OrderIds) && !empty($OrderIds)) {
-                        $Ids = unserialize($OrderIds);
-                    } else {
-                        $Ids = array();
+					$Ids = array();
+                    if ( !empty($OrderIds) ) {
+						$Ids = unserialize($OrderIds);
                     }
-                    if (!in_array($order['id'], $Ids)) {
-                        update_option('Vend_orderIDs', serialize(array_merge($Ids, array($order['id']))));
+
+					$ls_oid = ls_order_exist( $order['id'] );
+					$vend_order_exist = true;
+					if( is_null($Ids) ){
+						$vend_order_exist = false;
+					} elseif ( is_array($Ids) && !in_array($order['id'], $Ids) ){
+						$vend_order_exist = false;
+					}
+
+					if( false == $ls_oid || false == $vend_order_exist ){
+						update_option('Vend_orderIDs', serialize(array_merge($Ids, array($order['id']))));
                         $order_data = array(
                             'post_name' => 'order-' . date('M-d-Y-hi-a'), //'order-nov-29-2014-0503-am'
                             'post_type' => 'shop_order',
@@ -2004,6 +2030,8 @@ class linksync_class {
                         if (is_wp_error($order_id)) {
                             $order->errors = $order_id;
                         } else {
+
+
                             if (isset($order['payment']['transactionNumber']) && !empty($order['payment']['transactionNumber'])) {
                                 add_post_meta($order_id, 'transaction_id', $order['payment']['transactionNumber'], true);
                             }
@@ -2170,11 +2198,15 @@ class linksync_class {
                                                                              WHERE post_id= %d AND meta_key LIKE 'attribute_pa_%'"
                                                                             , $variant_id
                                                          ), ARRAY_A);
-                                                foreach ($query as $result) {
-                                                    $meta_key = str_replace('attribute_', '', $result['meta_key']);
-                                                    wc_add_order_item_meta($item_id, $meta_key, $result['meta_value']);
-                                                }
+
+												if( !empty($query) ){
+													foreach ($query as $result) {
+														$meta_key = str_replace('attribute_', '', $result['meta_key']);
+														wc_add_order_item_meta($item_id, $meta_key, $result['meta_value']);
+													}
+												}
                                             }
+
                                         }
                                     } else {
                                         $order->errors = 'Product SKU (' . $order->item_id . ') not found.';
@@ -2222,6 +2254,10 @@ class linksync_class {
                                     }
                                 }
                             }
+							/**
+							 * Linksync order id
+							 */
+							update_post_meta( $order_id, 'ls_oid', $order['id'] );
                         }
                         LSC_Log::add('Order Sync Vend to Woo', 'success', 'Vend Order no:' . $order['orderId'] . ', Woo Order no:' . $order_id, get_option('linksync_laid'));
                     }
@@ -2555,6 +2591,8 @@ class linksync_class {
                         } else {
                             add_post_meta($variation_product_id, '_sale_price', $sell_price);
                         }
+
+
                     } else {
                         $tax_and_sell_price_variant = $sell_price + $product_variants['tax_value'];
 //If 'no' then product price SELL Price(including any taxes.)
@@ -2564,6 +2602,7 @@ class linksync_class {
                         } else {
                             add_post_meta($variation_product_id, '_sale_price', $tax_and_sell_price_variant);
                         }
+
                     }
                 }
 #Product Quantity
@@ -2759,44 +2798,27 @@ class linksync_class {
                                     }
                                 }
                             }
-                            $db_sale_price = $wpdb->get_results($wpdb->prepare(
-                                                    "SELECT * FROM `" . $wpdb->postmeta . "`
-                                                    WHERE `post_id` = %d AND meta_key='_sale_price'"
-                                                    , $variation_product_id
-                                             ),ARRAY_A);
+
                             if ($excluding_tax == 'on') {
 //If 'yes' then product price SELL Price(excluding any taxes.)
-                                if (0 != $wpdb->num_rows) {
-                                    $result_sale_price = $db_sale_price[0];
-                                    if ($result_sale_price['meta_value'] == NULL) {
-                                        update_post_meta($variation_product_id, '_price', $sell_price);
-                                    }
-                                } else {
-                                    update_post_meta($variation_product_id, '_price', $sell_price);
-                                }
+								update_post_meta($variation_product_id, '_price', $sell_price);
                                 if (get_option('price_field') == 'regular_price') {
                                     update_post_meta($variation_product_id, '_regular_price', $sell_price);
                                 } else {
-                                    update_post_meta($variation_product_id, '_price', $sell_price);
                                     update_post_meta($variation_product_id, '_sale_price', $sell_price);
                                 }
+
                             } else {
 //If 'no' then product price SELL Price(including any taxes.)
                                 $tax_and_sell_price = $sell_price + $product_variants['tax_value'];
-                                if (0 != $wpdb->num_rows) {
-                                    $result_sale_price = $db_sale_price[0];
-                                    if ($result_sale_price['meta_value'] == NULL) {
-                                        update_post_meta($variation_product_id, '_price', $tax_and_sell_price);
-                                    }
-                                } else {
-                                    update_post_meta($variation_product_id, '_price', $tax_and_sell_price);
-                                }
+
+								update_post_meta($variation_product_id, '_price', $tax_and_sell_price);
                                 if (get_option('price_field') == 'regular_price') {
                                     update_post_meta($variation_product_id, '_regular_price', $tax_and_sell_price);
                                 } else {
-                                    update_post_meta($variation_product_id, '_price', $tax_and_sell_price);
                                     update_post_meta($variation_product_id, '_sale_price', $tax_and_sell_price);
                                 }
+
                             }
                         }
 #Product Quantity
