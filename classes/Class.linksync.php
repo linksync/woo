@@ -381,50 +381,47 @@ class linksync_class {
     }
 
 	/**
-	 * Setting Woocommerce Product Category by Vend tags
-	 * @param $product_id The product Id
-	 * @param $vend_tags The Vend Tag that my contain " parent / child " format of category
+	 * Setting Woocommerce Product Category by Vend Tags or by Vend Product Types
+	 * @param int $product_id                The product Id
+	 * @param string|array $categories       The Vend Tag that may contain " parent / child " format of category or Product Type that is only string
+	 * @param string $type                   Default is tag, it should be tag or product_type base on the categories option
 	 */
-    public  function set_woo_product_category( $product_id, $vend_tags ){
-		if ( !empty($vend_tags) ) {
+    public  function set_woo_product_category( $product_id, $categories, $type = 'tag' ){
+		if ( !empty($categories) ) {
+            //Category Tags
+            if( 'tag' == $type){
+                foreach ($categories as $tag) {
+                    if (isset($tag['name']) && !empty($tag['name'])) {
+                        $tags = explode(' / ', $tag['name']);
+                        if (isset($tags) && !empty($tags)) {
+                            $parent_id = 0;
 
-			foreach ($vend_tags as $tag) {
-				if (isset($tag['name']) && !empty($tag['name'])) {
-					$tags = explode('/', $tag['name']);
-					if (isset($tags) && !empty($tags)) {
-						$parent_id = 0;
+                            foreach($tags as $cat_key => $cat_name){
+                                $cat_name = trim($cat_name);
+                                $ls_term = ls_get_term_by_name( $cat_name, $parent_id );
 
-						foreach($tags as $cat_key => $cat_name){
-							$cat_name = esc_html(trim($cat_name));
-							$ls_term = get_term_by('name', $cat_name, 'product_cat');
-							if($ls_term){
+                                if( false != $ls_term ){
+                                    $term_id = (int)$ls_term->term_id;
+                                    wp_set_object_terms( $product_id, $term_id, 'product_cat', TRUE);
+                                    $parent_id = $ls_term->term_id;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+			//Category Product Types
+			elseif ( 'product_type' == $type ){
 
-								if( 0 != $parent_id ){
-									$args = array(
-										'hierarchical'		=> 1,
-										'show_option_none'	=> '',
-										'hide_empty'		=> 0,
-										'parent'			=>	$parent_id,
-										'taxonomy'			=>	'product_cat'
-									);
-
-									$child_categories = get_categories( $args );
-									error_log("parent id ".$parent_id." child categories ". json_encode($child_categories) );
-									foreach( $child_categories as $category ){
-										if( $category->name == $cat_name ){
-											wp_set_object_terms( $product_id, $category->term_id, 'product_cat', TRUE);
-											break;
-										}
-									}
-								}else{
-									wp_set_object_terms( $product_id, $ls_term->term_id, 'product_cat', TRUE);
-								}
-								$parent_id = $ls_term->term_id;
-							}
-						}
-					}
+				$cat_name = trim($categories);
+				$ls_term = ls_get_term_by_name( $cat_name );
+				if( false != $ls_term ){
+					$term_id = (int)$ls_term->term_id;
+					wp_set_object_terms( $product_id, $term_id, 'product_cat', TRUE);
 				}
-			}
+
+            }
+
 		}
 	}
 
@@ -488,19 +485,8 @@ class linksync_class {
             }
             $tax_name = $product['tax_name'];
 #Checking for Price Entered With Tax
-            if (get_option('woocommerce_calc_taxes') == 'yes') {
-                if (get_option('linksync_woocommerce_tax_option') == 'on') {
-                    if (get_option('woocommerce_prices_include_tax') == 'yes') {
-                        $excluding_tax = 'off';
-                    } else {
-                        $excluding_tax = 'on';
-                    }
-                } else {
-                    $excluding_tax = get_option('excluding_tax');
-                }
-            } else {
-                $excluding_tax = get_option('excluding_tax');
-            }
+			$excluding_tax = ls_is_excluding_tax();
+
 # @return product id if reference exists
             $result_reference = $this->isReferenceExists($reference); #  Check if already exist product into woocommerce
 
@@ -533,6 +519,12 @@ class linksync_class {
                     }
                 }
                 if (empty($product['deleted_at'])) {
+					$products_meta = new LS_Product_Meta( $result_reference['data'] );
+					$products_meta->update_tax_value( $product['tax_value'] );
+					$products_meta->update_tax_name( $product['tax_name'] );
+					$products_meta->update_tax_rate( $product['tax_rate'] );
+					$products_meta->update_tax_id( $product['tax_id'] );
+
 #-----Delete All Relationship--------#
                     if (get_option('ps_attribute') == 'on') {
                         $product_attributes = get_post_meta($result_reference['data'], '_product_attributes', TRUE);
@@ -754,14 +746,7 @@ class linksync_class {
                         include_once(ABSPATH . 'wp-admin/includes/taxonomy.php');
                         wp_delete_object_term_relationships($result_reference['data'], 'product_cat');
                         if (get_option('cat_radio') == 'ps_cat_product_type') {
-                            if (isset($product['product_type']) && !empty($product['product_type'])) {
-                                $ls_product_type = esc_html($product['product_type']);
-
-                                $term = get_term_by('name', $ls_product_type, 'product_cat');
-                                if (isset($term) && !empty($term)) {
-                                    wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat');
-                                }
-                            }
+							$this->set_woo_product_category( $result_reference['data'], $product['product_type'], 'product_type');
                         }
                         if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
 							$this->set_woo_product_category( $result_reference['data'], $product['tags'] );
@@ -1323,9 +1308,15 @@ class linksync_class {
                     if (get_option('ps_desc_copy') == 'on')
                         $my_post['post_excerpt'] = isset($description) && !empty($description) ? $description : '';
                     $product_ID = wp_insert_post($my_post);
-                    $product_ids[] = $product_ID . '|new_id';
                     if ($product_ID) {
-                        add_post_meta($product_ID, '_sku', $product['sku']);
+						$product_ids[] = $product_ID . '|new_id';
+
+						$products_meta = new LS_Product_Meta( $product_ID );
+						$products_meta->update_tax_value( $product['tax_value'] );
+						$products_meta->update_tax_name( $product['tax_name'] );
+						$products_meta->update_tax_rate( $product['tax_rate'] );
+						$products_meta->update_tax_id( $product['tax_id'] );
+						$products_meta->update_sku( $product['sku'] );
 #Tag of the Products
                         if (get_option('ps_tags') == 'on') {
                             $term_exists['term_id'] = 0;
@@ -1384,12 +1375,7 @@ class linksync_class {
                         if (get_option('ps_categories') == 'on') {
                             include_once(ABSPATH . 'wp-admin/includes/taxonomy.php');
                             if (get_option('cat_radio') == 'ps_cat_product_type') {
-                                if (isset($product['product_type']) && !empty($product['product_type'])) {
-                                    $term = get_term_by('name', $product['product_type'], 'product_cat');
-                                    if (isset($term) && !empty($term)) {
-                                        wp_set_object_terms($result_reference['data'], $term->term_id, 'product_cat');
-                                    }
-                                }
+								$this->set_woo_product_category( $product_ID, $product['product_type'], 'product_type');
                             }
                             if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
 								$this->set_woo_product_category( $product_ID, $product['tags'] );
@@ -2491,19 +2477,7 @@ class linksync_class {
 
     public function add_variant_product($product_ID, $product_variants) {
         global $wpdb;
-        if (get_option('woocommerce_calc_taxes') == 'yes') {
-            if (get_option('linksync_woocommerce_tax_option') == 'on') {
-                if (get_option('woocommerce_prices_include_tax') == 'yes') {
-                    $excluding_tax = 'off';
-                } else {
-                    $excluding_tax = 'on';
-                }
-            } else {
-                $excluding_tax = get_option('excluding_tax');
-            }
-        } else {
-            $excluding_tax = get_option('excluding_tax');
-        }
+		$excluding_tax = ls_is_excluding_tax();
         if ($product_variants['deleted_at'] == null) {
             $array_name = array();
             $thedata = array();
@@ -2702,19 +2676,7 @@ class linksync_class {
     }
 
     public function update_variant_product($product_ID, $product_variant) {
-        if (get_option('woocommerce_calc_taxes') == 'yes') {
-            if (get_option('linksync_woocommerce_tax_option') == 'on') {
-                if (get_option('woocommerce_prices_include_tax') == 'yes') {
-                    $excluding_tax = 'off';
-                } else {
-                    $excluding_tax = 'on';
-                }
-            } else {
-                $excluding_tax = get_option('excluding_tax');
-            }
-        } else {
-            $excluding_tax = get_option('excluding_tax');
-        }
+        $excluding_tax = ls_is_excluding_tax();
         $var_qty = 0;
         $array_name = array();
         $thedata = array();

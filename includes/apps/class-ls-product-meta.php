@@ -112,9 +112,54 @@ class LS_Product_Meta{
 		return $this->get_meta( '_ls_pid' );
 	}
 
-	public function udpate_product_id( $meta_value ){
+	public function update_product_id( $meta_value ){
 		return $this->update_meta( '_ls_pid', $meta_value );
 	}
+
+	public function set_tax_value( $meta_value ){
+		$this->metas['_ls_tax_value'] =  $meta_value;
+	}
+	public function get_tax_value(){
+		return $this->get_meta( '_ls_tax_value' );
+	}
+
+	public function update_tax_value( $meta_value ){
+		return $this->update_meta( '_ls_tax_name', $meta_value );
+	}
+
+	public function set_tax_name( $meta_value ){
+		$this->metas['_ls_tax_name'] =  $meta_value;
+	}
+	public function get_tax_name(){
+		return $this->get_meta( '_ls_tax_name' );
+	}
+
+	public function update_tax_name( $meta_value ){
+		return $this->update_meta( '_ls_tax_name', $meta_value );
+	}
+
+	public function set_tax_rate( $meta_value ){
+		$this->metas['_ls_tax_rate'] =  $meta_value;
+	}
+	public function get_tax_rate(){
+		return $this->get_meta( '_ls_tax_rate' );
+	}
+
+	public function update_tax_rate( $meta_value ){
+		return $this->update_meta( '_ls_tax_rate', $meta_value );
+	}
+
+	public function set_tax_id( $meta_value ){
+		$this->metas['_ls_tax_id'] =  $meta_value;
+	}
+	public function get_tax_id(){
+		return $this->get_meta( '_ls_tax_id' );
+	}
+
+	public function update_tax_id( $meta_value ){
+		return $this->update_meta( '_ls_tax_id', $meta_value );
+	}
+
 
 	public function set_product_type( $meta_value ){
 		$this->metas['_ls_ptype'] =  $meta_value;

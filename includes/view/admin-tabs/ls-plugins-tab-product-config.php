@@ -13,11 +13,7 @@
 
         if ($ls_connected_with == 'Vend' ||  $ls_connected_to == 'Vend') {
             include_once LS_INC_DIR . 'apps/vend/vend_product_config.php';
-        } elseif ($ls_connected_with == 'Xero' || $ls_connected_to == 'Xero') {
-            include_once LS_PLUGIN_DIR . 'xero_product_config.php';
-        } elseif ($ls_connected_with == 'QuickBooks Online' || $ls_connected_to == 'QuickBooks Online') {
-            include_once LS_INC_DIR. 'apps/qbo/QB_product_config.php';
-        } else {
+        }  else {
             echo "<p align=center style='color:red;font-size:17px;margin-top:150px;'><b>" . $LAIDKey . "</b> does not appear to be a valid API Key</p>";
         }
     } else {

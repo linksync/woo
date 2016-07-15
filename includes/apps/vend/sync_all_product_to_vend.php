@@ -40,19 +40,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
         $product_details = $wpdb->get_results($query_with_limit, ARRAY_A);
         $product_wc = $product_details[0];
         if ($product_wc['post_status'] != 'trash') {
-            if (get_option('woocommerce_calc_taxes') == 'yes') {
-                if (get_option('linksync_woocommerce_tax_option') == 'on') {
-                    if (get_option('woocommerce_prices_include_tax') == 'yes') {
-                        $excluding_tax = 'off';
-                    } else {
-                        $excluding_tax = 'on';
-                    }
-                } else {
-                    $excluding_tax = get_option('excluding_tax');
-                }
-            } else {
-                $excluding_tax = get_option('excluding_tax');
-            }
+			$excluding_tax = ls_is_excluding_tax();
             $display_retail_price_tax_inclusive = get_option('linksync_tax_inclusive');
             $taxsetup = false;
             $product = array();
@@ -209,48 +197,15 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
             }
 #qunantity
 //        
-#Tags
+
             if (get_option('ps_tags') == 'on') {
-//To get the Detail of the Tags and Category of the product using product id(Post ID) 
-                //Todo check this query 
-                $tags_query = "SELECT " . $wpdb->terms . ".name FROM `" . $wpdb->term_taxonomy . "` JOIN " . $wpdb->terms . " ON(" . $wpdb->terms . ".term_id=" . $wpdb->term_taxonomy . ".term_id)  JOIN " . $wpdb->term_relationships . " ON(" . $wpdb->term_relationships . ".term_taxonomy_id=" . $wpdb->term_taxonomy . ".term_taxonomy_id) WHERE " . $wpdb->term_taxonomy . ".taxonomy='product_tag' AND " . $wpdb->term_relationships . ".object_id= %s ";
-
-                $result_tags = $wpdb->get_results($wpdb->prepare($tags_query,$product_wc['ID']), ARRAY_A);
-//                    if (!$result_tags)
-//                        die("Error In  Connection : " . mysql_error() . " Line No. " . __LINE__);
-                if (0 != $wpdb->num_rows) {
-                    $tags_product_type = array();
-                    foreach ($result_tags as $row_tags) {
-                        $tags_product_type[] = array(
-                            'name' => html_entity_decode($row_tags['name']));
-                    }
-                }
-                if (isset($tags_product_type) && !empty($tags_product_type)) {
-                    $product['tags'] = $tags_product_type;
-                }
-//To free an array to use futher
-                unset($tags_product_type);
+				$product['tags'] = ls_get_product_terms( $product_wc['ID'], 'tag' );
             }
 
-#brands
             if (get_option('ps_brand') == 'on') {
-//To get the Detail of the Tags and Category of the product using product id(Post ID) 
-//              //Todo check this query and this part of code
-                $brands_query = "SELECT " . $wpdb->terms . ".name FROM `" . $wpdb->term_taxonomy . "` JOIN " . $wpdb->terms . " ON(" . $wpdb->terms . ".term_id=" . $wpdb->term_taxonomy . ".term_id)  JOIN " . $wpdb->term_relationships . " ON(" . $wpdb->term_relationships . ".term_taxonomy_id=" . $wpdb->term_taxonomy . ".term_taxonomy_id) WHERE " . $wpdb->term_taxonomy . ".`taxonomy`='product_brand' AND " . $wpdb->term_relationships . ".object_id= %s ";
-                $result_brands = $wpdb->get_results($wpdb->prepare($brands_query, $product_wc['ID']));
-
-                if (0 != $wpdb->num_rows) {
-                    foreach ($result_brands as $row_brands) {
-                         $brands[] = array(
-                            'name' => html_entity_decode($row_brands['name']));
-                    }
-                }
-                if (!empty($brands)) {
-                    $product['brands'] = $brands;
-                }
-//To free an array to use futher
-                unset($brands);
+				$product['brands'] = ls_get_product_terms( $product_wc['ID'], 'brand' );
             }
+
             $variants_data = $wpdb->get_results($wpdb->prepare("SELECT ID,post_title FROM `" . $wpdb->posts . "` WHERE post_type = 'product_variation' AND post_parent = %d AND post_status!='auto-draft'", $product_wc['ID'] ),ARRAY_A);
 //  $variants_data = mysql_query("SELECT ID,post_title FROM `" . $wpdb->prefix . "posts` WHERE post_type = 'product_variation' AND post_parent ='" . $product_wc['ID'] . "'");
             if (0 != $wpdb->num_rows) {

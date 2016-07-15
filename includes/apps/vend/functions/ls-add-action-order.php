@@ -305,7 +305,7 @@ function linksync_OrderFromBackEnd() {//Ordered product(s)
                 }
 
                 $json = json_encode($OrderArray);
-                $apicall->linksync_postOrder($json);
+                $order_sent = $apicall->linksync_postOrder($json);
                 LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_no, $LAIDKey);
             }
         }
@@ -344,7 +344,7 @@ function orderpost($orderId) {
                 $get_total = $order->get_total();
                 $get_user = $order->get_user();
                 $comments = $order->post->post_excerpt;
-                $primary_email_address = $get_user->data->user_email;
+                $primary_email_address = isset( $get_user->data->user_email )? $get_user->data->user_email : '';
                 $currency = $order->get_order_currency();
                 $shipping_method = $order->get_shipping_method();
                 $order_total = $order->get_order_item_totals();
@@ -439,7 +439,7 @@ function orderpost($orderId) {
                             'country' => $deliveryAddress_filter['country'],
                             'company' => $deliveryAddress_filter['company']
                         );
-                        $primary_email = isset($primary_email_address) ? $primary_email_address : $billingAddress['email_address'];
+                        $primary_email = !empty($primary_email_address) ? $primary_email_address : $billingAddress['email_address'];
                         unset($billingAddress['email_address']);
                     }
                 }
@@ -601,7 +601,7 @@ function orderpost($orderId) {
                     'deliveryAddress' => (isset($deliveryAddress) && !empty($deliveryAddress)) ? $deliveryAddress : null,
                 );
                 $json = json_encode($OrderArray);
-                $apicall->linksync_postOrder($json);
+                $response = $apicall->linksync_postOrder($json);
                 LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_no, $LAIDKey);
             }
         } else {
@@ -654,19 +654,8 @@ function order_product_post() {
                             //product status ->publish
                             $product['active'] = isset($result['post_status']) && $result['post_status'] == 'publish' ? 1 : 0;
                             // Price with Tax
-                            if (get_option('woocommerce_calc_taxes') == 'yes') {
-                                if (get_option('linksync_woocommerce_tax_option') == 'on') {
-                                    if (get_option('woocommerce_prices_include_tax') == 'yes') {
-                                        $excluding_tax = 'off';
-                                    } else {
-                                        $excluding_tax = 'on';
-                                    }
-                                } else {
-                                    $excluding_tax = get_option('excluding_tax');
-                                }
-                            } else {
-                                $excluding_tax = get_option('excluding_tax');
-                            }
+							$excluding_tax = ls_is_excluding_tax();
+
                             $display_retail_price_tax_inclusive = get_option('linksync_tax_inclusive');
                             if (get_option('ps_price') == 'on') {
                                 if (isset($post_detail['_tax_status'][0]) && $post_detail['_tax_status'][0] == 'taxable') { # Product with TAX 

@@ -4,7 +4,7 @@
 $product_type = get_option('product_sync_type');
 if (get_option('linksync_status') == 'Active') {
     if ($product_type == 'two_way' || $product_type == 'wc_to_vend') {
-        //check the post type (Product) 
+        //check the post type (Product)
         if (isset($_POST['post_type']) && $_POST['post_type'] == 'product') {
             global $wpdb;
             $taxsetup = false;
@@ -24,19 +24,8 @@ if (get_option('linksync_status') == 'Active') {
 					}
                     $product['sku'] = html_entity_decode($_POST['_sku']); //SKU(unique Key/Numbers) 
 
-                    if (get_option('woocommerce_calc_taxes') == 'yes') {
-                        if (get_option('linksync_woocommerce_tax_option') == 'on') {
-                            if (get_option('woocommerce_prices_include_tax') == 'yes') {
-                                $excluding_tax = 'off'; //Include tax is on
-                            } else {
-                                $excluding_tax = 'on'; //Excluding tax is on 
-                            }
-                        } else {
-                            $excluding_tax = get_option('excluding_tax');
-                        }
-                    } else {
-                        $excluding_tax = get_option('excluding_tax');
-                    }
+					$excluding_tax = ls_is_excluding_tax();
+
                     $display_retail_price_tax_inclusive = get_option('linksync_tax_inclusive');
                     //check for the product status ->publish or draft 
                     $product['active'] = (isset($_POST['post_status']) && $_POST['post_status'] == 'draft') ? 0 : 1;
@@ -191,18 +180,13 @@ if (get_option('linksync_status') == 'Active') {
 #-------------Brand-------------#
 
                             if (get_option('ps_brand') == 'on') {
-                                if (isset($_POST['tax_input']['product_brand']) && !empty($_POST['tax_input']['product_brand'])) {
-                                    if (isset($_POST['tax_input']['product_brand'][1]) && !empty($_POST['tax_input']['product_brand'][1])) {
-                                        $brand_id = $_POST['tax_input']['product_brand'][1];
-                                        $sql_query = "SELECT * FROM " . $wpdb->terms . " WHERE term_id= %d";
-                                        $query = $wpdb->get_results($wpdb->prepare($sql_query, $brand_id), ARRAY_A);
 
-                                        if (0 != $wpdb->num_rows) {
-                                            $brand_details = $query[0];
-                                            $product['brands'][] = array('name' => html_entity_decode($brand_details['name']));
-                                        }
-                                    }
-                                }
+								if (isset($_POST['post_ID']) && !empty($_POST['post_ID'])) {
+									$product['brands'] = ls_get_product_terms( $_POST['post_ID'] , 'brand' );
+								} else {
+									$product['brands'] = null;
+								}
+
                             }
 
                             # outlets
@@ -236,46 +220,8 @@ if (get_option('linksync_status') == 'Active') {
 
 #Tags
                             if (get_option('ps_tags') == 'on') {
-                                if (isset($_POST['tax_input']['product_tag']) && !empty($_POST['tax_input']['product_tag'])) {
-                                    $woo_version = get_bloginfo('version');
-                                    if ($woo_version >= '4.2.2') {
-                                        /*
-                                         * Changes In New Wordpress Version
-                                         */
-                                        if (is_array($_POST['tax_input']['product_tag'])) {
-                                            foreach ($_POST['tax_input']['product_tag'] as $value) {
-                                                $sql_query = "SELECT * FROM `" . $wpdb->terms . "` WHERE name = %s ";
-                                                $term_name = $wpdb->get_results($wpdb->prepare($sql_query, $value), ARRAY_A);
-                                                if (0 != $wpdb->num_rows) {
-                                                    $tag_name = $value;
-                                                } else {
-                                                    $sql = "SELECT * FROM `" . $wpdb->prefix . "terms` WHERE term_id = %d ";
-                                                    $term_id = $wpdb->get_results($wpdb->prepare($sql, $value), ARRAY_A);
-                                                    $tag = $term_id[0];
-                                                    $tag_name = $tag['name'];
-                                                }
-                                                $tags[] = array('name' => html_entity_decode($tag_name));
-                                            }
-                                        } elseif (is_string($_POST['tax_input']['product_tag'])) {
-                                            if (strpos($_POST['tax_input']['product_tag'], ','))
-                                                $arr = explode(',', $_POST['tax_input']['product_tag']);
-                                            else
-                                                $arr[] = $_POST['tax_input']['product_tag'];
-
-                                            foreach ($arr as $value) {
-                                                $tags[] = array('name' => html_entity_decode($value));
-                                            }
-                                        } else {
-                                            $tags = NULL;
-                                        }
-                                    } else {
-                                        $arr = explode(',', $_POST['tax_input']['product_tag']);
-                                        foreach ($arr as $value) {
-                                            $tags[] = array('name' => html_entity_decode($value));
-                                        }
-                                    }
-
-                                    $product['tags'] = $tags; //Tags
+                                if (isset($_POST['post_ID']) && !empty($_POST['post_ID'])) {
+									$product['tags'] = ls_get_product_terms( $_POST['post_ID'], 'tag' );
                                 } else {
                                     $product['tags'] = NULL; //If Tags NULL
                                 }
@@ -687,17 +633,11 @@ if (get_option('linksync_status') == 'Active') {
                                 }
                             }
                             if (get_option('ps_brand') == 'on') {
-                                if (isset($_POST['tax_input']['product_brand']) && !empty($_POST['tax_input']['product_brand'])) {
-                                    if (isset($_POST['tax_input']['product_brand'][1]) && !empty($_POST['tax_input']['product_brand'][1])) {
-                                        $brand_id = $_POST['tax_input']['product_brand'][1];
-                                        $sql_query = "SELECT * FROM " . $wpdb->terms . " WHERE term_id= %d " ;
-                                        $query = $wpdb->get_results($wpdb->prepare($sql_query, $brand_id), ARRAY_A);
-                                        if (0 != $wpdb->num_rows) {
-                                            $brand_details = $query[0];
-                                            $product['brands'][] = array('name' => html_entity_decode($brand_details['name']));
-                                        }
-                                    }
-                                }
+								if (isset($_POST['post_ID']) && !empty($_POST['post_ID'])) {
+									$product['brands'] = ls_get_product_terms( $_POST['post_ID'] , 'brand' );
+								} else {
+									$product['brands'] = null;
+								}
                             }
 
 #qunantity
@@ -725,54 +665,11 @@ if (get_option('linksync_status') == 'Active') {
                             isset($product_outlets) ? $product['outlets'] = $product_outlets : $product['outlets'] = array();
 //Tags 
                             if (get_option('ps_tags') == 'on') {
-                                if (isset($_POST['tax_input']['product_tag']) && !empty($_POST['tax_input']['product_tag'])) {
-
-                                    $woo_version = get_bloginfo('version');
-                                    if ($woo_version >= '4.2.2') {
-                                        /*
-                                         * Changes In New Wordpress Version
-                                         */
-                                        if (is_array($_POST['tax_input']['product_tag'])) {
-                                            foreach ($_POST['tax_input']['product_tag'] as $value) {
-                                                $sql_query = "SELECT * FROM `" . $wpdb->terms . "` WHERE name = %s ";
-                                                $term_name = $wpdb->get_results($wpdb->prepare($sql_query, $value), ARRAY_A);
-                                                if (0 != $wpdb->num_rows) {
-                                                    $tag_name = $value;
-                                                } else {
-                                                    $sql_query = "SELECT * FROM `" . $wpdb->terms . "` WHERE term_id = %d ";
-                                                    $term_id = $wpdb->get_results($wpdb->prepare($sql_query, $value), ARRAY_A);
-                                                    $tag = $term_id[0];
-                                                    $tag_name = $tag['name'];
-                                                }
-                                                $tags[] = array('name' => html_entity_decode($tag_name));
-                                            }
-                                        } elseif (is_string($_POST['tax_input']['product_tag'])) {
-                                            if (strpos($_POST['tax_input']['product_tag'], ','))
-                                                $arr = explode(',', $_POST['tax_input']['product_tag']);
-                                            else
-                                                $arr[] = $_POST['tax_input']['product_tag'];
-
-                                            foreach ($arr as $value) {
-                                                $tags[] = array('name' => html_entity_decode($value));
-                                            }
-                                        } else {
-                                            $tags = NULL;
-                                        }
-                                    } else {
-                                        if (strpos($_POST['tax_input']['product_tag'], ','))
-                                            $arr = explode(',', $_POST['tax_input']['product_tag']);
-                                        else
-                                            $arr[] = $_POST['tax_input']['product_tag'];
-
-                                        $arr = explode(',', $_POST['tax_input']['product_tag']);
-                                        foreach ($arr as $value) {
-                                            $tags[] = array('name' => html_entity_decode($value));
-                                        }
-                                    }
-                                    $product['tags'] = $tags; //Tags
-                                } else {
-                                    $product['tags'] = NULL; //If Tags NULL
-                                }
+								if (isset($_POST['post_ID']) && !empty($_POST['post_ID'])) {
+									$product['tags'] = ls_get_product_terms( $_POST['post_ID'], 'tag' );
+								} else {
+									$product['tags'] = NULL; //If Tags NULL
+								}
                             }
 //include_tax
                             $product['includes_tax'] = (isset($_POST['_tax_status']) && $_POST['_tax_status'] == 'taxable') ? true : false;

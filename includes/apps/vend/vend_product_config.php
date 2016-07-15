@@ -219,7 +219,12 @@ if (isset($_POST['save_product_sync_setting'])) {
         if (isset($_POST['ps_imp_by_tag'])) {
             if ($_POST['ps_imp_by_tag'] == 'on') {
                 if (isset($_POST['import_by_tags_list']) && !empty($_POST['import_by_tags_list'])) {
-                    $tags = implode('|', $_POST['import_by_tags_list']);
+					$selected_tags = array();
+					foreach( $_POST['import_by_tags_list'] as $key => $selected_tab ){
+						$selected_tags[] = remove_escaping_str($selected_tab);
+					}
+					$tags = implode( '|', $selected_tags );
+
                     $import_by_tags_list_serialize = serialize($tags);
                     update_option('import_by_tags_list', $import_by_tags_list_serialize);
                     update_option('ps_imp_by_tag', 'on');
@@ -1311,22 +1316,25 @@ update_option('product_image_ids', NULL);
             dataType:'json',
             data:{'product_id':i,'communication_key':communication_key,'check_status':status},
             url: '../wp-content/plugins/linksync/image_uploader.php',
-            success:function(data){ 
-                var result=data.response;
-                if(result.image=='on'){
-                    if(result.gallery == 'success' && result.thumbnail=='success'){
-                        status='send';
-                        i++;
-                        product_count++;  
-                    }else{
-                        status='resend';
-                        console.log('Resend Request for the same product: Process Not complete yet');
-                    }  
-                }else{
-                    status='send';
-                    i++;
-                    product_count++; 
-                }   
+            success:function(data){
+
+				if( data.response ){
+					var result=data.response;
+					if(result.image=='on'){
+						if(result.gallery == 'success' && result.thumbnail=='success'){
+							status='send';
+							i++;
+							product_count++;
+						}else{
+							status='resend';
+							console.log('Resend Request for the same product: Process Not complete yet');
+						}
+					}else{
+						status='send';
+						i++;
+						product_count++;
+					}
+				}
                  
             },
             error: function(xhr, status, error) { 

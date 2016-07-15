@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.4
+  Version: 2.4.5
  */
 include 'ls-constants.php';
 include 'ls-functions.php';
@@ -30,7 +30,7 @@ class linksync {
 	/**
 	 * @var string
 	 */
-	public static $version = '2.4.3';
+	public static $version = '2.4.5';
 
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
@@ -475,10 +475,6 @@ class linksync {
         include_once  LS_INC_DIR. 'apps/vend/functions/ls-add-action-product.php'; #POST Product hook file
     }
 
-    public static function linksync_productPost_QBO() {
-        include_once dirname(__FILE__) . '/classes/Class.linksync.php'; # Handle Module Functions
-        include_once LS_INC_DIR. 'apps/qbo/functions/ls-add-action-product-QB.php'; #POST Product hook file
-    }
 
 // Function to used to remove space b/w sku 
     public static function linksync_removespaces($vars) {
@@ -844,8 +840,6 @@ register_activation_hook(__FILE__, array('linksync', 'activate')); # When plugin
 if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
     add_action('save_post', array('linksync', 'linksync_removespaces'), 1);
     add_action('save_post', array('linksync', 'linksync_productPost'), 2);
-} elseif (get_option('linksync_connectionwith') == 'QuickBooks Online' || get_option('linksync_connectedto') == 'QuickBooks Online') {
-    add_action('save_post', array('linksync', 'linksync_productPost_QBO'));
 }
 
 if (get_option('order_sync_type') == 'wc_to_vend') {
@@ -898,6 +892,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 				update_option('linksync_user_activity_daily', $orignal_time);
 			}
 		}
+
 
 	});
 

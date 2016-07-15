@@ -8,7 +8,7 @@
     $current_date_time_string = strtotime(date("Y-m-d H:i:s"));
 
     include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Class file having API Call functions
-    include_once(dirname(__FILE__) . '/classes/Class.linksync_QB.php'); # Class file having API Call functions
+
 
     set_time_limit(0);
     if (!in_array('linksync/linksync.php', apply_filters('active_plugins', get_option('active_plugins')))) {
@@ -23,10 +23,6 @@
         die('Access is denied, status running');
     }
 
-    $image_process = get_option('image_process');
-    if (isset($image_process) && $image_process == 'running') {
-        die('Access is denied, image process still running');
-    }
 
     if (isset($_REQUEST['sendlog'])) {
         $fileName = dirname(__FILE__) . '/classes/raw-log.txt';
