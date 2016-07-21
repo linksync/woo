@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.5
+  Version: 2.4.6
  */
 include 'ls-constants.php';
 include 'ls-functions.php';
@@ -696,12 +696,19 @@ class linksync {
                                     $response_ = $response_outlets['userMessage'];
                                     LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                                 } else {
-                                    foreach ($response_outlets['outlets'] as $key => $value) {
-                                        $oulets["{$key}"] = $value['id'];
-                                    }
-                                    $ouletsdb = implode('|', $oulets);
-                                    update_option('ps_outlet_details', $ouletsdb);
-                                    update_option('ps_outlet', 'on');
+									$selected_outlets = get_option( 'ps_outlet_details' );
+									/**
+									 * Check if current settings for outlets is empty then select all outlets
+									 * else do nothing and do not override users selected outlet(s)
+									 */
+									if( empty($selected_outlets) ){
+										foreach ($response_outlets['outlets'] as $key => $value) {
+											$oulets["{$key}"] = $value['id'];
+										}
+										$ouletsdb = implode('|', $oulets);
+										update_option('ps_outlet_details', $ouletsdb);
+										update_option('ps_outlet', 'on');
+									}
                                 }
                             } else {
                                 $class2 = 'updated';
@@ -873,8 +880,7 @@ if (get_option('linksync_update_notic') == 'on') {
  */
 if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 
-	add_action('woocommerce_loaded',function(){
-
+	function load_linskync_after_woocommerce_loaded(){
 		$linksync = new linksync();
 		$orignal_time = time();
 
@@ -892,8 +898,8 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 				update_option('linksync_user_activity_daily', $orignal_time);
 			}
 		}
+	}
 
-
-	});
+	add_action( 'woocommerce_loaded', 'load_linskync_after_woocommerce_loaded' );
 
 }

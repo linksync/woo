@@ -46,6 +46,28 @@ function ls_get_product_id_by_sku( $sku ){
 }
 
 /**
+ * Returns all the product variation ids base on main product id
+ *
+ * @param $product_id
+ * @return array|null
+ */
+function ls_get_product_variant_ids( $product_id ){
+	global $wpdb;
+	$var_ids = $wpdb->get_results(
+		$wpdb->prepare("SELECT ID
+                        FROM " . $wpdb->posts . "
+                        WHERE
+                             post_type='product_variation' AND
+                             post_parent= %d ", $product_id )
+		, ARRAY_A);
+
+	if( !empty($var_ids) ){
+		return $var_ids;
+	}
+	return null;
+}
+
+/**
  * @param $ls_order_id
  * @return null|int null or the linksync order id
  */
@@ -137,7 +159,7 @@ function ls_speciachars_decode( $string, $quote_style = ENT_NOQUOTES ){
  *                                          'term_group', 'term_order', 'taxonomy', 'parent', or 'term_taxonomy_id'.
  *                                          Default 'name'.
  *     @type string $order                  Sort order. Accepts 'ASC' or 'DESC'. Default 'ASC'.
- *     @type string $fields                 Fields to return for matched terms. Accepts 'term_id', 'name', 'slug' and 'term_group'.
+ *     @type string $fields                 Fields to return for matched terms. Accepts 'tt_ids','term_id', 'name', 'slug' and 'term_group'.
  * }
  *   For string it will only accept 'all'
  * @return array|WP_Error The requested term data or empty array if no terms found.
@@ -188,6 +210,8 @@ function ls_get_object_terms( $object_id, $taxonomy = 'product_tag', $args = arr
 
 		if( 'all' == $fields ){
 			$select_this = "tr.object_id,tt.term_taxonomy_id,tt.taxonomy,tt.description,tt.parent,tt.count,t.*";
+		} elseif( 'tt_ids' == $fields ){
+			$select_this = "tt.term_taxonomy_id";
 		}else{
 			$fields = esc_sql($fields);
 			$select_this = "t.{$fields}";
@@ -225,8 +249,20 @@ function ls_get_object_terms( $object_id, $taxonomy = 'product_tag', $args = arr
 		return array();
 	}
 
+	if( 'tt_ids' == $fields ){
+
+		$tr = array();
+		foreach( $terms as $term_id ){
+			$tr[] = $term_id['term_taxonomy_id'];
+		}
+		// set the return value
+		$terms = $tr;
+	}
+
+
 	return $terms;
 }
+
 
 /**
  * Get the selected taxonomy of the product Tag, Category or Brand
@@ -274,4 +310,128 @@ function ls_is_excluding_tax(){
 	}
 
 	return $excluding_tax;
+}
+
+/**
+ * Create Woocommerce product attribute if it does not exists
+ *
+ * @param $attribute_label
+ * @return bool|string
+ */
+function ls_create_woo_attribute( $attribute_label ){
+	global $wpdb;
+	if( empty($attribute_label) ){
+		return null;
+	}
+
+	$attribute_name = wc_attribute_taxonomy_name( stripslashes( $attribute_label ) );
+	$attribute = ls_woo_product_attribute_exist($attribute_label);
+
+	if( false == $attribute ){
+		$attr_name = wc_sanitize_taxonomy_name( stripslashes( $attribute_label ) );
+		$attr_label = wc_clean( stripslashes( $attribute_label ) );
+		$attribute = array(
+			'attribute_label'   =>  $attr_label,
+			'attribute_name'    =>  $attr_name,
+			'attribute_type'    =>  'select',
+			'attribute_orderby' =>  'menu_order'
+		);
+
+		$attr = $wpdb->insert( $wpdb->prefix . 'woocommerce_attribute_taxonomies', $attribute );
+		//Todo make sure to make an eye on the next following line because it should run on init hook
+		// Register the taxonomy now so that the import works!
+		register_taxonomy(
+			$attribute_name,
+			apply_filters( 'woocommerce_taxonomy_objects_' . $attribute_name, array( 'product' ) ),
+			apply_filters( 'woocommerce_taxonomy_args_' . $attribute_name, array(
+				'hierarchical' => true,
+				'show_ui'      => false,
+				'query_var'    => true,
+				'rewrite'      => false,
+			) )
+		);
+
+		delete_transient( 'wc_attribute_taxonomies' );
+
+	}else{
+		$attribute_name = wc_attribute_taxonomy_name( stripslashes( $attribute['attribute_name'] ) );
+	}
+
+	return $attribute_name;
+}
+
+/**
+ * Check if attribute exist via database direct call of the woocommerce_attribute_taxonomies table
+ *
+ * @param $attr_label
+ * @return array|bool|null|object|void
+ */
+function ls_woo_product_attribute_exist( $attr_label ){
+	global $wpdb;
+	$tbl_name = $wpdb->prefix.'woocommerce_attribute_taxonomies';
+	$attr_name = $attr_label;
+
+	$where_clause = $wpdb->prepare( " attribute_label = %s ", $attr_name );
+	$attribute = $wpdb->get_row( "SELECT * FROM $tbl_name WHERE ".$where_clause , ARRAY_A);
+	if( null !== $attribute ){
+		return $attribute;
+	}else{
+		return false;
+	}
+
+}
+
+
+/**
+ * Save last update_at value to the database plus one second
+ *
+ * @param $type string           Required field, either 'product' or 'order'
+ * @param null $utc_date_time    update_at value comming from vend
+ * @return bool|string           Returns false or the last update_at value
+ */
+function ls_last_update_at( $type, $utc_date_time = null ){
+	$types = array( 'product', 'order' );
+
+	if( in_array( $type, $types ) ){
+
+		$option_name = 'ls_'.$type.'_last_updated_at';
+		$last_updated_at = get_option($option_name);
+
+		if( empty($utc_date_time) ){
+			return $last_updated_at;
+		}else{
+
+			$last_time = strtotime($last_updated_at);
+			$time_arg = strtotime($utc_date_time);
+			if( $last_time < $time_arg ){
+				$lt_plus_one_second = date( "Y-m-d H:i:s", $time_arg + 1 );
+				update_option( $option_name, $lt_plus_one_second );
+				return $lt_plus_one_second;
+			}
+
+		}
+
+	}
+
+	return false;
+}
+
+/**
+ * Save and return last order update_at key from the order get response plus one second
+ *
+ * @param $utc_date_time string   Optional UTC time coming from vend
+ * @return string|false           Returns utc time in string format or false if $utc_date_time is null
+ */
+function ls_last_product_updated_at( $utc_date_time = null ){
+	return ls_last_update_at( 'product', $utc_date_time );
+}
+
+/**
+ * Save and return last order update_at key from the order get response plus one second
+ *
+ * @param null $utc_date_time     Optional UTC time coming from vend
+ * @return string|false           Returns utc time in string format or false if $utc_date_time is null
+ */
+function ls_last_order_update_at( $utc_date_time = null ){
+	return ls_last_update_at( 'order', $utc_date_time );
 }

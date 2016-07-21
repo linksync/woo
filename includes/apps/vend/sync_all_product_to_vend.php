@@ -21,7 +21,7 @@ function logs_detail() {
 }
 
 if (isset($_POST['get_total'])) {
-    echo logs_detail();
+    logs_detail();
     exit;
 }
 if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_sync_type == 'two_way') {
@@ -57,8 +57,8 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                     $taxname = empty($post_detail['_tax_class'][0]) ? 'standard-tax' : $post_detail['_tax_class'][0];
                     $response_taxes = linksyn_get_tax_details_syncall($taxname);
                     if ($response_taxes['result'] == 'success') {
-                        $product['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
-                        $product['tax_rate'] = $response_taxes['data']['tax_rate'];
+                        //$product['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
+                        //$product['tax_rate'] = $response_taxes['data']['tax_rate'];
                         $taxsetup = true;
                     }
                 }
@@ -69,7 +69,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                             if (isset($post_detail['_regular_price'][0]) && !empty($post_detail['_regular_price'][0])) {
 //cost price:_regular_price
                                 $regular_price = (float) $post_detail['_regular_price'][0];
-                                $tax_rate = (float) $product['tax_rate'];
+                                $tax_rate = (float) @$product['tax_rate'];
                                 $tax_value = (float) ($regular_price * $tax_rate);
 //sell price:_regular_price 
 
@@ -82,12 +82,12 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                                 $product['sell_price'] = str_replace(',', '.', $price);
 
                                 $product['list_price'] = str_replace(',', '.', $price);
-                                $product['tax_value'] = $tax_value;
+                                //$product['tax_value'] = $tax_value;
                             }
                         } else {
                             if (isset($post_detail['_sale_price'][0]) && !empty($post_detail['_sale_price'][0])) {
                                 $regular_price = (float) $post_detail['_sale_price'][0];
-                                $tax_rate = (float) $product['tax_rate'];
+                                $tax_rate = (float) @$product['tax_rate'];
                                 $tax_value = (float) ($regular_price * $tax_rate);
                                 if ($display_retail_price_tax_inclusive == '1') {
                                     $price = $post_detail['_sale_price'][0] + $tax_value; //display_retail_price_tax_inclusive 1, sell_price = Woo Final price + tax
@@ -96,7 +96,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                                 }
                                 $product['sell_price'] = str_replace(',', '.', $price);
                                 $product['list_price'] = str_replace(',', '.', $price);
-                                $product['tax_value'] = $tax_value;
+                                //$product['tax_value'] = $tax_value;
                             }
                         }
                     } else {
@@ -121,7 +121,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
 // No effect on price 
                         if (get_option('price_field') == 'regular_price') {
                             $regular_price = (float) $post_detail['_regular_price'][0];
-                            $tax_rate = (float) $product['tax_rate'];
+                            $tax_rate = (float) @$product['tax_rate'];
                             $tax_value = ($regular_price - ($regular_price / (1 + $tax_rate)));
                             if (isset($post_detail['_regular_price'][0]) && !empty($post_detail['_regular_price'][0])) {
                                 if ($display_retail_price_tax_inclusive == '1') {
@@ -132,12 +132,12 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
 //sell price:_regular_price
                                 $product['sell_price'] = str_replace(',', '.', $post_detail['_regular_price'][0]);
                                 $product['list_price'] = str_replace(',', '.', $post_detail['_regular_price'][0]);
-                                $product['tax_value'] = $tax_value;
+                                //$product['tax_value'] = $tax_value;
                             }
                         } else {
                             if (isset($post_detail['_sale_price'][0]) && !empty($post_detail['_sale_price'][0])) {
                                 $regular_price = (float) $post_detail['_sale_price'][0];
-                                $tax_rate = (float) $product['tax_rate'];
+                                $tax_rate = (float) @$product['tax_rate'];
                                 $tax_value = ($regular_price - ($regular_price / (1 + $tax_rate)));
                                 if ($display_retail_price_tax_inclusive == '1') {
                                     //display_retail_price_tax_inclusive 1, sell_price = Woo Final price
@@ -147,7 +147,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
 
                                 $product['sell_price'] = str_replace(',', '.', $post_detail['_sale_price'][0]);
                                 $product['list_price'] = str_replace(',', '.', $post_detail['_sale_price'][0]);
-                                $product['tax_value'] = $tax_value;
+                                //$product['tax_value'] = $tax_value;
                             }
                         }
                     } else {
@@ -247,8 +247,8 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                             $taxname = empty($variants_detail['_tax_class'][0]) ? 'standard-tax' : $variants_detail['_tax_class'][0];
                             $response_taxes = linksyn_get_tax_details_syncall($taxname);
                             if ($response_taxes['result'] == 'success') {
-                                $variant['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
-                                $variant['tax_rate'] = $response_taxes['data']['tax_rate'];
+                                //$variant['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
+                                //$variant['tax_rate'] = $response_taxes['data']['tax_rate'];
                                 $taxsetup = true;
                             }
                         }
@@ -261,7 +261,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
 //cost price:_regular_price
                                         $regular_price = (float) $variants_detail['_regular_price'][0];
 // Get Tax_value
-                                        @$tax_rate = (float) $variant['tax_rate'];
+                                        @$tax_rate = (float) @$variant['tax_rate'];
                                         $tax_value = (float) ($regular_price * $tax_rate);
                                         if ($display_retail_price_tax_inclusive == '1') {
                                             $variant_price = $variants_detail['_regular_price'][0] + $tax_value;
@@ -271,13 +271,13 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                                         //sell price:_regular_price
                                         $variant['sell_price'] = str_replace(',', '.', $variant_price);
                                         $variant['list_price'] = str_replace(',', '.', $variant_price);
-                                        $variant['tax_value'] = $tax_value;
+                                        //$variant['tax_value'] = $tax_value;
                                     }
                                 } else {
                                     if (isset($variants_detail['_sale_price'][0]) && !empty($variants_detail['_sale_price'][0])) {
                                         $regular_price = (float) $variants_detail['_sale_price'][0];
 // Get Tax_value
-                                        $tax_rate = (float) $variant['tax_rate'];
+                                        $tax_rate = (float) @$variant['tax_rate'];
                                         $tax_value = (float) ($regular_price * $tax_rate);
                                         if ($display_retail_price_tax_inclusive == '1') {
                                             $variant_price = $variants_detail['_sale_price'][0] + $tax_value;
@@ -286,7 +286,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                                         }
                                         $variant['sell_price'] = str_replace(',', '.', $variant_price);
                                         $variant['list_price'] = str_replace(',', '.', $variant_price);
-                                        $variant['tax_value'] = $tax_value;
+                                        //$variant['tax_value'] = $tax_value;
                                     }
                                 }
                             } else {
@@ -324,7 +324,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
 //sell price:_regular_price
                                     $variant['sell_price'] = str_replace(',', '.', $variants_detail['_regular_price'][0]);
                                     $variant['list_price'] = str_replace(',', '.', $variants_detail['_regular_price'][0]);
-                                    $variant['tax_value'] = $tax_value;
+                                    //$variant['tax_value'] = $tax_value;
                                 }
                             } else {
                                 if (isset($variants_detail['_sale_price'][0]) && !empty($variants_detail['_sale_price'][0])) {
@@ -343,7 +343,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                                     }
                                     $variant['sell_price'] = str_replace(',', '.', $variants_detail['_sale_price'][0]);
                                     $variant['list_price'] = str_replace(',', '.', $variants_detail['_sale_price'][0]);
-                                    $variant['tax_value'] = $tax_value;
+                                    //$variant['tax_value'] = $tax_value;
                                 }
                             }
                         }

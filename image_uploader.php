@@ -3,11 +3,6 @@
 require(dirname(__FILE__) . '../../../../wp-load.php'); # WordPress Configuration File
 include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Class file having API Call functions 
 global $wp;
-// Initializing 
-$wp->init();
-$wp->parse_request();
-$wp->query_posts();
-$wp->register_globals();
 if ($_POST['communication_key'] != get_option('webhook_url_code')) {
     die('Access is Denied');
 }    #Product Image
@@ -15,7 +10,6 @@ global $wpdb;
 if (isset($_POST['product_id']) && !empty($_POST['product_id'])) {
     $message = array();
     $product_details = get_option('product_image_ids');
-
     $product_ID_check = isset($product_details[$_POST['product_id'] - 1]) ? $product_details[$_POST['product_id'] - 1] : null;
     $product_detail = explode('|', $product_ID_check);
     if (isset($product_detail[1]) && !empty($product_detail[1])) {

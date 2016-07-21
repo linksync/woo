@@ -76,6 +76,11 @@
                 $url = 'since=' . urlencode($order_time_suc);
             }
 
+			$order_last_update_at = ls_last_order_update_at();
+			if( false != $order_last_update_at ){
+				$url = 'since=' . urlencode($order_last_update_at);
+			}
+
             $all_orders = $apicall->linksync_getOrder($url);
 
             if (isset($all_orders['pagination'])) {
@@ -131,7 +136,12 @@
             $prod_update_suc = get_option('prod_update_suc'); # it has NULL or DATETIME
             // echo $prod_update_suc;echo "<br>";exit;
             if (isset($prod_update_suc) && !empty($prod_update_suc)) {
-                $url.='since=' . urlencode($prod_update_suc);
+				$p_last_updated_at = ls_last_product_updated_at();
+				if( false != $p_last_updated_at ){
+					$url.='since=' . urlencode($prod_update_suc);
+				}else{
+					$url.='since=' . urlencode($p_last_updated_at);
+				}
             }
             if ($product_sync_type == 'vend_to_wc-way') { # if only select Vend to Woocomerce
                 $price_book = get_option('price_book'); # it has NULL or DATETIME
@@ -202,7 +212,6 @@
                         $message['product_count'] = ($products['pagination']['page'] - 1) * 50;
                         if (isset($products['products']) && !empty($products['products'])) {
                             $api_response = $apicall->importProductToWoocommerce($products);
-
 							//User Manually
 							if (isset($api_response) && !empty($api_response)) {
 								update_option('image_process', 'running');
@@ -270,7 +279,7 @@
 									if( !empty($pro_variant['sku']) ){
 										$product_id = ls_get_product_id_by_sku( $pro_variant['sku'] );
 										$product_meta = new LS_Product_Meta($product_id);
-
+										ls_last_product_updated_at($pro_variant['update_at']);
 										$quantity = 0;
 										if( !empty($pro_variant['outlets']) ){
 											foreach( $pro_variant['outlets'] as $outlet ){
@@ -288,7 +297,7 @@
 
 									$product_id = ls_get_product_id_by_sku( $product['sku'] );
 									$product_meta = new LS_Product_Meta($product_id);
-
+									ls_last_product_updated_at($product['update_at']);
 									$quantity = 0;
 
 									if( !empty($product['outlets']) ){

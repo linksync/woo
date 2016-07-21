@@ -442,7 +442,7 @@ $laid = LS_Vend_Api_Key::select_all('OBJECT');
                 update_option('product_detail', NULL);
                 update_option('image_process', 'complete');
                 update_option('prod_last_page', NULL);
-                update_option('product_image_ids', NULL);
+                //update_option('product_image_ids', NULL);
             ?> 
             jQuery("#export_report").hide(); 
             jQuery('#syncing_loader').show();

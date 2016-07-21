@@ -1238,7 +1238,7 @@ if ($product_sync_type == 'disabled_sync') {
 <?php
 update_option('image_process', 'complete');
 update_option('prod_last_page', NULL);
-update_option('product_image_ids', NULL);
+//update_option('product_image_ids', NULL);
 ?>
         jQuery('#showMessage').hide();
         jQuery('#pop_button').hide();
@@ -1318,7 +1318,7 @@ update_option('product_image_ids', NULL);
             url: '../wp-content/plugins/linksync/image_uploader.php',
             success:function(data){
 
-				if( data.response ){
+				if( data ){
 					var result=data.response;
 					if(result.image=='on'){
 						if(result.gallery == 'success' && result.thumbnail=='success'){

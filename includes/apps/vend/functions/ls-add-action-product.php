@@ -15,6 +15,11 @@ if (get_option('linksync_status') == 'Active') {
             $apicall = new linksync_class($LAIDKey, $testMode);
             if ($apicall->lastresponse['result'] == 'success') {
                 if ($_POST['post_status'] != 'trash') {
+					/**
+					 * Product Metas Instance to get custom metas and default metas
+					 */
+					$product_metas = new LS_Product_Meta( $_POST['post_ID'] );
+
                     if (@empty($_POST['_sku'])) {
                         $_POST['_sku'] = 'sku_' . $_POST['post_ID'];
                         update_post_meta($_POST['post_ID'], '_sku', 'sku_' . $_POST['post_ID']);
@@ -46,8 +51,8 @@ if (get_option('linksync_status') == 'Active') {
                                     if (isset($taxname) && !empty($taxname)) {
                                         $response_taxes = linksyn_get_tax_details_for_product($taxname);
                                         if ($response_taxes['result'] == 'success') {
-                                            $product['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
-                                            $product['tax_rate'] = $response_taxes['data']['tax_rate'];
+                                            //$product['tax_name'] = !empty($product_metas->get_tax_name()) ? $product_metas->get_tax_name() : html_entity_decode($response_taxes['data']['tax_name']);
+                                            //$product['tax_rate'] = !empty($product_metas->get_tax_rate()) ? $product_metas->get_tax_rate() : $response_taxes['data']['tax_rate'];
                                             $taxsetup = true;
                                         }
                                     }
@@ -62,7 +67,7 @@ if (get_option('linksync_status') == 'Active') {
                                                 //cost price:_regular_price
                                                 $regular_price = (float) $_POST['_regular_price'];
 //                                                 Get Tax_value
-                                                $tax_rate = (float) $product['tax_rate'];
+                                                $tax_rate = (float) @$product['tax_rate'];
                                                 $tax_value = (float) ($regular_price * $tax_rate);
 
                                                 //sell price:_regular_price
@@ -78,13 +83,13 @@ if (get_option('linksync_status') == 'Active') {
                                                 }
                                                 $product['sell_price'] = str_replace(',', '.', $price);
                                                 $product['list_price'] = str_replace(',', '.', $price);
-                                                $product['tax_value'] = $tax_value;
+                                                //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                             }
                                         } else {
                                             if (isset($_POST['_sale_price']) && !empty($_POST['_sale_price'])) {
                                                 $sale_price = (float) $_POST['_sale_price'];
 //                                                 Get Tax_value
-                                                $tax_rate = (float) $product['tax_rate'];
+                                                $tax_rate = (float) @$product['tax_rate'];
                                                 $tax_value = (float) ($sale_price * $tax_rate);
                                                 if ($display_retail_price_tax_inclusive == '1') {
                                                     $price = $_POST['_sale_price'] + $tax_value;
@@ -93,7 +98,7 @@ if (get_option('linksync_status') == 'Active') {
                                                 }
                                                 $product['sell_price'] = str_replace(',', '.', $price);
                                                 $product['list_price'] = str_replace(',', '.', $price);
-                                                $product['tax_value'] = $tax_value;
+                                                //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                             }
                                         }
                                     } else {  //not ticked exc
@@ -123,7 +128,7 @@ if (get_option('linksync_status') == 'Active') {
                                                 //cost price:_regular_price
                                                 $regular_price = (float) $_POST['_regular_price'];
 //                                                 Get Tax_value
-                                                $tax_rate = (float) $product['tax_rate'];
+                                                $tax_rate = (float) @$product['tax_rate'];
                                                 $tax_value = ($regular_price - ($regular_price / (1 + $tax_rate)));
                                                 if ($display_retail_price_tax_inclusive == '1') {
                                                     $price = $_POST['_regular_price'];
@@ -134,14 +139,14 @@ if (get_option('linksync_status') == 'Active') {
                                                 //sell price:_regular_price
                                                 $product['sell_price'] = str_replace(',', '.', $price);
                                                 $product['list_price'] = str_replace(',', '.', $price);
-                                                $product['tax_value'] = $tax_value;
+                                                //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                             }
                                         } else {
                                             if (isset($_POST['_sale_price']) && !empty($_POST['_sale_price'])) {
                                                 //cost price:_regular_price
                                                 $regular_price = (float) $_POST['_sale_price'];
 //                                                 Get Tax_value
-                                                $tax_rate = (float) $product['tax_rate'];
+                                                $tax_rate = (float) @$product['tax_rate'];
                                                 $tax_value = ($regular_price - ($regular_price / (1 + $tax_rate)));
                                                 if ($display_retail_price_tax_inclusive == '1') {
                                                     
@@ -150,7 +155,7 @@ if (get_option('linksync_status') == 'Active') {
                                                 }
                                                 $product['sell_price'] = str_replace(',', '.', $_POST['_sale_price']);
                                                 $product['list_price'] = str_replace(',', '.', $_POST['_sale_price']);
-                                                $product['tax_value'] = $tax_value;
+                                                //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                             }
                                         }
                                     } else {  //not ticked exc
@@ -277,6 +282,8 @@ if (get_option('linksync_status') == 'Active') {
                                     $total_var_product = 0;
                                     foreach ($variants_data as $variant_data) {
                                         $variants_detail = get_post_meta($variant_data['ID']);
+										$var_meta = new LS_Product_Meta($variant_data['ID']);
+
                                         if (@empty($variants_detail['_sku'][0])) {
                                             $variants_detail['_sku'][0] = 'sku_' . $variant_data['ID'];
                                             update_post_meta($variant_data['ID'], '_sku', 'sku_' . $_POST['post_ID']);
@@ -300,8 +307,8 @@ if (get_option('linksync_status') == 'Active') {
                                                 $taxname = empty($variants_detail['_tax_class'][0]) ? 'standard-tax' : $variants_detail['_tax_class'][0];
                                                 $response_taxes = linksyn_get_tax_details_for_product($taxname);
                                                 if ($response_taxes['result'] == 'success') {
-                                                    $variant['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
-                                                    $variant['tax_rate'] = $response_taxes['data']['tax_rate'];
+                                                    //$variant['tax_name'] = !empty($var_meta->get_tax_name())? $var_meta->get_tax_name(): html_entity_decode($response_taxes['data']['tax_name']);
+                                                    //$variant['tax_rate'] = !empty($var_meta->get_tax_rate()) ? $var_meta->get_tax_rate() : $response_taxes['data']['tax_rate'];
                                                     $taxsetup = true;
                                                 }
                                             }
@@ -314,7 +321,7 @@ if (get_option('linksync_status') == 'Active') {
 //cost price:_regular_price
                                                             $regular_price = (float) $variants_detail['_regular_price'][0];
 // Get Tax_value
-                                                            @$tax_rate = (float) $variant['tax_rate'];
+                                                            @$tax_rate = (float) @$variant['tax_rate'];
                                                             $tax_value = (float) ($regular_price * $tax_rate);
 //sell price:_regular_price
                                                             //sell price:_regular_price
@@ -329,13 +336,13 @@ if (get_option('linksync_status') == 'Active') {
                                                             }
                                                             $variant['sell_price'] = str_replace(',', '.', $variant_price);
                                                             $variant['list_price'] = str_replace(',', '.', $variant_price);
-                                                            $variant['tax_value'] = $tax_value;
+                                                            //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                                                         }
                                                     } else {
                                                         if (isset($variants_detail['_sale_price'][0]) && !empty($variants_detail['_sale_price'][0])) {
                                                             $regular_price = (float) $variants_detail['_sale_price'][0];
 // Get Tax_value
-                                                            $tax_rate = (float) $variant['tax_rate'];
+                                                            $tax_rate = (float) @$variant['tax_rate'];
                                                             $tax_value = (float) ($regular_price * $tax_rate);
                                                             if ($display_retail_price_tax_inclusive == '1') {
                                                                 $variant_price = $variants_detail['_sale_price'][0] + $tax_value;
@@ -344,7 +351,7 @@ if (get_option('linksync_status') == 'Active') {
                                                             }
                                                             $variant['sell_price'] = str_replace(',', '.', $variant_price);
                                                             $variant['list_price'] = str_replace(',', '.', $variant_price);
-                                                            $variant['tax_value'] = $tax_value;
+                                                            //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                                                         }
                                                     }
                                                 } else {
@@ -383,7 +390,7 @@ if (get_option('linksync_status') == 'Active') {
 //sell price:_regular_price
                                                         $variant['sell_price'] = str_replace(',', '.', $variants_detail['_regular_price'][0]);
                                                         $variant['list_price'] = str_replace(',', '.', $variants_detail['_regular_price'][0]);
-                                                        $variant['tax_value'] = $tax_value;
+                                                        //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                                                     }
                                                 } else {
                                                     if (isset($variants_detail['_sale_price'][0]) && !empty($variants_detail['_sale_price'][0])) {
@@ -398,7 +405,7 @@ if (get_option('linksync_status') == 'Active') {
                                                         }
                                                         $variant['sell_price'] = str_replace(',', '.', $variants_detail['_sale_price'][0]);
                                                         $variant['list_price'] = str_replace(',', '.', $variants_detail['_sale_price'][0]);
-                                                        $variant['tax_value'] = $tax_value;
+                                                        //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                                                     }
                                                 }
                                             }
@@ -526,8 +533,8 @@ if (get_option('linksync_status') == 'Active') {
                                     $taxname = empty($_POST['_tax_class']) ? 'standard-tax' : $_POST['_tax_class'];
                                     $response_taxes = linksyn_get_tax_details_for_product($taxname);
                                     if ($response_taxes['result'] == 'success') {
-                                        $product['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
-                                        $product['tax_rate'] = $response_taxes['data']['tax_rate'];
+                                        //$product['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
+                                        //$product['tax_rate'] = $response_taxes['data']['tax_rate'];
                                         $taxsetup = true;
                                     }
                                 }
@@ -540,7 +547,7 @@ if (get_option('linksync_status') == 'Active') {
 //cost price:_regular_price
                                                 $regular_price = (float) $_POST['_regular_price'];
 //                                                 Get Tax_value
-                                                $tax_rate = (float) $product['tax_rate'];
+                                                $tax_rate = (float) @$product['tax_rate'];
                                                 $tax_value = (float) ($regular_price * $tax_rate);
 
                                                 if ($display_retail_price_tax_inclusive == '1') {
@@ -551,14 +558,14 @@ if (get_option('linksync_status') == 'Active') {
 //sell price:_regular_price
                                                 $product['sell_price'] = str_replace(',', '.', $price);
                                                 $product['list_price'] = str_replace(',', '.', $price);
-                                                $product['tax_value'] = $tax_value;
+                                                //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                             }
                                         } else {
                                             if (isset($_POST['_sale_price']) && !empty($_POST['_sale_price'])) {
 
                                                 $regular_price = (float) $_POST['_sale_price'];
 //                                                 Get Tax_value
-                                                $tax_rate = (float) $product['tax_rate'];
+                                                $tax_rate = (float) @$product['tax_rate'];
                                                 $tax_value = (float) ($regular_price * $tax_rate);
                                                 if ($display_retail_price_tax_inclusive == '1') {
                                                     $price = $_POST['_sale_price'] + $tax_value;
@@ -567,7 +574,7 @@ if (get_option('linksync_status') == 'Active') {
                                                 }
                                                 $product['sell_price'] = str_replace(',', '.', $price);
                                                 $product['list_price'] = str_replace(',', '.', $price);
-                                                $product['tax_value'] = $tax_value;
+                                                //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                             }
                                         }
                                     } else {
@@ -606,7 +613,7 @@ if (get_option('linksync_status') == 'Active') {
 //sell price:_regular_price
                                             $product['sell_price'] = str_replace(',', '.', $_POST['_regular_price']);
                                             $product['list_price'] = str_replace(',', '.', $_POST['_regular_price']);
-                                            $product['tax_value'] = $tax_value;
+                                            //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                         }
                                     } else {
                                         if (isset($_POST['_sale_price']) && !empty($_POST['_sale_price'])) {
@@ -627,7 +634,7 @@ if (get_option('linksync_status') == 'Active') {
 //sell price:_regular_price
                                             $product['sell_price'] = str_replace(',', '.', $_POST['_sale_price']);
                                             $product['list_price'] = str_replace(',', '.', $_POST['_sale_price']);
-                                            $product['tax_value'] = $tax_value;
+                                            //$product['tax_value'] = !empty($product_metas->get_tax_value()) ? $product_metas->get_tax_value() : $tax_value;
                                         }
                                     }
                                 }
@@ -764,6 +771,8 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
             $variants_detail['_sku'][0] = linksync_removespaces_sku_add_action($variants_detail['_sku'][0]);
             update_post_meta($variant_data['ID'], '_sku', $variants_detail['_sku'][0]);
             $variant['sku'] = html_entity_decode($variants_detail['_sku'][0]); //SKU(unique Key)
+
+			$var_meta = new LS_Product_Meta( $variant_data['ID'] );
 #Name/Title Check
             if (get_option('ps_name_title') == 'on') {
                 $variant['name'] = html_entity_decode($variant_data['post_title']);
@@ -783,8 +792,8 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
                     $taxname = empty($variants_detail['_tax_class'][0]) ? 'standard-tax' : $variants_detail['_tax_class'][0];
                     $response_taxes = linksyn_get_tax_details_for_product($taxname);
                     if ($response_taxes['result'] == 'success') {
-                        $variant['tax_name'] = html_entity_decode($response_taxes['data']['tax_name']);
-                        $variant['tax_rate'] = $response_taxes['data']['tax_rate'];
+                        //$variant['tax_name'] = !empty($var_meta->get_tax_name()) ? $var_meta->get_tax_name() : html_entity_decode($response_taxes['data']['tax_name']);
+                        //$variant['tax_rate'] = !empty($var_meta->get_tax_rate()) ? $var_meta->get_tax_rate() : $response_taxes['data']['tax_rate'];
                         $taxsetup = true;
                     }
                 }
@@ -797,7 +806,7 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
 //cost price:_regular_price
                                 $regular_price = (float) $variants_detail['_regular_price'][0];
 // Get Tax_value
-                                @$tax_rate = (float) $variant['tax_rate'];
+                                @$tax_rate = (float) @$variant['tax_rate'];
                                 $tax_value = (float) ($regular_price * $tax_rate);
                                 if ($display_retail_price_tax_inclusive == '1') {
                                     $variant_price = $variants_detail['_regular_price'][0] + $tax_value;
@@ -807,13 +816,13 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
                                 //sell price:_regular_price
                                 $variant['sell_price'] = str_replace(',', '.', $variant_price);
                                 $variant['list_price'] = str_replace(',', '.', $variant_price);
-                                $variant['tax_value'] = $tax_value;
+                                //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                             }
                         } else {
                             if (isset($variants_detail['_sale_price'][0]) && !empty($variants_detail['_sale_price'][0])) {
                                 $regular_price = (float) $variants_detail['_sale_price'][0];
 // Get Tax_value
-                                $tax_rate = (float) $variant['tax_rate'];
+                                $tax_rate = (float) @$variant['tax_rate'];
                                 $tax_value = (float) ($regular_price * $tax_rate);
                                 if ($display_retail_price_tax_inclusive == '1') {
                                     $variant_price = $variants_detail['_sale_price'][0] + $tax_value;
@@ -822,7 +831,7 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
                                 }
                                 $variant['sell_price'] = str_replace(',', '.', $variant_price);
                                 $variant['list_price'] = str_replace(',', '.', $variant_price);
-                                $variant['tax_value'] = $tax_value;
+                                //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() :$tax_value;
                             }
                         }
                     } else {
@@ -860,7 +869,7 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
 //sell price:_regular_price
                             $variant['sell_price'] = str_replace(',', '.', $variants_detail['_regular_price'][0]);
                             $variant['list_price'] = str_replace(',', '.', $variants_detail['_regular_price'][0]);
-                            $variant['tax_value'] = $tax_value;
+                            //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                         }
                     } else {
                         if (isset($variants_detail['_sale_price'][0]) && !empty($variants_detail['_sale_price'][0])) {
@@ -879,7 +888,7 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
                             }
                             $variant['sell_price'] = str_replace(',', '.', $variants_detail['_sale_price'][0]);
                             $variant['list_price'] = str_replace(',', '.', $variants_detail['_sale_price'][0]);
-                            $variant['tax_value'] = $tax_value;
+                            //$variant['tax_value'] = !empty($var_meta->get_tax_value()) ? $var_meta->get_tax_value() : $tax_value;
                         }
                     }
                 }

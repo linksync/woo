@@ -276,52 +276,6 @@ class linksync_class {
         return $result;
     }
 
-    /**
-     * QuickBooks Online Fucntions
-     */
-    public function linksync_QuickBook_taxes() {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/tax', 'GET');
-        return $result;
-    }
-
-    public function linksync_QuickBook_info() {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/info', 'GET');
-        return $result;
-    }
-
-    public function linksync_QuickBook_taxCode() {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/taxcode', 'GET');
-        return $result;
-    }
-
-    public function linksync_QuickBook_class() {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/class', 'GET');
-        return $result;
-    }
-
-    public function linksync_QuickBook_payment() {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/payment', 'GET');
-        return $result;
-    }
-
-    public function linksync_QuickBook_location() {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/location', 'GET');
-        return $result;
-    }
-
-    public function linksync_QuickBook_account($account) {
-        $url = $this->testmode == 'on' ? $url = $this->testingURL : $url = $this->URL;
-        $result = $this->_CalltoAPIArray($url, 'qbo/account?classification=' . $account, 'GET');
-        return $result;
-    }
-
-
 
     /**
      * @param array the variants array
@@ -425,6 +379,134 @@ class linksync_class {
 		}
 	}
 
+	public function set_woo_product_terms( $product_id, $terms, $taxonomy = 'tag' ){
+		$taxonomy = 'product_'.$taxonomy;
+		$product_id = (int) $product_id;
+		//Remove the old terms
+		wp_set_object_terms( $product_id, null, $taxonomy );
+		if( !empty($terms) && is_array($terms) ){
+			foreach ( $terms as $term ) {
+				//$vend_tag_names[] = ;
+				wp_set_object_terms( $product_id, $term['name'] , $taxonomy, true );
+			}
+		}
+	}
+
+
+	/**
+	 * Sync Vend data to woo terms, depending on the option selected
+	 *
+	 * @param $product_id
+	 * @param $terms array{
+	 *    Array of argument.
+	 *    @type array $tag
+	 *    @type array $cat
+	 *    @type string product_type
+	 * }
+	 */
+	public function to_woo_terms( $product_id, $terms ){
+		$tags = $terms['tags'];
+		$brands = $terms['brands'];
+		$product_type = $terms['product_type'];
+
+		#Tag of the Products
+		if (get_option('ps_tags') == 'on') {
+			if ( !empty($tags) ) {
+				$this->set_woo_product_terms( $product_id, $tags );
+			}
+		}
+
+		# BRAND syncing ( update )
+		if (in_array('woocommerce-brands/woocommerce-brands.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+			if (get_option('ps_brand') == 'on') {
+
+				if ( !empty($brands) ) {
+					$this->set_woo_product_terms( $product_id, $brands, 'brand' );
+				}
+
+			}
+		}
+
+		#Category
+		if (get_option('ps_categories') == 'on') {
+			if (get_option('cat_radio') == 'ps_cat_product_type') {
+				$this->set_woo_product_category( $product_id, $product_type, 'product_type');
+			}
+			if (get_option('cat_radio') == 'ps_cat_tags') {
+				$this->set_woo_product_category( $product_id, $tags );
+			}
+		}
+	}
+
+	/**
+	 * Vend variant attributes to woocommerce
+	 * @param $args{
+	 *    Array argument.
+	 *    $product_id   The product id or the parent id of the variant
+	 *    $variant_id   The variant id
+	 *    $attr_name    The attribute name from vend or the custom taxonomy in wordpress
+	 *    $attr_value   The attribute value from vend or the term of a taxonomy
+	 * }
+	 * @return null
+	 */
+	public function to_woo_variant_attributes( $args ){
+		if( empty($args['product_id']) || empty($args['variant_id']) || empty($args['attr_name']) || empty($args['attr_value'])){
+			return null;
+		}
+
+		$product_ID = (int) $args['product_id'];
+		$variation_product_id = (int) $args['variant_id'];
+		$attribute_label = $args['attr_name'];
+		$attribute_name  = ls_create_woo_attribute( $attribute_label );
+		$attribute_value = $args['attr_value'];
+
+
+
+		if ( !empty($attribute_name) &&  !empty($attribute_value)){
+
+			$visible = get_option('linksync_visiable_attr');
+			$attr = array(
+				'name'         => $attribute_name,
+				'value'        => '',
+				'is_visible'   => $visible,
+				'is_variation' => '1',
+				'is_taxonomy'  => '1'
+			);
+
+			$terms = wp_set_object_terms( $product_ID, $attribute_value, $attribute_name, true );
+
+			if( get_option('ps_attribute') == 'on' ){
+
+				$term = ls_get_term_by_name( $attribute_value, null, $attribute_name );
+				if( !empty($term->slug)  ){
+					update_post_meta($variation_product_id, "attribute_" . $attribute_name, $term->slug );
+				}
+
+			}
+
+			return array( 'tax_name' => $attribute_name, 'attr'=> $attr );
+		}
+
+		return null;
+	}
+
+	/**
+	 * Delete product base on product id
+	 * @param $product_id int        The woocommerce product id
+	 * @param bool $force_delete     Defaults is true, to force deletion and avoid trash
+	 */
+	public function delete_woo_products( $product_id , $force_delete = true ){
+		$delete_option = get_option('ps_delete');
+		if( 'on' == $delete_option ){
+			$var_ids = ls_get_product_variant_ids( $product_id );
+			if( !empty($var_ids) ){
+				foreach($var_ids as $var_id ){
+					wp_delete_post($var_id['ID'], $force_delete );
+				}
+			}
+			wp_delete_post( $product_id, $force_delete );
+		}
+	}
 
     /**
      * The function used to Add / Update product in woocommerce
@@ -500,25 +582,15 @@ class linksync_class {
                  */
 
 #Delete the product from the woocommerce with the value delected_at of the product
-                if (get_option('ps_delete') == 'on') {
-                    if (!empty($product['deleted_at'])) {
-                        global $wpdb;
-                        $product_detail = $wpdb->get_results(
-                                                $wpdb->prepare("SELECT ID,post_parent
-                                                                FROM `" . $wpdb->posts . "`
-                                                                WHERE
-                                                                    post_type='product_variation' AND
-                                                                    `post_parent`= %d ", $result_reference['data'])
-                                            , ARRAY_A);
-                        if (0 != $wpdb->num_rows) {
-                            foreach ($product_detail as $detail) {
-                                wp_delete_post($detail['ID']);
-                            }
-                        }
-                        wp_delete_post($result_reference['data'], true);
-                    }
-                }
+				/**
+				 * Delete product in woo if deleted_at key is not empty
+				 */
+				if( !empty($product['deleted_at']) ){
+					$this->delete_woo_products( $result_reference['data'] );
+				}
+
                 if (empty($product['deleted_at'])) {
+					ls_last_product_updated_at($product['update_at']);
 					$products_meta = new LS_Product_Meta( $result_reference['data'] );
 					$products_meta->update_tax_value( $product['tax_value'] );
 					$products_meta->update_tax_name( $product['tax_name'] );
@@ -646,112 +718,15 @@ class linksync_class {
 #----------------------------------------END VARIENT DATA----------------------------------------#
                     }
 
-#Tag of the Products
-                    if (get_option('ps_tags') == 'on') {
-                        $term_exists['term_id'] = 0; # default parent id is 0
-                        if (isset($product['tags'])) {
-                            $data = $wpdb->get_results("SELECT term_taxonomy_id
-                                                        FROM  `" . $wpdb->term_taxonomy . "`
-                                                        WHERE taxonomy='product_tag'", ARRAY_A);
+					$terms_args = array(
+						'tags'          => $product['tags'],
+						'brands'        => $product['brands'],
+						'product_type'  => $product['product_type']
+					);
 
-                            foreach ($data as $term_taxonmy_id) {
+					$this->to_woo_terms( $result_reference['data'], $terms_args );
 
-                                $sql_query ="DELETE FROM `" . $wpdb->term_relationships . "`
-                                                WHERE object_id= %d  AND term_taxonomy_id= %d ";
-                                $wpdb->query($wpdb->prepare(
-                                                    $sql_query,
-                                                    $result_reference['data'],
-                                                    $term_taxonmy_id['term_taxonomy_id']
-                                            ));
-                            }
-                            foreach ($product['tags'] as $tag) {
-                                if (isset($tag['name']) && !empty($tag['name']) && isset($term_exists['term_id'])) {
-                                    $check_term_exists = term_exists($tag['name'], 'product_tag', $term_exists['term_id']); # just check if tag with name already created
-                                    if (!is_array($check_term_exists)) {
-                                        $term_exists = (array) wp_insert_term($tag['name'], 'product_tag');
-                                        if (isset($term_exists['term_taxonomy_id']) && $term_exists['term_id']) {
 
-                                            $this->create_term_relationship( $result_reference['data'], $term_exists['term_taxonomy_id'] );
-                                            $wpdb->query($wpdb->prepare(
-                                                "UPDATE `" . $wpdb->term_taxonomy . "` SET count=count+1 WHERE term_id= %d "
-                                                , $term_exists['term_id']
-                                            ));
-                                        }
-                                    } else {
-
-                                        $this->create_term_relationship( $result_reference['data'], $check_term_exists['term_taxonomy_id'] );
-                                        $wpdb->query($wpdb->prepare(
-                                            "UPDATE `" . $wpdb->prefix . "term_taxonomy` SET count=count+1 WHERE term_id= %d "
-                                            , $check_term_exists['term_id']
-                                        ));
-                                    }
-                                }
-                            }
-                        }
-                    }
-# BRAND syncing ( update )
-                    if (in_array('woocommerce-brands/woocommerce-brands.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-                        if (get_option('ps_brand') == 'on') {
-// Delete existing brand then create
-                            $term_taxonmy_id = array();
-                            $data = $wpdb->get_results(
-                                            "SELECT term_taxonomy_id
-                                              FROM  `" . $wpdb->term_taxonomy . "`
-                                              WHERE taxonomy='product_brand'",ARRAY_A);
-
-                            foreach ($data as $exists_brands) {
-                                $wpdb->query($wpdb->prepare(
-                                    "  DELETE FROM `" . $wpdb->term_relationships . "`
-                                        WHERE
-                                            object_id= %d  AND
-                                            term_taxonomy_id= %d "
-                                    , $result_reference['data']
-                                    , $exists_brands['term_taxonomy_id']
-                                ));
-                            }
-
-                            if (isset($product['brands']) && !empty($product['brands'])) {
-                                $brands = $product['brands'];
-
-                                foreach ($brands as $brand) {
-                                    if (isset($brand['name']) && !empty($brand['name'])) {
-                                        if (!ctype_space($brand['name'])) { // if coming with white space
-                                            $termid_taxonomy = term_exists($brand['name'], 'product_brand');
-                                            if (!is_array($termid_taxonomy)) {
-                                                $termid_taxonomy = @wp_insert_term($brand['name'], 'product_brand');
-                                            }
-                                            if (!isset($termid_taxonomy->errors)) {
-//print_r($termid_taxonomy);
-                                                if (isset($termid_taxonomy['term_taxonomy_id']) && isset($termid_taxonomy['term_id'])) {
-
-                                                    $this->create_term_relationship( $result_reference['data'], $termid_taxonomy['term_taxonomy_id'] );
-                                                    $wpdb->query($wpdb->prepare(
-                                                        "UPDATE `" . $wpdb->term_taxonomy . "` SET count=count+1  WHERE term_id= %d"
-                                                        , $termid_taxonomy['term_id']
-                                                    ));
-
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            unset($termid_taxonomy);
-                        }
-                    }
-
-#Category
-                    if (get_option('ps_categories') == 'on') {
-                        include_once(ABSPATH . 'wp-admin/includes/taxonomy.php');
-                        wp_delete_object_term_relationships($result_reference['data'], 'product_cat');
-                        if (get_option('cat_radio') == 'ps_cat_product_type') {
-							$this->set_woo_product_category( $result_reference['data'], $product['product_type'], 'product_type');
-                        }
-                        if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
-							$this->set_woo_product_category( $result_reference['data'], $product['tags'] );
-                        }
-                    }
                     if (isset($product['variants']) && !empty($product['variants'])) {
                         update_post_meta($result_reference['data'], '_regular_price', '');
                         update_post_meta($result_reference['data'], '_sale_price', '');
@@ -1310,77 +1285,22 @@ class linksync_class {
                     $product_ID = wp_insert_post($my_post);
                     if ($product_ID) {
 						$product_ids[] = $product_ID . '|new_id';
-
+						ls_last_product_updated_at( $product['update_at'] );
 						$products_meta = new LS_Product_Meta( $product_ID );
 						$products_meta->update_tax_value( $product['tax_value'] );
 						$products_meta->update_tax_name( $product['tax_name'] );
 						$products_meta->update_tax_rate( $product['tax_rate'] );
 						$products_meta->update_tax_id( $product['tax_id'] );
 						$products_meta->update_sku( $product['sku'] );
-#Tag of the Products
-                        if (get_option('ps_tags') == 'on') {
-                            $term_exists['term_id'] = 0;
-                            foreach ($product['tags'] as $tag) {
-                                if (isset($tag['name']) && !empty($tag['name'])) {
-                                    $check_term_exists = term_exists($tag['name'], 'product_tag', $term_exists['term_id']);
-                                    if (!is_array($check_term_exists))
-                                        $term_exists = wp_insert_term($tag['name'], 'product_tag');
-                                    $term_exists = term_exists($tag['name'], 'product_tag');
-                                    if (is_array($term_exists)) {
 
-                                        $this->create_term_relationship( $product_ID, $term_exists['term_taxonomy_id'] );
-                                        $wpdb->query($wpdb->prepare(
-                                                        "UPDATE `" . $wpdb->term_taxonomy . "` SET count=count+1
-                                                        WHERE term_id= %d "
-                                                        , $term_exists['term_id']
-                                        ));
+						$terms_args = array(
+							'tags'         => $product['tags'],
+							'brands'       => $product['brands'],
+							'product_type' => $product['product_type']
+						);
+						$this->to_woo_terms( $product_ID, $terms_args );
 
-                                    }
-                                }
-                            }
-                        }
-# BRAND syncing
-                        if (in_array('woocommerce-brands/woocommerce-brands.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-                            if (get_option('ps_brand') == 'on') {
-                                if (isset($product['brands']) && !empty($product['brands'])) {
-                                    $brands = $product['brands'];
-                                    foreach ($brands as $brand) {
-                                        if (isset($brand['name']) && !empty($brand['name'])) {
-                                            if (!ctype_space($brand['name'])) {
-                                                $termid_taxonomy = term_exists($brand['name'], 'product_brand');
-                                                if (!is_array($termid_taxonomy)) {
-                                                    $termid_taxonomy = @wp_insert_term($brand['name'], 'product_brand');
-                                                }
-                                                if (!isset($termid_taxonomy->errors)) {
-                                                    if (isset($termid_taxonomy['term_taxonomy_id']) && isset($termid_taxonomy['term_id'])) {
 
-                                                        $this->create_term_relationship( $product_ID, $termid_taxonomy['term_taxonomy_id'] );
-                                                       $wpdb->query($wpdb->prepare(
-                                                                    "UPDATE `" . $wpdb->term_taxonomy . "`
-                                                                    SET count=count+1
-                                                                    WHERE term_id= %d "
-                                                                    , $termid_taxonomy['term_id']
-                                                       ));
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                unset($termid_taxonomy);
-                            }
-                        }
-
-#Category
-                        if (get_option('ps_categories') == 'on') {
-                            include_once(ABSPATH . 'wp-admin/includes/taxonomy.php');
-                            if (get_option('cat_radio') == 'ps_cat_product_type') {
-								$this->set_woo_product_category( $product_ID, $product['product_type'], 'product_type');
-                            }
-                            if (get_option('cat_radio') == 'ps_cat_tags') { //Product Tag is Selected
-								$this->set_woo_product_category( $product_ID, $product['tags'] );
-                            }
-                        }
                         if (isset($product['variants']) && !empty($product['variants'])) {
                             add_post_meta($product_ID, '_regular_price', '');
                             add_post_meta($product_ID, '_sale_price', '');
@@ -1525,17 +1445,20 @@ class linksync_class {
                                         'post_title' => $product_variants['name'],
                                         'post_status' => $variant_status,
                                         'post_author' => 1,
-//                                            'post_date' => current_time('mysql'),
-//                                            'post_date_gmt' => gmdate('Y-m-d h:i:s'),
-//                                            'post_modified' => current_time('mysql'),
-//                                            'post_modified_gmt' => gmdate('Y-m-d h:i:s'),
                                         'post_type' => 'product_variation',
                                         'post_parent' => $product_ID
                                     );
                                     $variation_product_id = wp_insert_post($my_post);
                                     if ($variation_product_id) {
-                                        add_post_meta($variation_product_id, '_sku', $product_variants['sku']);
-                                        add_post_meta($variation_product_id, '_visibility', ($variant_status == 'publish' ? 'visible' : ''));
+										ls_last_product_updated_at($product_variants['update_at']);
+										$var_meta = new LS_Product_Meta( $variation_product_id );
+										$var_meta->update_tax_value( $product_variants['tax_value'] );
+										$var_meta->update_tax_name( $product_variants['tax_name'] );
+										$var_meta->update_tax_rate( $product_variants['tax_rate'] );
+										$var_meta->update_tax_id( $product_variants['tax_id'] );
+										$var_meta->update_sku( $product_variants['sku'] );
+										$var_meta->update_visibility( $variant_status == 'publish' ? 'visible' : '' );
+
 
                                         if (get_option('ps_price') == 'on') {
                                             $new_variant_taxes = get_option('tax_class');
@@ -1628,77 +1551,22 @@ class linksync_class {
                                             add_post_meta($variation_product_id, '_manage_stock', 'no');
                                         }
                                     }
-                                    for ($i = 1; $i <= 3; $i++) {
-                                        if (!empty($product_variants['option_' . $option[$i] . '_name'])) {
-                                            /*
-                                             * check attribute lable Exists or Not tbl->woocommerce_attribute_taxonomies
-                                             */
-                                            $attribute_name = $this->linksync_check_attribute_label($product_variants['option_' . $option[$i] . '_name']);
-                                            $visible = get_option('linksync_visiable_attr');
-                                            $thedata['pa_' . $attribute_name] = Array(
-                                                'name' => 'pa_' . $attribute_name,
-                                                'value' => '',
-                                                'is_visible' => $visible,
-                                                'is_variation' => '1',
-                                                'is_taxonomy' => '1'
-                                            );
-                                            /*
-                                             * check Term value  Exists or Not tbl->term
-                                             */
-                                            if (!empty($product_variants['option_' . $option[$i] . '_value'])) {
-                                                $term_slug = $this->linksync_check_term_value($product_variants['option_' . $option[$i] . '_value']);
-                                                if (isset($term_slug) && !empty($term_slug)) {
-                                                    add_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
-                                                    $taxonomy_query = $wpdb->get_results($wpdb->prepare(
-                                                                                            "SELECT * FROM `" . $wpdb->term_taxonomy . "`
-                                                                                                WHERE
-                                                                                                    term_id = %d  AND
-                                                                                                    taxonomy = %s "
-                                                                                            , $term_slug['term_id']
-                                                                                            , 'pa_'.strtolower($attribute_name)
-                                                                        ), ARRAY_A);
-                                                    if (0 == $wpdb->num_rows) {
-                                                        $insert_term = $wpdb->query($wpdb->prepare(
-                                                                                    "INSERT INTO `" . $wpdb->term_taxonomy . "`
-                                                                                    (term_id,taxonomy,parent,description,count)
-                                                                                    VALUES(%d, %s, %d, %s , %d )"
-                                                                                    , $term_slug['term_id']
-                                                                                    , 'pa_'.strtolower($attribute_name), 0, ' ', 0
-                                                                        ));
+									for ($i = 1; $i <= 3; $i++) {
 
-                                                        if ($insert_term) {
-                                                            $taxonomy_id = $wpdb->insert_id;
-                                                            $this->create_term_relationship( $product_ID, $taxonomy_id );
+										$attr_args = array(
+											'product_id' => $product_ID,
+											'variant_id' => $variation_product_id,
+											'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
+											'attr_value' => $product_variants['option_' . $option[$i] . '_value']
+										);
 
-                                                        }
+										//use for setting _product_attributes meta attribute
+										$attr_data = $this->to_woo_variant_attributes( $attr_args );
+										if( !empty($attr_data) ){
+											$thedata[$attr_data['tax_name']] = $attr_data['attr'];
+										}
 
-                                                        $query_select = $wpdb->get_results($wpdb->prepare(
-                                                                                            "SELECT * FROM `" . $wpdb->prefix . "woocommerce_termmeta`
-                                                                                                WHERE woocommerce_term_id= %d "
-                                                                                            , $term_slug['term_id']
-                                                                        ), ARRAY_A);
-                                                        if (0 == $wpdb->num_rows) {
-                                                            $wpdb->query($wpdb->prepare(
-                                                                        "INSERT INTO `" . $wpdb->prefix . "woocommerce_termmeta`
-                                                                        (woocommerce_term_id,meta_key,meta_value)
-                                                                        VALUES(%d ,%s, %d)"
-                                                                        , $term_slug['term_id']
-                                                                        , 'order_pa_'.strtolower($attribute_name), 0
-                                                            ));
-                                                        }
-                                                    } else {
-                                                        $taxonomy_data = $taxonomy_query[0];
-                                                        $this->create_term_relationship( $product_ID, $taxonomy_data['term_taxonomy_id'] );
-                                                        $wpdb->query($wpdb->prepare(
-                                                            "UPDATE `" . $wpdb->term_taxonomy . "`
-                                                            SET count=count+1 WHERE term_id= %d "
-                                                            , $term_slug['term_id']
-                                                        ));
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+									}
                                 }
                             }
                             add_post_meta($product_ID, '_product_attributes', $thedata); //ADD Product Attribute
@@ -2487,7 +2355,6 @@ class linksync_class {
                 2 => 'two',
                 3 => 'three'
             );
-
 // Creating new variants if it's new added
             $status = 'publish';
 //  $list_price = $product_variants['list_price'];
@@ -2530,8 +2397,14 @@ class linksync_class {
             );
             $variation_product_id = wp_insert_post($my_post);
             if ($variation_product_id) {
-                add_post_meta($variation_product_id, '_sku', $product_variants['sku']);
-                add_post_meta($variation_product_id, '_visibility', ($status == 'publish' ? 'visible' : ''));
+				ls_last_product_updated_at($product_variants['update_at']);
+				$var_meta = new LS_Product_Meta( $variation_product_id );
+				$var_meta->update_tax_value( $product_variants['tax_value'] );
+				$var_meta->update_tax_name( $product_variants['tax_name'] );
+				$var_meta->update_tax_rate( $product_variants['tax_rate'] );
+				$var_meta->update_tax_id( $product_variants['tax_id'] );
+				$var_meta->update_sku( $product_variants['sku'] );
+				$var_meta->update_visibility( $status == 'publish' ? 'visible' : '' );
 
                 if (get_option('ps_price') == 'on') {
                     $tax_classes = get_option('tax_class');
@@ -2596,83 +2469,29 @@ class linksync_class {
                 }
             }
             for ($i = 1; $i <= 3; $i++) {
-                if (!empty($product_variants['option_' . $option[$i] . '_name'])) {
-                    /*
-                     * check attribute lable Exists or Not tbl->woocommerce_attribute_taxonomies
-                     */
-                    $attribute_name = $this->linksync_check_attribute_label($product_variants['option_' . $option[$i] . '_name']);
-                    $visible = get_option('linksync_visiable_attr');
-                    $thedata['pa_' . $attribute_name] = Array(
-                        'name' => 'pa_' . $attribute_name,
-                        'value' => '',
-                        'is_visible' => $visible,
-                        'is_variation' => '1',
-                        'is_taxonomy' => '1'
-                    );
-                    /*
-                     * check Term value  Exists or Not tbl->term
-                     */
-                    if (!empty($product_variants['option_' . $option[$i] . '_value'])) {
-                        $term_slug = $this->linksync_check_term_value($product_variants['option_' . $option[$i] . '_value']);
-                        if (isset($term_slug) && !empty($term_slug)) {
-							if( get_option('ps_attribute') == 'on' ){
-								update_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
-							}
+                if ( !empty($product_variants['option_' . $option[$i] . '_name']) && !empty($product_variants['option_' . $option[$i] . '_value']) ) {
+					$attr_args = array(
+						'product_id' => $product_ID,
+						'variant_id' => $variation_product_id,
+						'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
+						'attr_value' => $product_variants['option_' . $option[$i] . '_value']
+					);
 
-                            $taxonomy_query = $wpdb->get_results($wpdb->prepare(
-                                                            "SELECT * FROM `" . $wpdb->term_taxonomy . "`
-                                                            WHERE
-                                                                term_id= %d  AND
-                                                                taxonomy= %s"
-                                                            , $term_slug['term_id']
-                                                            , 'pa_'.strtolower($attribute_name)
-                                              ),ARRAY_A);
-                            if ($wpdb->num_rows == 0) {
-                                $db_insert = $wpdb->query($wpdb->prepare(
-                                    "INSERT INTO `" . $wpdb->term_taxonomy . "`
-                                     (term_id,taxonomy,parent,description,count)
-                                     VALUES(%d ,%s ,%d , %s , %d)"
-                                    , $term_slug['term_id']
-                                    , 'pa_'.strtolower($attribute_name),0 ,' ',0
-                                ));
-                                if ($db_insert) {
-                                    $taxonomy_id = $wpdb->insert_id;
-                                    $this->create_term_relationship( $product_ID, $taxonomy_id );
-                                }
-                                $query_select = $wpdb->get_results($wpdb->prepare(
-                                                                    "SELECT * FROM `" . $wpdb->prefix . "woocommerce_termmeta`
-                                                                    WHERE woocommerce_term_id= %d "
-                                                                    , $term_slug['term_id']
-                                                ),ARRAY_A);
-                                if (0 == $wpdb->num_rows) {
-                                    $wpdb->query($wpdb->prepare(
-                                        "INSERT INTO `" . $wpdb->prefix . "woocommerce_termmeta`
-                                        (woocommerce_term_id,meta_key,meta_value)
-                                        VALUES(%d, %s, %d)"
-                                        , $term_slug['term_id']
-                                        , 'order_pa_'.strtolower($attribute_name), 0
-                                    ));
-                                }
-                            } else {
-                                $taxonomy_data = $taxonomy_query[0];
-                                $this->create_term_relationship( $product_ID, $taxonomy_data['term_taxonomy_id'] );
-                                $wpdb->query($wpdb->prepare(
-                                    "UPDATE `" . $wpdb->term_taxonomy . "`
-                                    SET count=count+1
-                                    WHERE term_id= %d "
-                                    , $term_slug['term_id']
-                                ));
-                            }
-                        }
-                    }
+					//use for setting _product_attributes meta attribute
+					$attr_data = $this->to_woo_variant_attributes( $attr_args );
+					if( !empty($attr_data) ){
+						$thedata[$attr_data['tax_name']] = $attr_data['attr'];
+					}
                 }
-            }// end creating new variatns
+            }
 
             $return['thedata'] = isset($thedata) ? $thedata : ' ';
 //$return['array_name'] = isset($array_name) ? $array_name : ' ';
             $return['var_quantity'] = $var_qty;
             return $return;
-        }
+        }else{
+			$this->delete_woo_products( $product_ID );
+		}
     }
 
     public function update_variant_product($product_ID, $product_variant) {
@@ -2691,7 +2510,7 @@ class linksync_class {
         foreach ($product_variant as $product_variants) {
             if (empty($product_variants['deleted_at'])) {
                 $variant_reference = $this->variantSkuHandler($product_variants['sku'], $product_ID);
-//                variantSku($product_variants['sku']);
+
                 if ($variant_reference['result'] == 'success') {
                     $result_reference['data'] = $product_ID;
                     $sell_price = $product_variants['sell_price'];
@@ -2735,7 +2554,14 @@ class linksync_class {
                     $variation_product_id = wp_update_post($my_post);
 
                     if ($variation_product_id) {
-                        update_post_meta($variation_product_id, '_visibility', ($status == 'publish' ? 'visible' : ''));
+						ls_last_product_updated_at( $product_variants['update_at'] );
+						$var_meta = new LS_Product_Meta( $variation_product_id );
+						$var_meta->update_tax_value( $product_variants['tax_value'] );
+						$var_meta->update_tax_name( $product_variants['tax_name'] );
+						$var_meta->update_tax_rate( $product_variants['tax_rate'] );
+						$var_meta->update_tax_id( $product_variants['tax_id'] );
+						$var_meta->update_sku( $product_variants['sku'] );
+						$var_meta->update_visibility( $status == 'publish' ? 'visible' : '' );
 
                         if (get_option('ps_price') == 'on') {
                             $variant_tax_classes = get_option('tax_class');
@@ -2798,102 +2624,28 @@ class linksync_class {
                             unset($outlet_checker);
                         }
 #----------Remove Post Meta----Attribute----#
-//                        if (get_option('ps_attribute') == 'on') {
-//                            $wpdb->query($wpdb->prepare(
-//                                "DELETE FROM `" . $wpdb->postmeta . "`
-//                                WHERE post_id= %d AND meta_key LIKE 'attribute_pa_%%'"
-//                                , $variation_product_id
-//                            ));
-//                        }
-//                       if (taxonomy_exists('pa_' . strtolower($product_variants['option_' . $option[$i] . '_name']))) {
-//                            wp_delete_object_term_relationships($result_reference['data'], 'pa_' . strtolower($product_variants['option_' . $option[$i] . '_name']));
-//                        }
+
                         for ($i = 1; $i <= 3; $i++) {
-                            if (!empty($product_variants['option_' . $option[$i] . '_name'])) {
-                                /*
-                                 * check attribute lable Exists or Not tbl->woocommerce_attribute_taxonomies
-                                 */
-                                $attribute_name = $this->linksync_check_attribute_label($product_variants['option_' . $option[$i] . '_name']);
+							if ( !empty($product_variants['option_' . $option[$i] . '_name']) && !empty($product_variants['option_' . $option[$i] . '_value']) ) {
+								$attr_args = array(
+									'product_id' => $product_ID,
+									'variant_id' => $variation_product_id,
+									'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
+									'attr_value' => $product_variants['option_' . $option[$i] . '_value']
+								);
 
-                                $visible = get_option('linksync_visiable_attr');
-
-                                $thedata['pa_' . $attribute_name] = Array(
-                                    'name' => 'pa_' . $attribute_name,
-                                    'value' => '',
-                                    'is_visible' => $visible,
-                                    'is_variation' => '1',
-                                    'is_taxonomy' => '1'
-                                );
-                                /*
-                                 * check Term value  Exists or Not tbl->term
-                                 */
-                                if (!empty($product_variants['option_' . $option[$i] . '_value'])) {
-                                    $term_slug = $this->linksync_check_term_value($product_variants['option_' . $option[$i] . '_value']);
-                                    if (isset($term_slug) && !empty($term_slug)) {
-										if( get_option('ps_attribute') == 'on' ){
-											update_post_meta($variation_product_id, "attribute_pa_" . strtolower($attribute_name), strtolower($term_slug['slug']));
-										}
-                                        $taxonomy_query = $wpdb->get_results($wpdb->prepare(
-                                                                             "SELECT * FROM `" . $wpdb->term_taxonomy . "`
-                                                                             WHERE term_id= %d AND taxonomy= %s "
-                                                                            , $term_slug['term_id']
-                                                                            , 'pa_'. strtolower($attribute_name)
-                                                            ), ARRAY_A);
-                                        if ($wpdb->num_rows == 0) {
-                                            $db_insert = $wpdb->query($wpdb->prepare(
-                                                "INSERT INTO `" . $wpdb->term_taxonomy . "`
-                                                (term_id,taxonomy,parent,description,count)
-                                                VALUES(%d, %s ,%d ,%s , %d)"
-                                                , $term_slug['term_id']
-                                                , 'pa_'.strtolower($attribute_name), 0, ' ', 0
-                                            ));
-                                            if ($db_insert) {
-                                                $taxonomy_id = $wpdb->insert_id;
-                                                $this->create_term_relationship( $product_ID, $taxonomy_id );
-                                            }
-                                            $query_select = $wpdb->get_results($wpdb->prepare(
-                                                                                "SELECT * FROM `" . $wpdb->prefix . "woocommerce_termmeta`
-                                                                                WHERE woocommerce_term_id= %d "
-                                                                                , $term_slug['term_id']
-                                                            ),ARRAY_A);
-                                            if (0 == $wpdb->num_rows) {
-
-                                                $wpdb->query($wpdb->prepare(
-                                                    "INSERT INTO `" . $wpdb->prefix . "woocommerce_termmeta`
-                                                    (woocommerce_term_id,meta_key,meta_value)
-                                                    VALUES(%d ,%s , %d )"
-                                                    , $term_slug['term_id']
-                                                    , 'order_pa_'.strtolower($attribute_name), 0
-                                                ));
-                                            }
-                                        } else {
-                                            $taxonomy_data = $taxonomy_query[0];
-                                            $this->create_term_relationship( $product_ID, $taxonomy_data['term_taxonomy_id'] );
-                                            $wpdb->query($wpdb->prepare(
-                                                "UPDATE `" . $wpdb->term_taxonomy . "` SET count=count+1
-                                                WHERE term_id= %d "
-                                                , $term_slug['term_id']
-                                            ));
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    if (get_option('ps_delete') == 'on') {
-                        if (!empty($product_variants['sku'])) {
-                            $vend_product_id = $wpdb->get_results($wpdb->prepare(
-                                                        "SELECT post_id FROM `" . $wpdb->postmeta . "`
-                                                        WHERE meta_key='_sku' AND BINARY meta_value= %s "
-                                                        , $product_variants['sku']
-                                                ),ARRAY_A);
-                            $variant_product = $vend_product_id[0];
-                            wp_delete_post($variant_product['post_id']); //use the product Id and delete the product
+								//use for setting _product_attributes meta attribute
+								$attr_data = $this->to_woo_variant_attributes( $attr_args );
+								if( !empty($attr_data) ){
+									$thedata[$attr_data['tax_name']] = $attr_data['attr'];
+								}
+							}
                         }
                     }
                 }
-            }
+            }else{
+				$this->delete_woo_products( $product_ID );
+			}
         }
 
         $return['thedata'] = isset($thedata) ? $thedata : ' ';
