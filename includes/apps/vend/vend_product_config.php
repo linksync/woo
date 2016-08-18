@@ -1320,14 +1320,20 @@ update_option('prod_last_page', NULL);
 
 				if( data ){
 					var result=data.response;
-					if(result.image=='on'){
-						if(result.gallery == 'success' && result.thumbnail=='success'){
+					if( result.image ){
+						if(result.image=='on'){
+							if(result.gallery == 'success' && result.thumbnail=='success'){
+								status='send';
+								i++;
+								product_count++;
+							}else{
+								status='resend';
+								console.log('Resend Request for the same product: Process Not complete yet');
+							}
+						}else{
 							status='send';
 							i++;
 							product_count++;
-						}else{
-							status='resend';
-							console.log('Resend Request for the same product: Process Not complete yet');
 						}
 					}else{
 						status='send';

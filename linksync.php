@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.6
+  Version: 2.4.7
  */
 include 'ls-constants.php';
 include 'ls-functions.php';
@@ -114,11 +114,13 @@ class linksync {
 
     public static function activate() {
         global $wpdb;
+
+		require_once LS_INC_DIR. 'apps/vend/ls-vend-api-key.php';
+		require_once LS_INC_DIR. 'apps/vend/ls-vend-log.php';
+		require_once LS_INC_DIR. 'apps/vend/controllers/ls-log.php';
+
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
-        $check_laid = get_option('linksync_laid');
-        if (isset($check_laid) && !empty($check_laid)) {
-            self::checkForConnection($check_laid);
-        }
+
         add_option('linksync_laid', "");
         add_option('linksync_status', "");
         add_option('linksync_frequency', "");
@@ -242,6 +244,11 @@ class linksync {
          * Create the table for api keys
          */
         LS_Vend_Api_Key::create_table();
+
+		$check_laid = get_option('linksync_laid');
+		if (isset($check_laid) && !empty($check_laid)) {
+			self::checkForConnection($check_laid);
+		}
 // Removing Spaces b/w  sku value of product 
 // linksync::linksync_removespaces_of_exists_product();
     }

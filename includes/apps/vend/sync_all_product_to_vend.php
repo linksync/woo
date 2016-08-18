@@ -177,7 +177,7 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
             }
 #Description 
             if (get_option('ps_description') == 'on') {
-                $product['description'] = html_entity_decode($product_wc['post_content']);
+                $product['description'] = remove_escaping_str( html_entity_decode($product_wc['post_content']) );
             }
             $product['includes_tax'] = (isset($post_detail['_tax_status'][0]) && $post_detail['_tax_status'][0] == 'taxable') ? true : false;
 #---Outlet---Product----#
@@ -349,57 +349,25 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                         }
                     }
 // ATTRIBUTE && VARIANTS
-                    $attributes_select = $wpdb->get_results("SELECT * FROM `" . $wpdb->prefix . "woocommerce_attribute_taxonomies`", ARRAY_A);
-                    $check = 1;
-// $variants_detail['attribute_pa_' . strtolower($attributes['attribute_name'])][0]
-                    if (0 != $wpdb->num_rows) {
-                        $keys = array_keys($variants_detail);
-                        if (false !== stripos(implode("\n", $keys), "attribute_pa_")) {
-                            foreach ($attributes_select as $attributes) {
-                                if (isset($variants_detail['attribute_pa_' . strtolower($attributes['attribute_name'])]) && !empty($variants_detail['attribute_pa_' . strtolower($attributes['attribute_name'])])) {
-                                    $attribute_name = str_replace('pa_', '', $attributes['attribute_name']);
-                                    $attribute_query = $wpdb->get_results($wpdb->prepare("SELECT attribute_label FROM `" . $wpdb->prefix . "woocommerce_attribute_taxonomies` WHERE `attribute_name` = %s ", $attribute_name), ARRAY_A);
-                                    if (0 != $wpdb->num_rows) {
-                                        $attribute_name_result = $attribute_query[0];
-                                        $attributeName = $attribute_name_result['attribute_label'];
-                                    }
-                                    $variant['option_' . $option[$check] . '_name'] = isset($attributeName) ? $attributeName : '';
-                                    $query = $wpdb->get_results($wpdb->prepare("SELECT name FROM `" . $wpdb->terms . "` WHERE `slug` = %s ",$variants_detail['attribute_pa_' . strtolower($attributes['attribute_name'])][0]),ARRAY_A);
-                                    if (0 != $wpdb->num_rows) {
-                                        $attribute_value = $query[0];
-                                        $value = $attribute_value['name'];
-                                    }
-                                    $variant['option_' . $option[$check] . '_value'] = isset($value) ? $value : '';
-                                    $check++;
-                                }
-                            }
-            
-                        } else {
-                            if (isset($post_detail['_product_attributes'][0]) && !empty($post_detail['_product_attributes'][0])) {
-                                $_product_attributes = unserialize($post_detail['_product_attributes'][0]);
-                                foreach ($_product_attributes as $attribute_value) {
-                                    $attributeName = $attribute_value['name'];
-                                    $_attribute = explode('|', $attribute_value['value']);
-                                    $value = trim($_attribute[$total_var_product]);
-                                    $variant['option_' . $option[$check] . '_name'] = isset($attributeName) ? $attributeName : '';
-                                    $variant['option_' . $option[$check] . '_value'] = isset($value) ? $value : '';
-                                    $check++;
-                                }
-                            }
-                        }
-                    } else {
-                        if (isset($post_detail['_product_attributes'][0]) && !empty($post_detail['_product_attributes'][0])) {
-                            $_product_attributes = unserialize($post_detail['_product_attributes'][0]);
-                            foreach ($_product_attributes as $attribute_value) {
-                                $attributeName = $attribute_value['name'];
-                                $_attribute = explode('|', $attribute_value['value']);
-                                $value = trim($_attribute[$total_var_product]);
-                                $variant['option_' . $option[$check] . '_name'] = isset($attributeName) ? $attributeName : '';
-                                $variant['option_' . $option[$check] . '_value'] = isset($value) ? $value : '';
-                                $check++;
-                            }
-                        }
-                    }
+					$variant_attributes = ls_get_variant_attributes( $variant_data['ID'] );
+					if( !empty($variant_attributes) ){
+
+						$option_key = 1;
+						$vend_options = ls_vend_variant_option();
+						$option_name_str =  'name';
+						$option_value_str = 'value';
+
+						foreach( $variant_attributes as $variant_attribute ){
+							if( isset($vend_options[$option_key]) ){
+
+								$variant[ $vend_options[$option_key].$option_name_str ] = $variant_attribute[ $option_name_str ];
+								$variant[ $vend_options[$option_key].$option_value_str ] = $variant_attribute[ $option_value_str ];
+								$option_key++;
+
+							}
+						}
+
+					}
 #qunantity-----UPDATE--variant---
                     if (get_option('ps_quantity') == 'on') {
                         if (get_option('ps_wc_to_vend_outlet') == 'on') {

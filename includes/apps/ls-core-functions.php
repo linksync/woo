@@ -127,6 +127,44 @@ function ls_get_term_by_name( $name, $parent = null, $taxonomy = 'product_cat'  
 
 	return $term;
 }
+/**
+ * @param $slug
+ * @param null $parent
+ * @param null $taxonomy
+ * @return array|bool|null|object|void
+ */
+function ls_get_term_by_slug( $slug, $parent = null, $taxonomy = null ){
+	global $wpdb;
+
+	$tax_clause = '';
+	if( !empty($taxonomy) ){
+		$tax_clause = $wpdb->prepare( "AND tt.taxonomy = %s", $taxonomy );
+	}
+
+	$parent_clause = '';
+	if( null != $parent){
+		$parent_clause = $wpdb->prepare( "AND tt.parent = %d", $parent );
+	}
+
+	$term = $wpdb->get_row(
+		$wpdb->prepare( "
+				SELECT t.*, tt.* FROM $wpdb->terms AS t
+				INNER JOIN $wpdb->term_taxonomy AS tt
+				ON t.term_id = tt.term_id
+				WHERE t.slug = %s "
+			, $slug
+		) . " $parent_clause $tax_clause LIMIT 1" );
+
+	if ( ! $term )
+		return false;
+
+	return $term;
+}
+
+
+function ls_get_term( $args ){
+	//Todo to unify ls_get_term_by_slug and ls_get_term_by_name functions
+}
 
 /**
  * uses _wp_specialchars but we nee to use ENT_COMPAT for our use case
@@ -434,4 +472,96 @@ function ls_last_product_updated_at( $utc_date_time = null ){
  */
 function ls_last_order_update_at( $utc_date_time = null ){
 	return ls_last_update_at( 'order', $utc_date_time );
+}
+
+/**
+ * Get the attribute of a variant product
+ *
+ * @param $var_id int The varaint id
+ * @return array
+ */
+function ls_get_variant_attributes( $var_id ){
+	global $wpdb;
+
+	$attr_search = 'attribute_';
+	$pa_search = 'pa_';
+	$attr_where = $wpdb->esc_like($attr_search).'%';
+
+	$sql = 'SELECT meta_key, meta_value
+			FROM ' . $wpdb->postmeta . '
+			WHERE
+				 meta_key LIKE %s AND
+				 post_id = %d ';
+
+	$var_attrs = $wpdb->get_results($wpdb->prepare($sql, $attr_where, $var_id ), ARRAY_A);
+
+	$attributes = array();
+	if( !empty($var_attrs) ){
+		foreach( $var_attrs as $var_attr ){
+			$attr_removed = preg_replace( '/'.$attr_search.'/','',$var_attr['meta_key'] );
+			$pa_removed = preg_replace( '/'.$pa_search.'/','', $attr_removed );
+
+			$attr_label = '';
+			$attr_value = '';
+			//$attr_removed and $pa_removed should not be equal if pa_ has been remove
+			if( $attr_removed != $pa_removed ){
+
+				//Woocommerce Attributes
+				$woo_attribute = ls_woo_product_attribute_exist( $pa_removed );
+				if( false != $woo_attribute){
+					$attr_label = $woo_attribute['attribute_label'];
+					$term = ls_get_term_by_slug( $var_attr['meta_value'] );
+					$attr_value = $term->name;
+				}
+
+			}elseif( $attr_removed == $pa_removed ){
+
+				//Custom attributes from woocommerce
+				/*$parent_id = ls_get_post_parent_id( $var_id );
+				if( false != $parent_id ){
+					$parent_attributes = get_post_meta( $parent_id,'_product_attributes', true );
+
+					if( isset($parent_attributes[ $pa_removed ]) && null != $parent_attributes[ $pa_removed ] ){
+
+						$attr_label = $parent_attributes[ $pa_removed ]['name'];
+						$attr_values = explode( '|', $parent_attributes[ $pa_removed ]['value']);
+						$value = preg_grep( '/'.$var_attr['meta_value'].'/i',  $attr_values );
+						if( isset($value[0]) ){
+							$attr_value = $value[0];
+						}
+
+					}
+				}*/
+
+			}
+
+			if( !empty($attr_label) && !empty($attr_value) ){
+				$attributes[] = array( 'name' => $attr_label, 'value' => $attr_value );
+			}
+
+		}
+	}
+
+	return $attributes;
+}
+
+/**
+ * @return array Possible option in vend, the limit is three
+ */
+function ls_vend_variant_option(){
+	$options = array(
+		1 => 'option_one_',
+		2 => 'option_two_',
+		3 => 'option_three_',
+	);
+	return $options;
+}
+
+/**
+ * Get the parent ID of a variant uses wordpress wp_get_post_parent_id function
+ * @param $post_id
+ * @return false|int
+ */
+function ls_get_post_parent_id( $post_id ){
+	return wp_get_post_parent_id( $post_id );
 }

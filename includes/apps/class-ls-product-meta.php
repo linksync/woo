@@ -383,6 +383,9 @@ class LS_Product_Meta{
 	public function get_price(){
 		return $this->get_meta( '_price' );
 	}
+	public function update_price( $meta_value ){
+		return $this->update_meta( '_price', $meta_value );
+	}
 
 	public function set_sold_individually( $meta_value ){
 		$this->metas['_sold_individually'] =  $meta_value;

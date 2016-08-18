@@ -260,6 +260,10 @@
 				if (isset($result_time) && !empty($result_time)) {
 					$url = 'since=' . urlencode($result_time);
 				}
+				$product_last_update = ls_last_product_updated_at();
+				if( false != $product_last_update ){
+					$url = 'since=' . urlencode($product_last_update);
+				}
 
 				$current_page = 1;
 				$total_pages = 0;
