@@ -1320,7 +1320,7 @@ update_option('prod_last_page', NULL);
 
 				if( data ){
 					var result=data.response;
-					if( result.image ){
+					if( result && result.image ){
 						if(result.image=='on'){
 							if(result.gallery == 'success' && result.thumbnail=='success'){
 								status='send';

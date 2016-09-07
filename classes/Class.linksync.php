@@ -476,6 +476,13 @@ class linksync_class {
 			$terms = wp_set_object_terms( $product_ID, $attribute_value, $attribute_name, true );
 			$attribute_option = get_option('ps_attribute');
 			$term = ls_get_term_by_name( $attribute_value, null, $attribute_name );
+
+            //Check if there are no terms found and will try to search via slug
+            if( false == $term ){
+                $attribute_value = sanitize_title( $attribute_value );
+                $term = ls_get_term_by_slug( $attribute_value, null, $attribute_name );
+            }
+
 			$attr_key = "attribute_" . $attribute_name;
 
 				//Attibute option enabled

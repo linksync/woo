@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.7
+  Version: 2.4.8
  */
 include 'ls-constants.php';
 include 'ls-functions.php';
@@ -274,26 +274,14 @@ class linksync {
     public static function clearLogsDetails() {
         $fileName = dirname(__FILE__) . '/classes/raw-log.txt';
         if (file_exists($fileName)) {
-            $linecount = 0;
-            $handle = fopen($fileName, "r");
+            /**
+             * @reference http://stackoverflow.com/questions/5650958/erase-all-data-from-txt-file-php?answertab=active#tab-top
+             * @manual http://php.net/manual/en/function.fopen.php
+             */
+            $handle = fopen($fileName, "w+");
             if ($handle) {
-                while (!feof($handle)) {
-                    $lines[] = fgets($handle);
-                    $linecount++;
-                }
-                if ($linecount > 10000) {
-                    for ($lineNum = 1; $lineNum <= 10000; $lineNum++) {
-                        unset($lines[$lineNum]);
-                    }
-                    $fp = fopen($fileName, 'w+');
-                    if ($fp) {
-                        foreach ($lines as $line) {
-                            fwrite($fp, $line);
-                        }
-                        fclose($fp);
-                    }
-                    LSC_Log::add('Daily Cron', 'Success', 'Older 10000 Lines Removed!', '-');
-                }
+                fclose($handle);
+                LSC_Log::add('Daily Cron', 'Success', 'Older 10000 Lines Removed!', '-');
             }
         }
     }
@@ -901,7 +889,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 		$daily = get_option('linksync_user_activity_daily') + 86400;
 		if (isset($daily) && !empty($daily) && isset($orignal_time) && !empty($orignal_time)) {
 			if ($orignal_time >= $daily) {
-				$linksync->clearLogsDetails();
+				$linksync::clearLogsDetails();
 				update_option('linksync_user_activity_daily', $orignal_time);
 			}
 		}
