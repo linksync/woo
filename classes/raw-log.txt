@@ -1,3 +1,0 @@
-
-
-2016-07-15 04:22:27 | GET | https://api.linksync.com/api/v1/laid | No POST Data | {"app":13,"connected_app":18,"app_version":"2.4.4","connected_app_version":null,"message":null,"time":"2016-07-14 13:24:04"} | aotbb94CZY3STcO1MxQS1S | 0|127.0.0.1

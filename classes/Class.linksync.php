@@ -450,7 +450,7 @@ class linksync_class {
 	 * @return null
 	 */
 	public function to_woo_variant_attributes( $args ){
-		if( empty($args['product_id']) || empty($args['variant_id']) || empty($args['attr_name']) || empty($args['attr_value'])){
+		if( empty($args['product_id']) || empty($args['variant_id']) || empty($args['attr_name']) || '' == trim($args['attr_value'])){
 			return null;
 		}
 
@@ -458,11 +458,11 @@ class linksync_class {
 		$variation_product_id = (int) $args['variant_id'];
 		$attribute_label = $args['attr_name'];
 		$attribute_name  = ls_create_woo_attribute( $attribute_label );
-		$attribute_value = $args['attr_value'];
+		$attribute_value = trim($args['attr_value']);
 
 
 
-		if ( !empty($attribute_name) &&  !empty($attribute_value)){
+		if ( !empty($attribute_name) &&  '' != $attribute_value){
 
 			$visible = get_option('linksync_visiable_attr');
 			$attr = array(
@@ -488,7 +488,7 @@ class linksync_class {
 				//Attibute option enabled
 			if( 'on' == $attribute_option ){
 
-				if( !empty($term->slug)  ){
+				if( '' != trim($term->slug)  ){
 					update_post_meta($variation_product_id, $attr_key, $term->slug );
 				}
 
@@ -496,7 +496,7 @@ class linksync_class {
 			}elseif( 'on' != $attribute_option ){
 
 				$var_attribute = get_post_meta( $variation_product_id, $attr_key, true );
-				if( !empty($term->slug) && empty($var_attribute) ){
+				if( '' != trim($term->slug) && '' != trim($var_attribute) ){
 					update_post_meta($variation_product_id, $attr_key, $term->slug );
 				}
 			}
@@ -514,6 +514,7 @@ class linksync_class {
 	 */
 	public function delete_woo_products( $product_id , $force_delete = true ){
 		$delete_option = get_option('ps_delete');
+		$deleted = false;
 		if( 'on' == $delete_option ){
 			$var_ids = ls_get_product_variant_ids( $product_id );
 			if( !empty($var_ids) ){
@@ -521,8 +522,23 @@ class linksync_class {
 					wp_delete_post($var_id['ID'], $force_delete );
 				}
 			}
-			wp_delete_post( $product_id, $force_delete );
+			$deleted = wp_delete_post( $product_id, $force_delete );
 		}
+
+		return $deleted;
+	}
+
+	public function delete_woo_variant_by_sku( $variant_wku, $force_delete = true ){
+		$delete_option = get_option('ps_delete');
+		$deleted = false;
+		if( 'on' == $delete_option ){
+			$varId = ls_get_product_id_by_sku($variant_wku);
+			if(!empty($varId)){
+				$deleted = wp_delete_post( $varId, $force_delete );
+			}
+		}
+
+		return $deleted;
 	}
 
 	/**
@@ -2306,6 +2322,7 @@ class linksync_class {
 
     public function variant_sku_check($product_variant, $product_ID) {
         global $wpdb;
+		$result = array();
         $variant_product_sku_woo['woo_data'] = array();
         $variant_product_sku_vend['vend_data'] = array();
         $add_var_result = array();
@@ -2481,29 +2498,27 @@ class linksync_class {
                 }
             }
             for ($i = 1; $i <= 3; $i++) {
-                if ( !empty($product_variants['option_' . $option[$i] . '_name']) && !empty($product_variants['option_' . $option[$i] . '_value']) ) {
-					$attr_args = array(
-						'product_id' => $product_ID,
-						'variant_id' => $variation_product_id,
-						'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
-						'attr_value' => $product_variants['option_' . $option[$i] . '_value']
-					);
 
-					//use for setting _product_attributes meta attribute
-					$attr_data = $this->to_woo_variant_attributes( $attr_args );
-					if( !empty($attr_data) ){
-						$thedata[$attr_data['tax_name']] = $attr_data['attr'];
-					}
-                }
+				$attr_args = array(
+					'product_id' => $product_ID,
+					'variant_id' => $variation_product_id,
+					'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
+					'attr_value' => $product_variants['option_' . $option[$i] . '_value']
+				);
+
+				//use for setting _product_attributes meta attribute
+				$attr_data = $this->to_woo_variant_attributes( $attr_args );
+				if( !empty($attr_data) ){
+					$thedata[$attr_data['tax_name']] = $attr_data['attr'];
+				}
+
             }
 
             $return['thedata'] = isset($thedata) ? $thedata : ' ';
 //$return['array_name'] = isset($array_name) ? $array_name : ' ';
             $return['var_quantity'] = $var_qty;
             return $return;
-        }else{
-			$this->delete_woo_products( $product_ID );
-		}
+        }
     }
 
     public function update_variant_product($product_ID, $product_variant) {
@@ -2628,25 +2643,25 @@ class linksync_class {
 #----------Remove Post Meta----Attribute----#
 
                         for ($i = 1; $i <= 3; $i++) {
-							if ( !empty($product_variants['option_' . $option[$i] . '_name']) && !empty($product_variants['option_' . $option[$i] . '_value']) ) {
-								$attr_args = array(
-									'product_id' => $product_ID,
-									'variant_id' => $variation_product_id,
-									'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
-									'attr_value' => $product_variants['option_' . $option[$i] . '_value']
-								);
 
-								//use for setting _product_attributes meta attribute
-								$attr_data = $this->to_woo_variant_attributes( $attr_args );
-								if( !empty($attr_data) ){
-									$thedata[$attr_data['tax_name']] = $attr_data['attr'];
-								}
+							$attr_args = array(
+								'product_id' => $product_ID,
+								'variant_id' => $variation_product_id,
+								'attr_name'  => $product_variants['option_' . $option[$i] . '_name'],
+								'attr_value' => $product_variants['option_' . $option[$i] . '_value']
+							);
+
+							//use for setting _product_attributes meta attribute
+							$attr_data = $this->to_woo_variant_attributes( $attr_args );
+							if( !empty($attr_data) ){
+								$thedata[$attr_data['tax_name']] = $attr_data['attr'];
 							}
+
                         }
                     }
                 }
             }else{
-				$this->delete_woo_products( $product_ID );
+				$this->delete_woo_variant_by_sku( $product_variants['sku'] );
 			}
         }
 
