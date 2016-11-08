@@ -741,9 +741,16 @@ function order_product_post() {
                                     $getoutlets = get_option('wc_to_vend_outlet_detail');
                                     if (isset($getoutlets) && !empty($getoutlets)) {
                                         $outlet = explode('|', $getoutlets);
-                                        if (isset($post_detail['_stock'][0]) && !empty($post_detail['_stock'][0])) {
-                                            $product['outlets'] = array(array('name' => html_entity_decode($outlet[0]),
-                                                    'quantity' => $post_detail['_stock'][0]));
+                                        if (isset( $post_detail[ '_stock' ][ 0 ] ) && !empty( $post_detail[ '_stock' ][ 0 ] )) {
+                                            $product[ 'outlets' ] = array( array(
+                                                'name' => html_entity_decode( $outlet[ 0 ] ),
+                                                'quantity' => $post_detail[ '_stock' ][ 0 ]
+                                            ) );
+                                        } elseif (isset( $post_detail[ '_stock' ][ 0 ] ) && 0 == $post_detail[ '_stock' ][ 0 ]) {
+                                            $product[ 'outlets' ] = array( array(
+                                                'name' => html_entity_decode( $outlet[ 0 ] ),
+                                                'quantity' => 0
+                                            ) );
                                         }
                                     }
                                 }
