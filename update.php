@@ -14,6 +14,15 @@
     if (!in_array('linksync/linksync.php', apply_filters('active_plugins', get_option('active_plugins')))) {
         die('Access is denied');
     }
+
+	$order_last_update_at = ls_last_order_update_at();
+	$p_last_updated_at = ls_last_product_updated_at();
+
+	if(!isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
+		$lwsmessage = ' Last Product Sync To Woocommerce: '.$p_last_updated_at.'(from linksync)<br/> Last Order Sync to Woocommerce: '.$order_last_update_at.'(from linksync)';
+		LSC_Log::add('Linksync Triggered a sync', 'success', $lwsmessage, '');
+	}
+
     if (!isset($_REQUEST['c']) || @get_option('webhook_url_code') != $_REQUEST['c']) {
         LSC_Log::add('Webhook Triggered', 'error', 'Invalid Request', ''); # Error to be loggged
         die('Access is denied, Webhook is not the same');
@@ -25,7 +34,7 @@
 
 
     if (isset($_REQUEST['sendlog'])) {
-        $fileName = dirname(__FILE__) . '/classes/raw-log.txt';
+        $fileName = LS_PLUGIN_DIR . '/classes/raw-log.txt';
         if (file_exists($fileName)) {
             $LAIDKey = get_option('linksync_laid'); # Activated LAID KEY
             $testMode = get_option('linksync_test'); # TEST MODE CHECKS
@@ -76,7 +85,7 @@
                 $url = 'since=' . urlencode($order_time_suc);
             }
 
-			$order_last_update_at = ls_last_order_update_at();
+
 			if( false != $order_last_update_at ){
 				$url = 'since=' . urlencode($order_last_update_at);
 			}
@@ -136,7 +145,6 @@
             $prod_update_suc = get_option('prod_update_suc'); # it has NULL or DATETIME
             // echo $prod_update_suc;echo "<br>";exit;
             if (isset($prod_update_suc) && !empty($prod_update_suc)) {
-				$p_last_updated_at = ls_last_product_updated_at();
 				if( false != $p_last_updated_at ){
 					$url.='since=' . urlencode($prod_update_suc);
 				}else{

@@ -48,7 +48,7 @@
             </fieldset>";
 } else {
     if (isset($_POST['send_log'])) {
-        $fileName = dirname(__FILE__) . '/classes/raw-log.txt';
+        $fileName = LS_PLUGIN_DIR . 'classes/raw-log.txt';
         $data = file_get_contents($fileName);
         $encoded_data = base64_encode($data);
         $result = array(
