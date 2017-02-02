@@ -29,13 +29,51 @@ class LSC_Log{
         return self::instance()->insert($data_to_insert);
     }
 
+	public static function add_success($method, $message, $laid){
+		return self::add($method, 'Success', $message, $laid);
+	}
+
+	public static function add_dev_success($method, $message){
+		return self::add($method, '<p style="color:green;">Success</p>', $message, 'developer');
+	}
+
+	public static function add_failed($method, $message, $laid){
+		return self::add($method, 'Failed', $message, $laid);
+	}
+
+	public static function add_dev_failed($method, $message){
+		return self::add($method, '<p style="color:red;">Failed</p>', $message, 'developer');
+	}
+
+	public static function count_dev_logs(){
+		global $wpdb;
+		$tableName = $wpdb->prefix . 'linksync_log';
+		$log_count = $wpdb->get_var(" SELECT COUNT(result) FROM ".$tableName." WHERE laid = 'developer' ");
+
+		return $log_count;
+	}
+
+	public static function clear_some_dev_logs(){
+		global $wpdb;
+		$devLogCount = self::count_dev_logs();
+		$tableName = $wpdb->prefix . 'linksync_log';
+		if($devLogCount > 150){
+			$query = "DELETE FROM ".$tableName." WHERE laid='developer' LIMIT 100";
+			$wpdb->query($query);
+		}
+	}
+
     /**
      * Get and display logs
      * @param int $last
      */
 	public static function getLogs($last = 10) {
 
-        $query = 'SELECT * FROM  `' . $GLOBALS['wpdb']->prefix . 'linksync_log` ORDER BY `id_linksync_log` DESC LIMIT 0 , ' . $last;
+		$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid !=\'developer\' ';
+		if(!empty($_GET['logtype']) && 'developer' == $_GET['logtype']){
+			$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid =\''.$_GET['logtype'].'\' ';
+		}
+        $query = 'SELECT * FROM  `' . $GLOBALS['wpdb']->prefix . 'linksync_log` '.$log_type.' ORDER BY `id_linksync_log` DESC LIMIT 0 , ' . $last;
         $logs = self::instance()->select_by_query($query);
 
         $html =' <table class="wp-list-table widefat plugins">
@@ -71,8 +109,12 @@ class LSC_Log{
      */
     public static function printallLogs() {
         global $wpdb;
+		$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid !=\'developer\' ';
+		if(!empty($_GET['logtype']) && 'developer' == $_GET['logtype']){
+			$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid =\''.$_GET['logtype'].'\' ';
+		}
 
-        $query = 'SELECT * FROM  `'. $GLOBALS['wpdb']->prefix . 'linksync_log` ORDER BY `id_linksync_log` DESC';
+        $query = 'SELECT * FROM  `'. $GLOBALS['wpdb']->prefix . 'linksync_log` '.$log_type.' ORDER BY `id_linksync_log` DESC';
         $log_result = self::instance()->select_by_query($query);
         $html = '';
 

@@ -61,20 +61,14 @@ if (isset($_POST['add_apiKey'])) {
 }
 
 if (isset($_POST['apikey_update'])) {
-
-    $where = array('id' => $_POST['id']);
     if (!empty($_POST['apikey'])) {
         $result = linksync::checkForConnection($_POST['apikey']);
         if (isset($result['success'])) {
             $status = 'Connected';
-        } else {
-            $status = 'InValid';
-        }
-        $data_array = array('api_key' => trim($_POST['apikey']), 'date_add' => date('Y/m/d'), 'status' => $status);
-        if (LS_Vend_Api_Key::update($data_array,$where)) {
             LSC_Log::add('Manage API Keys', 'success', 'API key Updated Successfully', $_POST['apikey']);
             $response = 'API key Updated Successfully!! ';
         } else {
+            $status = 'InValid';
             LSC_Log::add('Manage API Keys', 'fail', 'Unable to Update!!', $_POST['apikey']);
         }
     } else {
@@ -125,7 +119,7 @@ if (isset($_POST['rest'])) {
 }
 
 
-$laid = LS_Vend_Api_Key::select_all('OBJECT');
+$laid = linksync::get_current_laid();
 ?>
 <div id="myModal" class="reveal-modal">
     <form method="POST" name="f1" action="">
@@ -162,8 +156,7 @@ $laid = LS_Vend_Api_Key::select_all('OBJECT');
                    title=' Unsure about how to generate an API Key? Click the icon for a specific guidelines to get you up and running with linksync Vend & WooCommerce.'>
                     <img class="help_tip" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16">
                 </a>
-                <input type="text" size="30" name="apikey"  value="<?php echo isset($laid[0]->api_key) ? $laid[0]->api_key: ''; ?>">
-                <input type="hidden" value="<?php echo isset($laid[0]->id) ? $laid[0]->id : ''; ?>" name="id">
+                <input type="text" size="30" name="apikey"  value="<?php echo !empty($laid) ? $laid: ''; ?>">
                 <input type="submit" value="Update" class='button color-green'  name="apikey_update">
             </div>
         </center>
@@ -191,7 +184,7 @@ $laid = LS_Vend_Api_Key::select_all('OBJECT');
                     <td>
                         <?php
 
-                            $laids = empty($laid[0]->api_key)? 'No Api Key': $laid[0]->api_key;
+                            $laids = empty($laid)? 'No Api Key': $laid;
                             echo '<b>',$laids,'</b>';
                         ?>
                         <a href="https://www.linksync.com/help/woocommerce"
@@ -207,7 +200,7 @@ $laid = LS_Vend_Api_Key::select_all('OBJECT');
                         <?php 
                             $count_ls_laidkeys = LS_Vend_Api_Key::get_count();
 
-                            if (0 == $count_ls_laidkeys) { ?>
+                            if (empty($laid)) { ?>
                                 <a href="#"  data-reveal-id="myModal" data-animation="fade" class="button button-primary">Add Api Key</a><?php
                             }else{
                                 ?>
@@ -216,13 +209,6 @@ $laid = LS_Vend_Api_Key::select_all('OBJECT');
                             } ?>
                     </td>
                 </tr>
-                <?php
-                if ( $count_ls_laidkeys >= 2 ) {
-                    ?>
-                    <tr>
-                        <td colspan="2"> <input type="submit" class="button button-primary" id="laid_save" name="laid_save" value="Use This API Key" /> </td>
-                    </tr>
-                <?php } ?> 
             </table>
         </form>
 

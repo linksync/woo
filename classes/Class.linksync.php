@@ -640,6 +640,7 @@ class linksync_class {
             include_once(ABSPATH . 'wp-admin/includes/image.php');
 
             if ($result_reference['result'] == 'success') { // it means it already exists
+                ls_last_product_updated_at($product['update_at']);
                 $product_ids[] = $result_reference['data'] . '|update_id';
                 $status = '';
                 /*
@@ -655,7 +656,6 @@ class linksync_class {
 				}
 
                 if (empty($product['deleted_at'])) {
-					ls_last_product_updated_at($product['update_at']);
 					$products_meta = new LS_Product_Meta( $result_reference['data'] );
 					$products_meta->update_tax_value( $product['tax_value'] );
 					$products_meta->update_tax_name( $product['tax_name'] );
@@ -1890,22 +1890,11 @@ class linksync_class {
             $order_status = get_option('order_vend_to_wc'); //Order Status from order config setting
             foreach ($orders['orders'] as $order) {
                 if (isset($order['id']) && !empty($order['id'])) {
-                    $OrderIds = get_option("Vend_orderIDs");
-					$Ids = array();
-                    if ( !empty($OrderIds) ) {
-						$Ids = unserialize($OrderIds);
-                    }
 
+                    ls_last_order_update_at($order['updated_at']);
 					$ls_oid = ls_order_exist( $order['id'] );
-					$vend_order_exist = true;
-					if( is_null($Ids) ){
-						$vend_order_exist = false;
-					} elseif ( is_array($Ids) && !in_array($order['id'], $Ids) ){
-						$vend_order_exist = false;
-					}
+					if( false == $ls_oid ){
 
-					if( false == $ls_oid || false == $vend_order_exist ){
-						update_option('Vend_orderIDs', serialize(array_merge($Ids, array($order['id']))));
                         $order_data = array(
                             'post_name' => 'order-' . date('M-d-Y-hi-a'), //'order-nov-29-2014-0503-am'
                             'post_type' => 'shop_order',
@@ -1920,8 +1909,17 @@ class linksync_class {
 
                         if (is_wp_error($order_id)) {
                             $order->errors = $order_id;
+                            LSC_Log::add_dev_failed('linksync_class->importOrderToWoocommerce', 'Order('.$order['id'].') creation from vend to woocommerce failed <br/> '.json_encode($order_id));
                         } else {
 
+                            $devLogMessage = 'Order '.$order_id.' was created from vend to woocommerce <br/> <b>Json data being used from vend:</b><br/>';
+                            $devLogMessage .= '<textarea>'.json_encode($order).'</textarea>';
+                            LSC_Log::add_dev_success('linksync_class->importOrderToWoocommerce', $devLogMessage);
+
+                            /**
+                             * Linksync order id
+                             */
+                            update_post_meta( $order_id, 'ls_oid', $order['id'] );
 
                             if (isset($order['payment']['transactionNumber']) && !empty($order['payment']['transactionNumber'])) {
                                 add_post_meta($order_id, 'transaction_id', $order['payment']['transactionNumber'], true);
@@ -2145,10 +2143,6 @@ class linksync_class {
                                     }
                                 }
                             }
-							/**
-							 * Linksync order id
-							 */
-							update_post_meta( $order_id, 'ls_oid', $order['id'] );
                         }
                         LSC_Log::add('Order Sync Vend to Woo', 'success', 'Vend Order no:' . $order['orderId'] . ', Woo Order no:' . $order_id, get_option('linksync_laid'));
                     }

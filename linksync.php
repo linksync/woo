@@ -5,12 +5,8 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.11
+  Version: 2.4.12
  */
-include 'ls-constants.php';
-include 'ls-functions.php';
-include 'ls-linksync.php';
-
 
 /*
  * To handle all languages
@@ -21,16 +17,12 @@ mb_http_input('UTF-8');
 mb_language('uni');
 mb_regex_encoding('UTF-8');
 
-if (!@include_once(dirname(__FILE__) . '/linksync_plugin_updater/linksync_plugin_updater.php')) {
-    echo ("<p style='text-align:center;'>Linksync : linksync Plugin Updater File Not Found !</p>");
-}
-
 class linksync {
 
 	/**
 	 * @var string
 	 */
-	public static $version = '2.4.11';
+	public static $version = '2.4.12';
 
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
@@ -53,21 +45,27 @@ class linksync {
 	/**
 	 * Include Required files for Linksync
 	 */
-	public function includes(){
-		include_once LS_INC_DIR. 'apps/ls-core-functions.php';
-		include_once LS_INC_DIR. 'apps/class-ls-product-meta.php';
+    public function includes()
+    {
 
-		include_once LS_INC_DIR. 'api/ls-api.php';
-		include_once LS_INC_DIR. 'api/ls-api-controller.php';
+        include_once 'ls-constants.php';
+        include_once 'ls-functions.php';
 
-		require_once LS_INC_DIR. 'apps/vend/vend.php';
-		require_once LS_INC_DIR. 'apps/vend/ls-vend-api-key.php';
-		require_once LS_INC_DIR. 'apps/vend/ls-vend-log.php';
-		require_once LS_INC_DIR. 'apps/vend/controllers/ls-log.php';
+        include_once LS_PLUGIN_DIR . 'linksync_plugin_updater/plugin-update-checker.php';
+
+        include_once LS_INC_DIR . 'apps/ls-core-functions.php';
+        include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
+
+        include_once LS_INC_DIR . 'api/ls-api.php';
+        include_once LS_INC_DIR . 'api/ls-api-controller.php';
+
+        require_once LS_INC_DIR . 'apps/vend/vend.php';
+        require_once LS_INC_DIR . 'apps/vend/ls-vend-api-key.php';
+        require_once LS_INC_DIR . 'apps/vend/ls-vend-log.php';
+        require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
 
 
-
-	}
+    }
 
 	/**
 	 * Return the current laid key
@@ -114,10 +112,9 @@ class linksync {
 
     public static function activate() {
         global $wpdb;
+        $linksync = new Linksync();
+        $linksync->includes();
 
-		require_once LS_INC_DIR. 'apps/vend/ls-vend-api-key.php';
-		require_once LS_INC_DIR. 'apps/vend/ls-vend-log.php';
-		require_once LS_INC_DIR. 'apps/vend/controllers/ls-log.php';
 
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
 
@@ -659,20 +656,7 @@ class linksync {
                     }
                 }
                 if (isset($status) && isset($app_name_status) && $status == 'Active' && $app_name_status == 'Active') {
-// if (isset($result['connected_app_version']) && !empty($result['connected_app_version'])) {woocommerce/woocommerce.php
 
-                    $plugin_file = dirname(__FILE__) . '/linksync.php';
-                    $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-                    $linksync_version = $plugin_data['Version'];
-                    update_option('linksync_version', $linksync_version);
-                    $webhook = $apicall->webhookConnection(content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'no');
-                    if (isset($webhook) && !empty($webhook)) {
-                        if (isset($webhook['result']) && $webhook['result'] == 'success') {
-                            LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
-                            update_option('linksync_addedfile', '<a href="' . content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . content_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
-                        }
-                    }
-//}
                     if (isset($result['time']) && !empty($result['time'])) {
                         $server_response = strtotime($result['time']);
                         $server_time = time();
@@ -691,19 +675,18 @@ class linksync {
                                     $response_ = $response_outlets['userMessage'];
                                     LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                                 } else {
+                                    /**
+                                     * Make ps_outlet_details option in sync with the outlets in vend.
+                                     */
+                                    
 									$selected_outlets = get_option( 'ps_outlet_details' );
-									/**
-									 * Check if current settings for outlets is empty then select all outlets
-									 * else do nothing and do not override users selected outlet(s)
-									 */
-									if( empty($selected_outlets) ){
-										foreach ($response_outlets['outlets'] as $key => $value) {
-											$oulets["{$key}"] = $value['id'];
-										}
-										$ouletsdb = implode('|', $oulets);
-										update_option('ps_outlet_details', $ouletsdb);
-										update_option('ps_outlet', 'on');
+									
+									foreach ($response_outlets['outlets'] as $key => $value) {
+										$oulets["{$key}"] = $value['id'];
 									}
+									$ouletsdb = implode('|', $oulets);
+									update_option('ps_outlet_details', $ouletsdb);
+									update_option('ps_outlet', 'on');
                                 }
                             } else {
                                 $class2 = 'updated';
@@ -720,7 +703,13 @@ class linksync {
                                 $response_ = $response_outlets['userMessage'];
                                 LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                             } else {
-                                $two_way_wc_to_vend = $response_outlets['outlets'][0]['name'] . '|' . $response_outlets['outlets'][0]['id'];
+                                $outlets = explode('|', get_option( 'ps_outlet_details' ));
+                                if ( count($outlets) == 1 ) {
+                                    $two_way_wc_to_vend = $response_outlets['outlets'][0]['name'] . '|' . $response_outlets['outlets'][0]['id'];
+                                } else {
+                                    $two_way_wc_to_vend = get_option('wc_to_vend_outlet_detail');
+                                }
+
                                 update_option('wc_to_vend_outlet_detail', $two_way_wc_to_vend);
                                 update_option('ps_wc_to_vend_outlet', 'on');
                             }
@@ -847,7 +836,7 @@ if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_conn
 if (get_option('order_sync_type') == 'wc_to_vend') {
     add_action('woocommerce_process_shop_order_meta', 'linksync_OrderFromBackEnd'); # Order From Back End (Admin Order)  
     add_action('woocommerce_thankyou', 'linksync_OrderFromFrontEnd',10); # Order From Front End (User Order)
-    add_action('transition_post_status', 'post_unpublished', 12, 3);
+    //add_action('transition_post_status', 'post_unpublished', 12, 3);
 }
 if (get_option('order_sync_type') == 'disabled') {
     $check_product_syncing_setting = get_option('product_sync_type');
@@ -893,6 +882,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 				update_option('linksync_user_activity_daily', $orignal_time);
 			}
 		}
+
 	}
 
 	add_action( 'woocommerce_loaded', 'load_linskync_after_woocommerce_loaded' );

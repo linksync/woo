@@ -115,29 +115,23 @@ if (isset($_POST['save_order_sync_setting'])) {
 
         // Set Import To Yes on the base of point 31 
         $result = $apicall->testConnection();
-        $plugin_file = LS_PLUGIN_DIR. 'linksync.php';
-        $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-        $linksync_version = $plugin_data['Version'];
-        $webhook = $apicall->webhookConnection(plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'yes', 'no');
-        if (isset($webhook) && !empty($webhook)) {
-            if (isset($webhook['result']) && $webhook['result'] == 'success') {
+        $linksync_version = linksync::$version;
+        $webhook = $apicall->webhookConnection(plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'yes');
+        if (isset($webhook['result']) && $webhook['result'] == 'success') {
                 LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
                 update_option('linksync_addedfile', '<a href="' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
-            }
+
         } else {
             LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
         }
     } else {
         $result = $apicall->testConnection();
-        $plugin_file = LS_PLUGIN_DIR . 'linksync.php';
-        $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-        $linksync_version = $plugin_data['Version'];
-        $webhook = $apicall->webhookConnection(plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'no', 'no');
-        if (isset($webhook) && !empty($webhook)) {
-            if (isset($webhook['result']) && $webhook['result'] == 'success') {
+        $linksync_version = linksync::$version;
+        $webhook = $apicall->webhookConnection(plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'no');
+        if (isset($webhook['result']) && $webhook['result'] == 'success') {
                 LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
                 update_option('linksync_addedfile', '<a href="' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
-            }
+
         } else {
             LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
         }

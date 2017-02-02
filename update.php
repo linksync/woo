@@ -81,16 +81,18 @@
             #order update  Request time
             update_option('order_time_req', $result_time);
             $order_time_suc = get_option('order_time_suc'); # it has NULL or DATETIME
-            if (isset($order_time_suc) && !empty($order_time_suc)) {
+            if (!empty($order_time_suc)) {
                 $url = 'since=' . urlencode($order_time_suc);
             }
 
 
-			if( false != $order_last_update_at ){
+			if( !empty($order_last_update_at) ){
 				$url = 'since=' . urlencode($order_last_update_at);
 			}
 
             $all_orders = $apicall->linksync_getOrder($url);
+			$devLogMessage = 'Get order using url endpoint : '.$url.' <br/> Query Response: '.json_encode($all_orders);
+			LSC_Log::add_dev_success('Vend to woocommerce order syncing',$devLogMessage);
 
             if (isset($all_orders['pagination'])) {
                 if (isset($all_orders['pagination']['results']) && $all_orders['pagination']['results'] != 0) {
@@ -173,6 +175,8 @@
                 do {
                     $requesturl = $urli . $page;
                     $products = $apicall->getProductWithParam($requesturl);
+                    $devLogMessage = 'logged_one <br/>Get Product from vend using url endpoint : '.$requesturl.' <br/> Query Response: '.json_encode($products);
+                    LSC_Log::add_dev_success('Product Syncing Vend to Woocommerce or Two way', $devLogMessage);
                     if (isset($products) && !empty($products)) {
                         if (!isset($products['errorCode'])) {
                             if (isset($products['products']) && !empty($products['products'])) {
@@ -214,6 +218,9 @@
 
                 $requesturl = $urli . $page;
                 $products = $apicall->getProductWithParam($requesturl);
+                $devLogMessage = 'Get Product from vend using url endpoint : '.$requesturl.' <br/> Query Response: '.json_encode($products);
+                LSC_Log::add_dev_success('Product Syncing Vend to Woocommerce or Two way', $devLogMessage);
+
                 if (isset($products) && !empty($products)) {
                     if (!isset($products['errorCode'])) {
                         update_option('product_detail', $products['pagination']['results']);
