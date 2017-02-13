@@ -264,8 +264,8 @@ function linksync_OrderFromBackEnd()
 
             $json = json_encode($OrderArray);
             $order_sent = $apicall->linksync_postOrder($json);
-            $devLogMessage = '<b>Woocommerce order to vend<b><br/>';
-            $devLogMessage .= 'Json being sent: <br/><textarea>'.$json.'</textarea>';
+            $devLogMessage = '<b>Woocommerce order to vend '.$orderId.'<b><br/>';
+            $devLogMessage .= 'Json being sent: <br/><textarea>'.$json.'</textarea><br/>';
             $devLogMessage .= 'Response from LWS: <pre>'.json_encode($order_sent).'</pre>';
             LSC_Log::add_dev_success('linksync_OrderFromBackEnd', $devLogMessage);
             if (!empty($order_sent['orderId'])) {
@@ -528,8 +528,8 @@ function orderpost($orderId)
             );
             $json = json_encode($OrderArray);
             $order_sent = $apicall->linksync_postOrder($json);
-            $devLogMessage = '<b>Woocommerce order to Vend<b><br/>';
-            $devLogMessage .= 'Json being sent: <br/><textarea>'.$json.'</textarea>';
+            $devLogMessage = '<b>Woocommerce order to Vend '.$orderId.'<b><br/>';
+            $devLogMessage .= 'Json being sent: <br/><textarea>'.$json.'</textarea><br/>';
             $devLogMessage .= 'Response from LWS: <pre>'.json_encode($order_sent).'</pre>';
             LSC_Log::add_dev_success('linksync_OrderFromFrontEnd called orderpost', $devLogMessage);
             if (!empty($order_sent['orderId'])) {

@@ -112,30 +112,8 @@ if (isset($_POST['save_order_sync_setting'])) {
         $result_time = date("Y-m-d H:i:s", $time);
         #order update  Request time
         update_option('order_time_suc', $result_time);
-
-        // Set Import To Yes on the base of point 31 
-        $result = $apicall->testConnection();
-        $linksync_version = linksync::$version;
-        $webhook = $apicall->webhookConnection(plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'yes');
-        if (isset($webhook['result']) && $webhook['result'] == 'success') {
-                LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
-                update_option('linksync_addedfile', '<a href="' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
-
-        } else {
-            LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
-        }
-    } else {
-        $result = $apicall->testConnection();
-        $linksync_version = linksync::$version;
-        $webhook = $apicall->webhookConnection(plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'no');
-        if (isset($webhook['result']) && $webhook['result'] == 'success') {
-                LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
-                update_option('linksync_addedfile', '<a href="' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '">' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code') . '</a>');
-
-        } else {
-            LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . plugins_url() . '/linksync/update.php?c=' . get_option('webhook_url_code'), $LAIDKey);
-        }
     }
+
     if ($_POST['order_sync_type'] != 'disabled') {
         if ($_POST['order_sync_type'] == 'vend_to_wc-way') {
             $enable = 'Vend to Woo';
@@ -145,6 +123,10 @@ if (isset($_POST['save_order_sync_setting'])) {
         $setting_message = $enable . ' is enable';
     } else {
         $setting_message = 'Sync Setting Disabled';
+    }
+
+    if (is_vend()) {
+        $webhook = LS_Vend()->updateWebhookConnection();
     }
     LSC_Log::add('Order Sync Setting', 'success', $setting_message, $LAIDKey);
 }

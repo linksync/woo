@@ -16,6 +16,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
          */
         public static $_instance = null;
 
+        public static $api = null;
+
         public function __construct()
         {
             $this->includes();
@@ -33,23 +35,47 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             return self::$_instance;
         }
 
+        public function api()
+        {
+            if(is_null(self::$api)){
+                self::$api = new LS_Vend_Api(LS_ApiController::get_api());
+            }
+
+            return self::$api;
+        }
+
+
         /**
          * Vend Includes
          */
         public static function includes()
         {
             include_once LS_INC_DIR . 'apps/ls-core-functions.php';
+            include_once LS_INC_DIR . 'apps/class-ls-woo-tax.php';
+
+            include_once LS_INC_DIR . 'apps/class-ls-json-product-factory.php';
+            include_once LS_INC_DIR . 'apps/class-ls-json-order-factory.php';
+
+            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-tax-helper.php';
+            include_once LS_INC_DIR . 'apps/class-ls-woo-order-line-item.php';
             include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
 
             include_once LS_INC_DIR . 'apps/vend/class-ls-vend-option.php';
             include_once LS_INC_DIR . 'apps/vend/class-ls-vend-order-option.php';
             include_once LS_INC_DIR . 'apps/vend/class-ls-vend-product-option.php';
 
+            include_once LS_INC_DIR . 'api/ls-api.php';
             include_once LS_INC_DIR . 'api/ls-api-controller.php';
+            include_once LS_INC_DIR . 'apps/class-ls-product-api.php';
+            include_once LS_INC_DIR . 'apps/class-ls-order-api.php';
 
+            require_once LS_INC_DIR . 'apps/vend/class-ls-vend-api.php';
             require_once LS_INC_DIR . 'apps/vend/ls-vend-api-key.php';
             require_once LS_INC_DIR . 'apps/vend/ls-vend-log.php';
             require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
+
+
+            require_once LS_INC_DIR. 'apps/vend/class-ls-vend-sync.php';
         }
 
         /**
@@ -103,6 +129,67 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 return 'yes';
             }
             return 'no';
+        }
+
+        public function updateWebhookConnection()
+        {
+            $laid = LS_ApiController::get_current_laid();
+
+            $webHookData['url'] = linksync::getWebHookUrl();
+            $webHookData['version'] = linksync::$version;
+
+            $orderSyncType = LS_Vend()->order_option()->sync_type();
+            $orderImport = 'no';
+            if('vend_to_wc-way' == $orderSyncType){
+                $orderImport = 'yes';
+            }
+            $webHookData['order_import'] = $orderImport;
+
+            $prodyctSyncType = LS_Vend()->product_option()->sync_type();
+            $productImport = 'no';
+            if('two_way' == $prodyctSyncType || 'vend_to_wc-way' == $prodyctSyncType){
+                $productImport = 'yes';
+            }
+
+            $webHookData['product_import'] = $productImport;
+
+
+            $webHook = LS_ApiController::update_webhook_connection($webHookData);
+            $pluginUrl = plugins_url();
+            $webhookUrlCode = get_option('webhook_url_code');
+
+            if(!empty($webHook['result']) && $webHook['result'] == 'success'){
+                LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode, $laid);
+                update_option('linksync_addedfile', '<a href="' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode . '">' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode . '</a>');
+
+            } else {
+                LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode, $laid);
+            }
+            return $webHook;
+        }
+
+        /**
+         * @return null|string The hook name to use on triggering order syncing to vend
+         */
+        public function orderSyncToVendHookName()
+        {
+            $orderHookName = get_option('order_status_wc_to_vend');
+            if(!empty($orderHookName)){
+                $name = substr( $orderHookName, 3 );
+                $orderHook = 'woocommerce_order_status_'.$name;
+
+                return $orderHook;
+            }
+            return null;
+        }
+
+        public function getSelectedOrderStatusToTriggerWooToVendSync()
+        {
+            $orderHookName = get_option('order_status_wc_to_vend');
+            if(!empty($orderHookName)){
+                return $orderHookName;
+            }
+            return null;
         }
 
     }

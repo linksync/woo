@@ -316,6 +316,9 @@ if (isset($_POST['save_product_sync_setting'])) {
         LSC_Log::add('Product Sync Setting', 'success', $setting_message, $LAIDKey);
     }
     update_option('image_process', 'complete');
+    if (is_vend()) {
+        LS_Vend()->updateWebhookConnection();
+    }
 } elseif (isset($_POST['sync_reset_btn'])) {
     update_option('prod_update_suc', NULL);
     update_option('prod_last_page', NULL);

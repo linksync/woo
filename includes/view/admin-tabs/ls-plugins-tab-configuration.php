@@ -50,6 +50,9 @@ if (isset($_POST['add_apiKey'])) {
         LSC_Log::add('Manage API Keys', 'fail', 'API Key is empty!!', '-');
         $response = "API Key is Empty!!";
     }
+    if (is_vend()) {
+        LS_Vend()->updateWebhookConnection();
+    }
     ?>
     <script>
 
@@ -74,6 +77,9 @@ if (isset($_POST['apikey_update'])) {
     } else {
         LSC_Log::add('Manage API Keys', 'fail', 'API key is empty!!', '-');
         $response = "API key is empty!!";
+    }
+    if (is_vend()) {
+        LS_Vend()->updateWebhookConnection();
     }
     ?>
     <script>

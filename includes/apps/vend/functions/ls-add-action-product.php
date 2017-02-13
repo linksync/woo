@@ -478,7 +478,7 @@ if (get_option('linksync_status') == 'Active') {
                             }
                             $data = json_encode($product);
                             $response = $apicall->linksync_postProduct($data);
-                            $devLogMessage = 'Json data being sent: <br/><textarea>'.$data.'</textarea>';
+                            $devLogMessage = 'Json data being sent: <br/><textarea>'.$data.'</textarea><br/>';
                             $devLogMessage .= '<br/> Response from LWS: <br/> <pre>'.json_encode($response).'</pre>';
                             LSC_Log::add_dev_success('Product Sync Woocommerce to Vend', $devLogMessage);
                             LSC_Log::add('Product Sync Woo to Vend', 'success', 'Product synced SKU:' . $product['sku'], $LAIDKey);
@@ -670,7 +670,7 @@ if (get_option('linksync_status') == 'Active') {
                             }
                             $data = json_encode($product);
                             $response = $apicall->linksync_postProduct($data);
-                            $devLogMessage = 'Json data being sent: <br/><textarea>'.$data.'</textarea>';
+                            $devLogMessage = 'Json data being sent: <br/><textarea>'.$data.'</textarea><br/>';
                             $devLogMessage .= '<br/> Response from LWS: <br/>'.json_encode($response);
                             LSC_Log::add_dev_success('Product Sync Woocommerce to Vend', $devLogMessage);
                             LSC_Log::add('Product Sync Woo to Vend', 'success', 'Product synced SKU:' . $product['sku'], $LAIDKey);

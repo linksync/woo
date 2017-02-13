@@ -565,3 +565,19 @@ function ls_vend_variant_option(){
 function ls_get_post_parent_id( $post_id ){
 	return wp_get_post_parent_id( $post_id );
 }
+
+/**
+ * Check the connection if it is Vend
+ * @return bool
+ */
+function is_vend(){
+    $bool = false;
+    $connected_to = get_option('linksync_connectedto');
+    $connected_with = get_option('linksync_connectionwith');
+
+    if ( 'Vend' == $connected_to || 'Vend' == $connected_with) {
+        $bool = true;
+    }
+
+    return $bool;
+}

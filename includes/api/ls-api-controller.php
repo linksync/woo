@@ -34,7 +34,7 @@ class LS_ApiController{
      */
     public static function update_webhook_connection( $web_hook_data = null ){
 
-        $url = LS_QBO()->get_update_url();
+        $url = linksync::getWebHookUrl();
         $webhookURL = isset($web_hook_data['url']) ? $web_hook_data['url'] : $url;
 
         $web_hook_data = array(

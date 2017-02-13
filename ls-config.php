@@ -1,15 +1,15 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit;  
+<?php if ( ! defined( 'ABSPATH' ) ) exit;
 
+return array(
+    /**
+     *	True on testmode
+     */
+    'testmode' => false,
 
-/**
- *	True on testmode
- */
-$config['testmode'] = false;
+    /**
+     * Set api name or version
+     */
+    'api' => 'v1'
 
-
-/**
- * Set api name or version		
- */
-$config['api']		= 'v1';
-
+);
 
