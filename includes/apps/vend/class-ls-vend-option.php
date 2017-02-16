@@ -29,14 +29,14 @@ class LS_Vend_Option
 
     /**
      * Uses Wordpress get_option
-     *
      * @param $key
-     * @return mixed|void
+     * @param string $default
+     * @return mixed
      */
-    public function get_option($key)
+    public function get_option($key, $default = '')
     {
         $key = self::instance()->option_prefix . $key;
-        return get_option($key);
+        return get_option($key, $default);
     }
 
 

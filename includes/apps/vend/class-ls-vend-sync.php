@@ -9,7 +9,7 @@ class LS_Vend_Sync
         self::$orderSyncOption = LS_Vend()->order_option();
 
         if (self::$orderSyncOption->woocommerceToVend() == self::$orderSyncOption->sync_type()) {
-            add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'));
+            add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'), 1);
             add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'importOrderToVend'));
         }
 
@@ -64,14 +64,18 @@ class LS_Vend_Sync
             $wooProduct = new WC_Product($product_id);
             $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
 
-            $price = $wooProduct->get_price();
+            $product_amount = $wooProduct->get_price();
+            if (!empty($orderLineItem->lineItem['line_subtotal'])) {
+                $product_amount = (float)($orderLineItem->lineItem['line_subtotal'] / $orderLineItem->lineItem['qty']);
+            }
+
             $discount = $orderLineItem->get_discount_amount();
             if (!empty($discount)) {
-                $discount = (float)($discount / $orderItem['qty']);
+                $discount = (float)($discount / $orderLineItem->lineItem['qty']);
             }
 
             //Product Amount = product org amount - discount amount
-            $product_total_amount = (float)$price - (float)$discount;
+            $product_total_amount = (float)$product_amount - (float)$discount;
             if (!empty($product_total_amount) && !empty($vendTaxDetails['taxRate'])) {
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
             }
@@ -200,6 +204,21 @@ class LS_Vend_Sync
                 'country' => $filtered_shipping_address['country'],
                 'company' => $filtered_shipping_address['company']
             );
+
+            $orderOption = LS_Vend()->order_option();
+            $useBillingToBePhysicalOption = $orderOption->useBillingAddressToBePhysicalAddress();
+            $orderBillingAddress = $billing_address;
+            $orderShippingAddress = $delivery_address;
+
+            if('yes' == $useBillingToBePhysicalOption){
+                $delivery_address = $orderBillingAddress;
+            }
+
+            $useShippingToBePostalOption = $orderOption->useShippingAddressToBePostalAddress();
+            if('yes' == $useShippingToBePostalOption){
+                $billing_address = $orderShippingAddress;
+            }
+
             $primaryEmail = !empty($primary_email_address) ? $primary_email_address : $billing_address['email_address'];
             unset($billing_address['email_address']);
 

@@ -105,5 +105,35 @@ class LS_Vend_Order_Option extends LS_Vend_Option
             'vend_username' => null
         );
     }
+
+    public function useBillingAddressToBePhysicalAddress()
+    {
+        return self::instance()->get_option('usebillingtobephysical', 'no');
+    }
+
+    public function setBillingAddressToBePhysicalAddress($optionValue)
+    {
+        $optValue = 'no';
+        if('yes' == $optionValue){
+            $optValue = $optionValue;
+        }
+
+        return self::instance()->update_option('usebillingtobephysical', $optValue);
+    }
+
+    public function useShippingAddressToBePostalAddress()
+    {
+        return self::instance()->get_option('useshippingtobepostal', 'no');
+    }
+
+    public function setShippingAddressToBePostalAddress($optionValue)
+    {
+        $optValue = 'no';
+        if('yes' == $optionValue){
+            $optValue = $optionValue;
+        }
+
+        return self::instance()->update_option('useshippingtobepostal', $optValue);
+    }
 }
 

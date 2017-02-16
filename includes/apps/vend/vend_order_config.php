@@ -67,6 +67,14 @@ if (isset($_POST['save_order_sync_setting'])) {
     }
     if ($_POST['wc_to_vend_export']) {
         update_option('wc_to_vend_export', isset($_POST['wc_to_vend_export']) ? $_POST['wc_to_vend_export'] : 'off');
+        $orderOption = LS_Vend()->order_option();
+
+        $useBillingToBePhysicalOption = (isset($_POST['usebillingtobephysical']) && 'yes' == $_POST['usebillingtobephysical']) ? 'yes' : 'no';
+        $orderOption->setBillingAddressToBePhysicalAddress($useBillingToBePhysicalOption);
+
+        $useShippingToBePostalOption = (isset($_POST['useshippingtobepostal']) && 'yes' == $_POST['useshippingtobepostal']) ? 'yes' : 'no';
+        $orderOption->setShippingAddressToBePostalAddress($useShippingToBePostalOption);
+
     } else {
         update_option('wc_to_vend_export', 'off');
     }
@@ -507,7 +515,32 @@ if (get_option('order_sync_type') == 'disabled') {
                         <th  class="titledesc">Customer Export</th>
                         <td class="forminp forminp-checkbox">
 
-                <legend style="display: inline-block;width: 25em; "><input type="radio"  checked  value="customer" <?php echo (get_option('wc_to_vend_export') == 'customer' ? 'checked' : ''); ?> name="wc_to_vend_export" />Export Customer data<a href="https://www.linksync.com/help/woocommerce"><img title="Select this option if you'd like customer data, such as name, email address and shipping and billing address, to be included when exporting orders to Vend." style="margin-left: 4px;margin-bottom: -3px;"  src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a> </legend><br>
+                <legend style="display: inline-block;width: 25em; ">
+                    <input  checked  type="radio"
+                            value="customer" <?php echo (get_option('wc_to_vend_export') == 'customer' ? 'checked' : ''); ?>
+                            name="wc_to_vend_export" />Export Customer data
+                            <a href="https://www.linksync.com/help/woocommerce">
+                                <img title="Select this option if you'd like customer data, such as name, email address and shipping and billing address, to be included when exporting orders to Vend."
+                                     style="margin-left: 4px;margin-bottom: -3px;"
+                                     src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16">
+                            </a>
+                </legend><br>
+                            <?php
+                                $orderOption = LS_Vend()->order_option();
+                                $useBillingToBePhysicalOption = $orderOption->useBillingAddressToBePhysicalAddress();
+                                $checkedBillingPhysicalOption = ('yes' == $useBillingToBePhysicalOption) ? 'checked':'';
+
+                                $useShippingToBePostalOption = $orderOption->useShippingAddressToBePostalAddress();
+                                $checkedShippingPostalOption = ('yes' == $useShippingToBePostalOption) ? 'checked':'';
+                            ?>
+                            <label style="width: 100%;margin-left: 50px;margin-bottom: 20px;">
+                                <input name="usebillingtobephysical" value="yes" type="checkbox" <?php echo $checkedBillingPhysicalOption; ?>>Use Woocommerce Billing Address as Vend Physical Address
+                            </label>
+
+                            <label style="width: 100%;margin-left: 50px;margin-bottom: 20px;">
+                                <input name="useshippingtobepostal" value="yes" type="checkbox" <?php echo $checkedShippingPostalOption; ?>>Use Woocommerce Shipping Address as Vend Postal Address
+                            </label>
+
                 <legend style="display: inline-block;width: 25em; "><input type="radio" value="cash_sale" <?php echo (get_option('wc_to_vend_export') == 'cash_sale' ? 'checked' : ''); ?>  name="wc_to_vend_export" />Export as 'Cash Sale' <a href="https://www.linksync.com/help/woocommerce"><img title="Select this option if you're not interested in including the customer information when exporting orders to Vend. " style="margin-left: 4px;margin-bottom: -3px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></legend></td>
                 </tr>
                 </tbody>
