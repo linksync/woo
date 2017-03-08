@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.14
+  Version: 2.4.15
  */
 
 /*
@@ -23,7 +23,7 @@ class linksync {
 	/**
 	 * @var string
 	 */
-	public static $version = '2.4.14';
+	public static $version = '2.4.15';
 
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
@@ -687,27 +687,41 @@ class linksync {
                     }
 
                     if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
-// Add Default setting into DB  
+// Add Default setting into DB
+                        $syncType = LS_Vend()->product_option()->sync_type();
                         $response_outlets = $apicall->linksync_getOutlets();
-                        if (@get_option('ps_outlet') == 'on') { #VEND TO WC
+                        if (@get_option('ps_outlet') == 'on' && 'vend_to_wc-way' == $syncType) { #VEND TO WC
                             if (isset($response_outlets) && !empty($response_outlets)) {
                                 if (isset($response_outlets['errorCode']) && !empty($response_outlets['userMessage'])) {
                                     update_option('ps_outlet_details', 'off');
                                     $response_ = $response_outlets['userMessage'];
                                     LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                                 } else {
+//                                    /**
+//                                     * Make ps_outlet_details option in sync with the outlets in vend.
+//                                     */
+//
+//									$selected_outlets = get_option( 'ps_outlet_details' );
+//
+//									foreach ($response_outlets['outlets'] as $key => $value) {
+//										$oulets["{$key}"] = $value['id'];
+//									}
+//									$ouletsdb = implode('|', $oulets);
+//									update_option('ps_outlet_details', $ouletsdb);
+//									update_option('ps_outlet', 'on');
+                                    $selected_outlets = get_option( 'ps_outlet_details' );
                                     /**
-                                     * Make ps_outlet_details option in sync with the outlets in vend.
+                                     * Check if current settings for outlets is empty then select all outlets
+                                     * else do nothing and do not override users selected outlet(s)
                                      */
-                                    
-									$selected_outlets = get_option( 'ps_outlet_details' );
-									
-									foreach ($response_outlets['outlets'] as $key => $value) {
-										$oulets["{$key}"] = $value['id'];
-									}
-									$ouletsdb = implode('|', $oulets);
-									update_option('ps_outlet_details', $ouletsdb);
-									update_option('ps_outlet', 'on');
+                                    if( empty($selected_outlets) ){
+                                        foreach ($response_outlets['outlets'] as $key => $value) {
+                                            $oulets["{$key}"] = $value['id'];
+                                        }
+                                        $ouletsdb = implode('|', $oulets);
+                                        update_option('ps_outlet_details', $ouletsdb);
+                                        update_option('ps_outlet', 'on');
+                                    }
                                 }
                             } else {
                                 $class2 = 'updated';
@@ -718,21 +732,23 @@ class linksync {
                                 echo "<br>";
                             }
                         }
-                        if (@get_option('ps_wc_to_vend_outlet') == 'on') {
+
+                        if (@get_option('ps_wc_to_vend_outlet') == 'on' && 'two_way' == $syncType) {
                             if (isset($response_outlets['errorCode']) && !empty($response_outlets['userMessage'])) {
                                 update_option('wc_to_vend_outlet_detail', 'off');
                                 $response_ = $response_outlets['userMessage'];
                                 LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                             } else {
-                                $outlets = explode('|', get_option( 'ps_outlet_details' ));
-                                if ( count($outlets) == 1 ) {
-                                    $two_way_wc_to_vend = $response_outlets['outlets'][0]['name'] . '|' . $response_outlets['outlets'][0]['id'];
-                                } else {
-                                    $two_way_wc_to_vend = get_option('wc_to_vend_outlet_detail');
-                                }
-
-                                update_option('wc_to_vend_outlet_detail', $two_way_wc_to_vend);
-                                update_option('ps_wc_to_vend_outlet', 'on');
+//                                $outlets = explode('|', get_option( 'ps_outlet_details' )); ls_print_r($outlets);
+//                                if ( count($outlets) == 1 ) {
+//                                    $two_way_wc_to_vend = $response_outlets['outlets'][0]['name'] . '|' . $response_outlets['outlets'][0]['id'];
+//                                } else {
+//                                    $two_way_wc_to_vend = get_option('wc_to_vend_outlet_detail');
+//                                }
+//
+//                                ls_print_r($two_way_wc_to_vend);
+//                                update_option('wc_to_vend_outlet_detail', $two_way_wc_to_vend);
+//                                update_option('ps_wc_to_vend_outlet', 'on');
                             }
                         }
                         /*

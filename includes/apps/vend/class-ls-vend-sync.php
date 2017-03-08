@@ -219,8 +219,7 @@ class LS_Vend_Sync
                 $billing_address = $orderShippingAddress;
             }
 
-            $primaryEmail = !empty($primary_email_address) ? $primary_email_address : $billing_address['email_address'];
-            unset($billing_address['email_address']);
+            $primaryEmail = !empty($orderBillingAddress['email_address']) ? $orderBillingAddress['email_address'] : '';
 
         }
 
