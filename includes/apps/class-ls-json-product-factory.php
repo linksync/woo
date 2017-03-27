@@ -212,6 +212,27 @@ class LS_Json_Product_Factory
     {
         $this->set('purchase_description', $purchaseInformation);
     }
+
+    public function set_brands($brands)
+    {
+        $this->set('brands', $brands);
+    }
+
+    public function set_tags($tags)
+    {
+        $this->set('tags', $tags);
+    }
+
+    public function set_outlets($outlets)
+    {
+        $this->set('outlets', $outlets);
+    }
+
+    public function set_variants($variants)
+    {
+        $this->set('variants', $variants);
+    }
+
     /**
      * Set each product attributes like name, description ,sku etc
      * @param $key
@@ -256,12 +277,21 @@ class LS_Json_Product_Factory
         return $this->json_product[$key];
     }
 
+    public function get_product_array()
+    {
+        return $this->json_product;
+    }
+
     /**
      * Returns a json representation of a single product for LWS
      * @return string
      */
     public function get_json_product()
     {
+        if(empty($this->json_product)){
+            return null;
+        }
+
         return json_encode($this->json_product);
     }
 

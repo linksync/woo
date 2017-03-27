@@ -27,6 +27,13 @@ return array(
 		*	api url for v1 api
 		*/
 		'url'=> 'https://api.linksync.com/api/v1/'
-	)
+	),
+
+    'dev' => array(
+        /*
+        *    api url for dev environment
+        */
+        'url'=> 'https://dev-api.linksync.com/api/v1/'
+    )
 
 );

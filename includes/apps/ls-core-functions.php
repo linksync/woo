@@ -1,23 +1,5 @@
 <?php if ( ! defined( 'ABSPATH' ) ) exit('Access is Denied');
 
-/**
- * @return array|null|object
- */
-function ls_get_woo_product_ids(){
-	global $wpdb;
-
-	$product_ids =	$wpdb->get_results("
-						SELECT post.ID
-						FROM $wpdb->posts AS post
-						WHERE
-							post.post_type IN('product','product_variation')
-						ORDER BY post.ID ASC
-						", ARRAY_A);
-
-	if ( $product_ids ) return  $product_ids;
-
-	return null;
-}
 
 /**
  * Get Product using the sku
@@ -480,69 +462,78 @@ function ls_last_order_update_at( $utc_date_time = null ){
  * @param $var_id int The varaint id
  * @return array
  */
-function ls_get_variant_attributes( $var_id ){
-	global $wpdb;
+function ls_get_variant_attributes($var_id)
+{
+    global $wpdb;
+    $parent_id = ls_get_post_parent_id($var_id);
+    $parent_attributes = get_post_meta($parent_id, '_product_attributes', true);
 
-	$attr_search = 'attribute_';
-	$pa_search = 'pa_';
-	$attr_where = $wpdb->esc_like($attr_search).'%';
+    $attr_search = 'attribute_';
+    $pa_search = 'pa_';
+    $attr_where = $wpdb->esc_like($attr_search) . '%';
 
-	$sql = 'SELECT meta_key, meta_value
+    $sql = 'SELECT meta_key, meta_value
 			FROM ' . $wpdb->postmeta . '
 			WHERE
 				 meta_key LIKE %s AND
 				 post_id = %d ';
 
-	$var_attrs = $wpdb->get_results($wpdb->prepare($sql, $attr_where, $var_id ), ARRAY_A);
+    $var_attrs = $wpdb->get_results($wpdb->prepare($sql, $attr_where, $var_id), ARRAY_A);
 
-	$attributes = array();
-	if( !empty($var_attrs) ){
-		foreach( $var_attrs as $var_attr ){
-			$attr_removed = preg_replace( '/'.$attr_search.'/','',$var_attr['meta_key'] );
-			$pa_removed = preg_replace( '/'.$pa_search.'/','', $attr_removed );
+    $attributes = array();
+    if (!empty($var_attrs)) {
+        foreach ($var_attrs as $var_attr) {
+            $attr_removed = preg_replace('/' . $attr_search . '/', '', $var_attr['meta_key']);
+            $pa_removed = preg_replace('/' . $pa_search . '/', '', $attr_removed);
 
-			$attr_label = '';
-			$attr_value = '';
-			//$attr_removed and $pa_removed should not be equal if pa_ has been remove
-			if( $attr_removed != $pa_removed ){
+            $attr_label = '';
+            $attr_value = '';
 
-				//Woocommerce Attributes
-				$woo_attribute = ls_woo_product_attribute_exist( $pa_removed );
-				if( false != $woo_attribute){
-					$attr_label = $woo_attribute['attribute_label'];
-					$term = ls_get_term_by_slug( $var_attr['meta_value'] );
-					$attr_value = $term->name;
-				}
+            //$attr_removed and $pa_removed should not be equal if pa_ has been remove
+            if ($attr_removed != $pa_removed) {
 
-			}elseif( $attr_removed == $pa_removed ){
+                if (
+                    isset($parent_attributes[$pa_search . $pa_removed]) &&
+                    $parent_attributes[$pa_search . $pa_removed]['is_variation']
+                ) {
+                    //Woocommerce Attributes
+                    $woo_attribute = ls_woo_product_attribute_exist($pa_removed);
+                    if (false != $woo_attribute) {
+                        $attr_label = $woo_attribute['attribute_label'];
+                        $term = ls_get_term_by_slug($var_attr['meta_value']);
+                        $attr_value = $term->name;
+                    }
+                }
 
-				//Custom attributes from woocommerce
-				/*$parent_id = ls_get_post_parent_id( $var_id );
-				if( false != $parent_id ){
-					$parent_attributes = get_post_meta( $parent_id,'_product_attributes', true );
 
-					if( isset($parent_attributes[ $pa_removed ]) && null != $parent_attributes[ $pa_removed ] ){
+            } elseif ($attr_removed == $pa_removed) {
 
-						$attr_label = $parent_attributes[ $pa_removed ]['name'];
-						$attr_values = explode( '|', $parent_attributes[ $pa_removed ]['value']);
-						$value = preg_grep( '/'.$var_attr['meta_value'].'/i',  $attr_values );
-						if( isset($value[0]) ){
-							$attr_value = $value[0];
-						}
+                //Custom attributes from woocommerce
+                if (false != $parent_id) {
 
-					}
-				}*/
+                    if (!empty($parent_attributes[$pa_removed]) && $parent_attributes[$pa_removed]['is_variation']) {
 
-			}
+                        $attr_label = $parent_attributes[$pa_removed]['name'];
+                        $attr_values = explode('|', $parent_attributes[$pa_removed]['value']);
+                        $value = preg_grep('/' . $var_attr['meta_value'] . '/i', $attr_values);
+                        if(!empty($value)){
+                            $attr_value = $var_attr['meta_value'];
+                        }
 
-			if( !empty($attr_label) && !empty($attr_value) ){
-				$attributes[] = array( 'name' => $attr_label, 'value' => $attr_value );
-			}
+                    }
+                }
 
-		}
-	}
+            }
 
-	return $attributes;
+
+            if (!empty($attr_label) && !empty($attr_value)) {
+                $attributes[] = array('name' => $attr_label, 'value' => $attr_value);
+            }
+
+        }
+    }
+
+    return $attributes;
 }
 
 /**
@@ -567,6 +558,14 @@ function ls_get_post_parent_id( $post_id ){
 }
 
 /**
+ * Returns available payment methods in woocommerce
+ * @return array
+ */
+function ls_get_woo_payment_methods(){
+    return WC_Payment_Gateways::instance()->payment_gateways();
+}
+
+/**
  * Check the connection if it is Vend
  * @return bool
  */
@@ -581,3 +580,146 @@ function is_vend(){
 
     return $bool;
 }
+
+/**
+ * Check the connection if it is QuickBooks Online
+ * @return bool
+ */
+function is_qbo(){
+    $bool = false;
+    $connected_to = get_option('linksync_connectedto');
+    $connected_with = get_option('linksync_connectionwith');
+
+    if ( 'QuickBooks Online' == $connected_to || 'QuickBooks Online' == $connected_with) {
+        $bool = true;
+    }
+
+    return $bool;
+}
+
+/**
+ * returns string UTC time of the last syncing
+ * @return string
+ */
+function get_last_sync(){
+    $utc_str = gmdate("Y-m-d H:i:s", time());
+    $utc = gmdate("Y-m-d H:i:s",strtotime($utc_str) );
+
+    return get_option( 'ls_last_sync', $utc);
+}
+
+/**
+ * returns string UTC time of the last syncing
+ * @return string
+ */
+function update_last_sync(){
+    $utc_str = gmdate("Y-m-d H:i:s", time());
+    $utc = gmdate("Y-m-d H:i:s",strtotime($utc_str));
+    update_option( 'ls_last_sync', $utc );
+
+    return get_last_sync();
+}
+
+/**
+ * Return true if post_type is a product or not
+ * @param $type
+ * @return bool
+ */
+function is_woo_product( $type ){
+    $bool = false;
+    $product_types = array('product', 'product_variation');
+
+    if( in_array($type, $product_types) ){
+        $bool = true;
+    }
+    return $bool;
+}
+
+/**
+ * Remove unneeded string
+ * @param $string
+ * @return mixed|string
+ */
+function remove_escaping_str( $string ){
+    $str_tobe_removed = array("\\");
+    $str = '';
+
+    foreach( $str_tobe_removed as $needle ){
+        $str = str_replace($needle, '', $string );
+    }
+
+    return $str;
+}
+
+
+/**
+ * Returns all the needed woocommerce order action hooks that was selected by the user
+ * @return array
+ */
+function ls_woo_order_hook_names(){
+    $selected_orders = LS_QBO()->order_option()->order_status();
+    $order_hooks = array();
+
+    if( !empty($selected_orders)){
+        foreach( $selected_orders as $order_name ){
+            $name = substr( $order_name, 3 );
+
+            $order_hooks[] = 'woocommerce_order_status_'.$name;
+        }
+    }
+
+    return $order_hooks;
+}
+
+function ls_selected_order_status_to_trigger_sync(){
+    $selected_orders = LS_QBO()->order_option()->order_status();
+    $order_hooks = array();
+    if( !empty($selected_orders)){
+        foreach( $selected_orders as $order_name ){
+            $name = substr( $order_name, 3 );
+
+            $order_hooks[] = $name;
+        }
+    }
+    return $order_hooks;
+}
+
+function get_qbo_id( $id ){
+    $laid = LS_ApiController::get_current_laid();
+    if( !empty($laid) ){
+        return str_replace( $laid, '', $id );
+    }
+    return $id;
+}
+
+if (!function_exists('array_udiff_custom_compare_product_id')) {
+    function array_udiff_custom_compare_product_id($a, $b)
+    {
+        return $a['ID'] - $b['ID'];
+    }
+}
+
+if (!function_exists('ls_is_odd')) {
+
+    function ls_is_odd($number)
+    {
+        if (($number % 2) == 1) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('get_vend_id')) {
+
+    function get_vend_id($id)
+    {
+        $laid = LS_ApiController::get_current_laid();
+        if( !empty($laid) ){
+            return str_replace( $laid, '', $id );
+        }
+        return $id;
+    }
+}
+

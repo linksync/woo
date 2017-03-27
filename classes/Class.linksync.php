@@ -1279,11 +1279,18 @@ class linksync_class {
                         }
                         //Update products _stock_status
                         update_post_meta($result_reference['data'],'_stock_status',$product__stock_status);
-                    } else {
-
-                        $status = get_post_status($result_reference['data']);//Just use the woocommerce status data
-
                     }
+
+                    $current_product_status = get_post_status($result_reference['data']);//get current woocommerce product status data
+
+
+                    if ('pending' == $current_product_status) {
+                        /**
+                         * Do not alter product status if current product status is pending
+                         */
+                        $status = $current_product_status;
+                    }
+
 
                     $my_product = array();
                     $my_product['ID'] = $result_reference['data'];

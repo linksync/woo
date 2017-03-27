@@ -8,19 +8,21 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
     /**
      * This file will serve as the entry point of vend app
      */
-    class LS_Vend
+    final class LS_Vend
     {
 
         /**
          * @var LS_Vend instance
          */
-        public static $_instance = null;
+        protected static $_instance = null;
 
         public static $api = null;
 
         public function __construct()
         {
             $this->includes();
+
+            do_action('ls_vend_loaded');
         }
 
         /**
@@ -53,29 +55,38 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/ls-core-functions.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-tax.php';
 
-            include_once LS_INC_DIR . 'apps/class-ls-json-product-factory.php';
-            include_once LS_INC_DIR . 'apps/class-ls-json-order-factory.php';
-
             include_once LS_INC_DIR . 'apps/vend/class-ls-vend-tax-helper.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-order-line-item.php';
             include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
 
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-option.php';
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-order-option.php';
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-product-option.php';
+
 
             include_once LS_INC_DIR . 'api/ls-api.php';
             include_once LS_INC_DIR . 'api/ls-api-controller.php';
             include_once LS_INC_DIR . 'apps/class-ls-product-api.php';
             include_once LS_INC_DIR . 'apps/class-ls-order-api.php';
-
             require_once LS_INC_DIR . 'apps/vend/class-ls-vend-api.php';
+
+            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-option.php';
+            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-order-option.php';
+            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-product-option.php';
+
+            include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
+            include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
+            include_once LS_INC_DIR . 'apps/class-ls-variant-product.php';
+
+            include_once LS_INC_DIR . 'apps/class-ls-json-product-factory.php';
+            include_once LS_INC_DIR . 'apps/class-ls-json-order-factory.php';
+
             require_once LS_INC_DIR . 'apps/vend/ls-vend-api-key.php';
             require_once LS_INC_DIR . 'apps/vend/ls-vend-log.php';
             require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
 
+            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-helper.php';
+            if (is_vend()) {
+                include_once LS_INC_DIR . 'apps/vend/class-ls-vend-sync.php';
+            }
 
-            require_once LS_INC_DIR. 'apps/vend/class-ls-vend-sync.php';
         }
 
         /**
@@ -104,6 +115,11 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 include_once LS_INC_DIR . 'view/ls-plugins-tab-configuration.php';
             }
 
+        }
+
+        public function option()
+        {
+            return LS_Vend_Option::instance();
         }
 
         public function order_option()
@@ -201,5 +217,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
     // Global for backwards compatibility.
     $GLOBALS['ls_vend'] = LS_Vend();
+
 
 }

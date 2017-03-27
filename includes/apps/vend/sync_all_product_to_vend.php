@@ -350,24 +350,31 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
                     }
 // ATTRIBUTE && VARIANTS
 					$variant_attributes = ls_get_variant_attributes( $variant_data['ID'] );
-					if( !empty($variant_attributes) ){
+                    if (!empty($variant_attributes)) {
 
-						$option_key = 1;
-						$vend_options = ls_vend_variant_option();
-						$option_name_str =  'name';
-						$option_value_str = 'value';
+                        $option_key = 1;
+                        $vend_options = ls_vend_variant_option();
+                        $vend_options_count = count($vend_options);
+                        $option_name_str = 'name';
+                        $option_value_str = 'value';
 
-						foreach( $variant_attributes as $variant_attribute ){
-							if( isset($vend_options[$option_key]) ){
+                        foreach ($variant_attributes as $variant_attribute) {
+                            if (isset($vend_options[$option_key])) {
+                                $variant[ $vend_options[$option_key].$option_name_str ] = $variant_attribute[ $option_name_str ];
+                                $variant[ $vend_options[$option_key].$option_value_str ] = $variant_attribute[ $option_value_str ];
+                                $option_key++;
 
-								$variant[ $vend_options[$option_key].$option_name_str ] = $variant_attribute[ $option_name_str ];
-								$variant[ $vend_options[$option_key].$option_value_str ] = $variant_attribute[ $option_value_str ];
-								$option_key++;
+                            }
+                        }
 
-							}
-						}
+                        for($i = $option_key; $i <= $vend_options_count; $i++){
+                            if(isset($vend_options[$i])){
+                                $variant[ $vend_options[$i].$option_name_str ] = null;
+                                $variant[ $vend_options[$i].$option_value_str ] = null;
+                            }
+                        }
+                    }
 
-					}
 #qunantity-----UPDATE--variant---
                     if (get_option('ps_quantity') == 'on') {
                         if (get_option('ps_wc_to_vend_outlet') == 'on') {

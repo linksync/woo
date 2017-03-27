@@ -6,44 +6,26 @@ if (isset($_POST['add_apiKey'])) {
     if (!empty($_POST['apikey'])) {
         $query_api_key = LS_Vend_Api_Key::get_count();
 
-        if (0 == $query_api_key ) {
-
-            $data_to_insert = array(
-                    'api_key' => trim($_POST['apikey']),
-                    'status' => 'Under Process',
-                    'date_add' => date('Y/m/d')
-            );
-            //If Connection is established than save to database:
-            if (LS_Vend_Api_Key::insert($data_to_insert)) {
-
-                $result = linksync::checkForConnection($_POST['apikey']);
-                if (get_option('linksync_laid') == '') {
-                    update_option('linksync_laid', trim($_POST['apikey']));
-                }
-                $class1 = 'error';
-                $class2 = 'updated';
-                LSC_Log::add('Manage API Keys', 'success', 'API Key Added Successfully', $_POST['apikey']);
-                $response = 'API Key has been added successfully !';
-            } else {
-                LSC_Log::add('Manage API Keys', 'fail', 'Unable to Insert', $_POST['apikey']);
-            }
-
-            if (isset($result['success'])) {
-                $class1 = 'error';
-                $class2 = 'updated';
-                $response = $result['success'];
-            } else {
-
-                LS_Vend_Api_Key::delete_by_api(trim($_POST['apikey']));
-
-                $class1 = 'updated';
-                $class2 = 'error';
-                $response = $result['error'];
-            }
+        $result = linksync::checkForConnection($_POST['apikey']);
+        $currentLaid = LS_ApiController::get_current_laid('');
+        if ('' == $currentLaid) {
+            LS_ApiController::update_current_laid(trim($_POST['apikey']));
+        }
+        $class1 = 'error';
+        $class2 = 'updated';
+        LSC_Log::add('Manage API Keys', 'success', 'API Key Added Successfully', $_POST['apikey']);
+        $response = 'API Key has been added successfully !';
+        if (isset($result['success'])) {
+            $class1 = 'error';
+            $class2 = 'updated';
+            $response = $result['success'];
         } else {
+
+            LS_Vend_Api_Key::delete_by_api(trim($_POST['apikey']));
+
             $class1 = 'updated';
             $class2 = 'error';
-            $response = "API Key is already exists!";
+            $response = $result['error'];
         }
 
     } else {
@@ -61,21 +43,14 @@ if (isset($_POST['add_apiKey'])) {
 }
 
 if (isset($_POST['apikey_update'])) {
-
-
-    $where = array('id' => $_POST['id']);
     if (!empty($_POST['apikey'])) {
         $result = linksync::checkForConnection($_POST['apikey']);
         if (isset($result['success'])) {
             $status = 'Connected';
-        } else {
-            $status = 'InValid';
-        }
-        $data_array = array('api_key' => trim($_POST['apikey']), 'date_add' => date('Y/m/d'), 'status' => $status);
-        if (LS_Vend_Api_Key::update($data_array,$where)) {
             LSC_Log::add('Manage API Keys', 'success', 'API key Updated Successfully', $_POST['apikey']);
             $response = 'API key Updated Successfully!! ';
         } else {
+            $status = 'InValid';
             LSC_Log::add('Manage API Keys', 'fail', 'Unable to Update!!', $_POST['apikey']);
         }
     } else {

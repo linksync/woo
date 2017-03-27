@@ -4,46 +4,28 @@
 if (isset($_POST['add_apiKey'])) {
     global $wpdb;
     if (!empty($_POST['apikey'])) {
-        $query_api_key = LS_Vend_Api_Key::get_count();
 
-        if (0 == $query_api_key ) {
+        $result = linksync::checkForConnection($_POST['apikey']);
+        $currentLaid = LS_ApiController::get_current_laid('');
+        if ('' == $currentLaid) {
+            LS_ApiController::update_current_laid(trim($_POST['apikey']));
+        }
+        $class1 = 'error';
+        $class2 = 'updated';
+        LSC_Log::add('Manage API Keys', 'success', 'API Key Added Successfully', $_POST['apikey']);
+        $response = 'API Key has been added successfully !';
 
-            $data_to_insert = array(
-                'api_key' => trim($_POST['apikey']),
-                'status' => 'Under Process',
-                'date_add' => date('Y/m/d')
-            );
-            //If Connection is established than save to database:
-            if (LS_Vend_Api_Key::insert($data_to_insert)) {
-
-                $result = linksync::checkForConnection($_POST['apikey']);
-                if (get_option('linksync_laid') == '') {
-                    update_option('linksync_laid', trim($_POST['apikey']));
-                }
-                $class1 = 'error';
-                $class2 = 'updated';
-                LSC_Log::add('Manage API Keys', 'success', 'API Key Added Successfully', $_POST['apikey']);
-                $response = 'API Key has been added successfully !';
-            } else {
-                LSC_Log::add('Manage API Keys', 'fail', 'Unable to Insert', $_POST['apikey']);
-            }
-
-            if (isset($result['success'])) {
-                $class1 = 'error';
-                $class2 = 'updated';
-                $response = $result['success'];
-            } else {
-
-                LS_Vend_Api_Key::delete_by_api(trim($_POST['apikey']));
-
-                $class1 = 'updated';
-                $class2 = 'error';
-                $response = $result['error'];
-            }
+        if (isset($result['success'])) {
+            $class1 = 'error';
+            $class2 = 'updated';
+            $response = $result['success'];
         } else {
+
+            LS_Vend_Api_Key::delete_by_api(trim($_POST['apikey']));
+
             $class1 = 'updated';
             $class2 = 'error';
-            $response = "API Key is already exists!";
+            $response = $result['error'];
         }
 
     } else {
@@ -125,7 +107,7 @@ if (isset($_POST['rest'])) {
 }
 
 
-$laid = linksync::get_current_laid();
+$laid = LS_ApiController::get_current_laid();
 ?>
 <div id="myModal" class="reveal-modal">
     <form method="POST" name="f1" action="">

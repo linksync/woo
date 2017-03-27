@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.15
+  Version: 2.4.16
  */
 
 /*
@@ -23,7 +23,7 @@ class linksync {
 	/**
 	 * @var string
 	 */
-	public static $version = '2.4.15';
+	public static $version = '2.4.16';
 
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
@@ -59,6 +59,8 @@ class linksync {
 
         include_once LS_INC_DIR . 'api/ls-api.php';
         include_once LS_INC_DIR . 'api/ls-api-controller.php';
+        include_once LS_INC_DIR . 'apps/class-ls-product-api.php';
+        include_once LS_INC_DIR . 'apps/class-ls-order-api.php';
 
         require_once LS_INC_DIR . 'apps/vend/vend.php';
         require_once LS_INC_DIR . 'apps/vend/ls-vend-api-key.php';
@@ -133,8 +135,7 @@ class linksync {
 
     public static function activate() {
         global $wpdb;
-        $linksync = new Linksync();
-        $linksync->includes();
+        $linksync = new linksync();
 
 
         require_once( ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -459,9 +460,7 @@ class linksync {
                             $linksync_version = NULL;
                         }
                         update_option('linksync_version', $linksync_version);
-                        $plugin_file = dirname(__FILE__) . '/linksync.php';
-                        $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-                        $running_version = $plugin_data['Version'];
+                        $running_version = linksync::$version;
                         if ($linksync_version > $running_version) {
                             update_option('linksync_update_notic', 'on');
                         } else {
@@ -866,8 +865,8 @@ class linksync {
 
 register_activation_hook(__FILE__, array('linksync', 'activate')); # When plugin get activated it will triger class method "activate"
 if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
-    add_action('save_post', array('linksync', 'linksync_removespaces'), 1);
-    add_action('save_post', array('linksync', 'linksync_productPost'), 2);
+    //add_action('save_post', array('linksync', 'linksync_removespaces'), 1);
+    //add_action('save_post', array('linksync', 'linksync_productPost'), 2);
 }
 
 if (get_option('order_sync_type') == 'wc_to_vend') {
@@ -885,9 +884,7 @@ if (get_option('order_sync_type') == 'disabled') {
 if (get_option('linksync_update_notic') == 'on') {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
     $linksync_version = get_option('linksync_version');
-    $plugin_file = dirname(__FILE__) . '/linksync.php';
-    $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-    $running_version = $plugin_data['Version'];
+    $running_version = linksync::$version;
     if ($linksync_version > $running_version) {
         update_option('linksync_update_notic', 'on');
     } else {

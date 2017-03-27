@@ -47,4 +47,69 @@ class LS_Vend_Tax_helper
             }
         }
     }
+
+    public static function get_tax_details_for_product($taxname)
+    {
+        $result = array();
+        $taxDb = get_option('tax_class');
+        if (isset($taxDb) && !empty($taxDb)) {
+            $tax_class = explode(",", $taxDb);
+            foreach ($tax_class as $new) {
+                $taxes = explode("|", $new);
+                if (in_array($taxname, $taxes)) {
+                    $tax = explode("-", @$taxes[0]);
+                    $result['tax_rate'] = @$tax[1]; //tax_rate
+                    $result['tax_name'] = @$tax[0]; //tax_name
+                    return array('result' => 'success', 'data' => $result);
+                }
+            }
+        }
+        return array('result' => 'error', 'data' => 'no tax rule set');
+    }
+
+    /**
+     * @return string either 'on' or 'off'
+     */
+    public static function is_excluding_tax()
+    {
+        $excluding_tax = 'on';
+
+        $woocommerce_calc_taxes = LS_Vend()->option()->woocommerce_calc_taxes();
+        $woocommerce_prices_include_tax = LS_Vend()->option()->woocommerce_prices_include_tax();
+        $linksync_woocommerce_tax_option = LS_Vend()->option()->linksync_woocommerce_tax_option();
+
+        $excluding_tax = get_option('excluding_tax');
+
+        if ('yes' == $woocommerce_calc_taxes) {
+
+            if ('on' == $linksync_woocommerce_tax_option) {
+                $excluding_tax = 'on'; //Excluding tax is on
+
+                if ('yes' == $woocommerce_prices_include_tax) {
+                    $excluding_tax = 'off'; //Include tax is on
+                }
+            }
+        }
+
+        return $excluding_tax;
+    }
+
+    public static function is_taxable($tax_status, $tax_class)
+    {
+        if ('taxable' == $tax_status) {
+            $taxname = empty($tax_class) ? 'standard-tax' : $tax_class;
+            if (!empty($taxname)) {
+                $response_taxes = LS_Vend_Tax_helper::get_tax_details_for_product($taxname);
+                if ('success' == $response_taxes['result']) {
+                    //$product['tax_name'] = !empty($product_meta->get_tax_name()) ? $product_meta->get_tax_name() : html_entity_decode($response_taxes['data']['tax_name']);
+                    //$product['tax_rate'] = !empty($product_meta->get_tax_rate()) ? $product_meta->get_tax_rate() : $response_taxes['data']['tax_rate'];
+                    //$taxsetup = true;
+                    return true;
+                }
+            }
+
+        }
+        return false;
+
+    }
 }

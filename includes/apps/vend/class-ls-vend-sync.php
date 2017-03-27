@@ -13,8 +13,211 @@ class LS_Vend_Sync
             add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'importOrderToVend'));
         }
 
+
+        self::add_action_save_post();
+
     }
 
+    public static function add_action_save_post()
+    {
+        add_action('save_post', array('LS_Vend_Sync', 'save_product'), 999, 3);
+    }
+
+    public static function remove_action_save_post()
+    {
+        remove_action('save_post', array('LS_Vend_Sync', 'save_product'), 999);
+    }
+
+    public static function save_product($product_id, $post, $update)
+    {
+        // Dont' send product for revisions or autosaves and auto-draft post_status
+        if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+            return $product_id;
+        }
+
+        // Don't save revisions and autosaves
+        if (wp_is_post_revision($product_id) || wp_is_post_autosave($product_id)) {
+            return $product_id;
+        }
+
+        // Check post type is product
+        if ('product' != $post->post_type || 'auto-draft' == $post->post_status) {
+            return $product_id;
+        }
+
+        //Do not send http post to linksync server if user is trashing product
+        if ('trash' == $post->post_status) {
+            return $product_id;
+        }
+
+        LS_Vend_Sync::importProductToVend($product_id);
+
+    }
+
+    /**
+     * Imports Woocommerce Products to Vend
+     * @param $product_id
+     */
+    public static function importProductToVend($product_id)
+    {
+        set_time_limit(0);
+        $product = wc_get_product($product_id);
+        $product_meta = new LS_Product_Meta($product_id);
+        $productOptionSyncType = LS_Vend()->product_option()->sync_type();
+
+
+        if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
+            $product_type = $product->post->post_type;
+            $product_post_status = $product->post->post_status;
+
+            //Check if the post type is product or product_variation
+            if (is_woo_product($product_type)) {
+                $json_product = new LS_Json_Product_Factory();
+                $productOptionNameTitle = LS_Vend()->product_option()->nameTitle();
+                $productOptionDescription = LS_Vend()->product_option()->description();
+                $productOptionPrice = LS_Vend()->product_option()->price();
+                $productOptionPriceField = LS_Vend()->product_option()->priceField();
+                $productOptionBrand = LS_Vend()->product_option()->brand();
+                $productOptionTag = LS_Vend()->product_option()->tag();
+                $productOptionQuantity = LS_Vend()->product_option()->quantity();
+
+                $vendOptionWooToVendOutlet = LS_Vend()->option()->wooToVendOutlet();
+                $vendOptionWooToVendOutletDetail = LS_Vend()->option()->wooToVendOutletDetail();
+
+                $sku = LS_Vend_Helper::removeSpacesOnsku($product->get_sku());
+                if (empty($sku)) {
+                    $sku = 'sku_' . $product_id;
+                }
+                $product_meta->update_sku($sku);
+                $json_product->set_sku(html_entity_decode($sku));
+
+
+                $excluding_tax = LS_Vend_Tax_helper::is_excluding_tax();
+                $display_retail_price_tax_inclusive = LS_Vend()->option()->tax_inclusive();
+                $active = ($product_post_status == 'draft') ? 0 : 1;
+                $json_product->set_active($active);
+
+                $pTitle = null;
+                if ('on' == $productOptionNameTitle) {
+                    $pTitle = html_entity_decode(remove_escaping_str($product->get_title()));
+                }
+                $json_product->set_name($pTitle);
+
+                $pDescription = null;
+                if ('on' == $productOptionDescription) {
+                    $pDescription = remove_escaping_str(html_entity_decode($product->post->post_content));
+                }
+                $json_product->set_description($pDescription);
+                $tax_status = $product_meta->get_tax_status();
+
+                $paramsToGetSellAndListPriceToSyncInVend = array(
+                    'product_option_price' => $productOptionPrice,
+                    'product_option_price_field' => $productOptionPriceField,
+                    'tax_status' => $tax_status,
+                    'tax_class' => $product_meta->get_tax_class(),
+                    'product_regular_price' => $product->get_regular_price(),
+                    'product_sale_price' => $product->get_sale_price(),
+                    'excluding_tax' => $excluding_tax,
+                    'display_retail_price_tax_inclusive' => $display_retail_price_tax_inclusive,
+                    'vend_option_woo_to_vend_outlet' => $vendOptionWooToVendOutlet,
+                    'vend_option_woo_to_vend_outlet_detail' => $vendOptionWooToVendOutletDetail,
+                );
+
+                $priceBaseOnSettings = LS_Vend_Helper::getSellAndListPriceToSyncInVend($paramsToGetSellAndListPriceToSyncInVend);
+                if (!empty($priceBaseOnSettings)) {
+                    $json_product->set_sell_price($priceBaseOnSettings);
+                    $json_product->set_list_price($priceBaseOnSettings);
+                }
+                //Set includes_tax key for the json product
+                $json_product->set_includes_tax(('taxable' == $tax_status) ? true : false);
+
+
+                if ('on' == $productOptionBrand) {
+                    $pBrands = ls_get_product_terms($product_id, 'brand');
+                    $json_product->set_brands($pBrands);
+                }
+
+                if ('on' == $productOptionTag) {
+                    $pTags = ls_get_product_terms($product_id, 'tag');
+                    $json_product->set_tags($pTags);
+                }
+
+                $manage_stock = $product_meta->get_manage_stock();
+                $paramsToBuildJsonOutlets = array(
+                    'manage_stock' => $manage_stock,
+                    'product_option_quantity' => $productOptionQuantity,
+                    'vend_option_woo_to_vend_outlet' => $vendOptionWooToVendOutlet,
+                    'vend_option_woo_to_vend_outlet_detail' => $vendOptionWooToVendOutletDetail,
+                    'product_stock' => $product_meta->get_stock()
+                );
+
+                if ($product_type == 'product') {
+                    $pOutlets = LS_Vend_Helper::buildOutletJsonBaseOnParams($paramsToBuildJsonOutlets);
+                    $json_product->set_outlets($pOutlets);
+                }
+
+
+                if (true == $product->is_type('variable')) {
+                    $has_children = $product->has_child();
+                    if (true == $has_children) {
+                        $variation_ids = $product->get_children();
+                        if (!empty($variation_ids)) {
+
+                            $paramsToBuildJsonVariant = array(
+                                'product_option_name_title' => $productOptionNameTitle,
+                                'product_option_description' => $productOptionDescription,
+                                'product_option_price' => $productOptionPrice,
+                                'product_option_price_field' => $productOptionPriceField,
+                                'product_option_brand' => $productOptionBrand,
+                                'product_option_tag' => $productOptionTag,
+                                'product_option_quantity' => $productOptionQuantity,
+                                'vend_option_woo_to_vend_outlet' => $vendOptionWooToVendOutlet,
+                                'vend_option_woo_to_vend_outlet_detail' => $vendOptionWooToVendOutletDetail,
+                                'parent_id' => $product_id
+                            );
+                            $variationTotalQuantity = 0;
+                            $variation = array();
+                            foreach ($variation_ids as $variation_id) {
+
+                                $varArray = LS_Vend_Helper::buildSingleVariantJsonBaseOnParams($variation_id, $paramsToBuildJsonVariant);
+                                $variation[] = $varArray;
+                                $variationTotalQuantity += (int) $varArray['quantity'];
+                            }
+
+
+                            if (!empty($variation)) {
+                                $paramsToBuildJsonOutlets['product_stock'] = $variationTotalQuantity;
+                                $pOutlets = LS_Vend_Helper::buildOutletJsonBaseOnParams($paramsToBuildJsonOutlets);
+                                $json_product->set_outlets($pOutlets);
+                            }
+                            $json_product->set_variants($variation);
+
+                        }
+                    }
+
+                }
+
+
+                $j_product = $json_product->get_json_product();
+                if (!empty($j_product)) {
+                    $result = LS_Vend()->api()->product()->save_product($j_product);
+                    if (!empty($result['id'])) {
+                        LSC_Log::add_dev_success('LS_Vend_Sync::importProductToVend', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
+                    } else {
+                        LSC_Log::add_dev_failed('LS_Vend_Sync::importProductToVend25', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
+                    }
+                }
+
+            }
+        }
+
+    }
+
+
+    /**
+     * Imports woocommerce order to Vend
+     * @param $order_id
+     */
     public static function importOrderToVend($order_id)
     {
         set_time_limit(0);
@@ -99,16 +302,21 @@ class LS_Vend_Sync
 
         if (!empty($shippingMethod)) {
             $shipping_cost = $wooOrder->get_total_shipping();
+            $shipping_tax = $wooOrder->get_shipping_tax();
+
             $vendTaxDetails = array(
                 'taxId' => null,
                 'taxName' => null,
                 'taxRate' => null
             );
-            foreach ($orderTaxes as $tax_label) {
-                $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
-                    $tax_label['label'],
-                    $orderItem['item_meta']['_tax_class'][0]
-                );
+
+            if (!empty($shipping_tax)) {
+                foreach ($orderTaxes as $tax_label) {
+                    $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
+                        $tax_label['label'],
+                        $orderItem['item_meta']['_tax_class'][0]
+                    );
+                }
             }
 
             $shippingCost = $wooOrder->get_total_shipping();
@@ -210,12 +418,12 @@ class LS_Vend_Sync
             $orderBillingAddress = $billing_address;
             $orderShippingAddress = $delivery_address;
 
-            if('yes' == $useBillingToBePhysicalOption){
+            if ('yes' == $useBillingToBePhysicalOption) {
                 $delivery_address = $orderBillingAddress;
             }
 
             $useShippingToBePostalOption = $orderOption->useShippingAddressToBePostalAddress();
-            if('yes' == $useShippingToBePostalOption){
+            if ('yes' == $useShippingToBePostalOption) {
                 $billing_address = $orderShippingAddress;
             }
 

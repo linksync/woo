@@ -10,10 +10,9 @@
 
     <?php
         global $wpdb;
-        $linksync = new linksync();
         //Send log feature
         $testMode = get_option('linksync_test');
-        $LAIDKey = linksync::get_current_laid();
+        $LAIDKey = LS_ApiController::get_current_laid();
         $apicall = new linksync_class($LAIDKey, $testMode);
 
 		if( !empty($LAIDKey) ){

@@ -26,23 +26,6 @@ function ls_print_r($data){
 	echo '</pre>';
 }
 
-
-/**
- * Remove unneeded string
- * @param $string
- * @return mixed|string
- */
-function remove_escaping_str( $string ){
-	$str_tobe_removed = array("\\");
-	$str = '';
-
-	foreach( $str_tobe_removed as $needle ){
-		$str = str_replace($needle, '', $string );
-	}
-
-	return $str;
-}
-
 /**
  * Download an image from the specified URL uses ls_generate_woo_product_image function
  * @param $post_id 		The post id associated with the image
@@ -110,4 +93,21 @@ function ls_generate_woo_product_image( $post_id, $image_url, $desc = null ){
 	}
 
 	return $id;
+}
+
+/**
+ * Show Image help link
+ */
+function help_link($attribute){
+    /**
+     * Check if href key has been added if not set to default link
+     */
+    $href = isset($attribute['href'])? $attribute['href']: 'https://www.linksync.com/help/woocommerce';
+
+    $src = '../wp-content/plugins/linksync/assets/images/linksync/help.png';
+    echo '	<a style="color: transparent !important" target="_blank" href="', $href ,'">
+				<img title="',$attribute['title'],'"
+					 src="', $src ,'"
+					 height="16" width="16">
+			</a>';
 }
