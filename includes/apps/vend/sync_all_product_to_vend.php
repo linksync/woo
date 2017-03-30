@@ -369,8 +369,8 @@ if (isset($product_sync_type) && $product_sync_type == 'wc_to_vend' || $product_
 
                         for($i = $option_key; $i <= $vend_options_count; $i++){
                             if(isset($vend_options[$i])){
-                                $variant[ $vend_options[$i].$option_name_str ] = null;
-                                $variant[ $vend_options[$i].$option_value_str ] = null;
+                                $variant[ $vend_options[$i].$option_name_str ] = "NULL";
+                                $variant[ $vend_options[$i].$option_value_str ] = "NULL";
                             }
                         }
                     }

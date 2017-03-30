@@ -431,8 +431,8 @@ if (get_option('linksync_status') == 'Active') {
 
                                             for($i = $option_key; $i <= $vend_options_count; $i++){
                                                 if(isset($vend_options[$i])){
-                                                    $variant[ $vend_options[$i].$option_name_str ] = null;
-                                                    $variant[ $vend_options[$i].$option_value_str ] = null;
+                                                    $variant[ $vend_options[$i].$option_name_str ] = "NULL";
+                                                    $variant[ $vend_options[$i].$option_value_str ] = "NULL";
                                                 }
                                             }
                                         }
@@ -888,8 +888,8 @@ function linksync_getVariantData($product_ID, $excluding_tax, $display_retail_pr
 
                 for($i = $option_key; $i <= $vend_options_count; $i++){
                     if(isset($vend_options[$i])){
-                        $variant[ $vend_options[$i].$option_name_str ] = null;
-                        $variant[ $vend_options[$i].$option_value_str ] = null;
+                        $variant[ $vend_options[$i].$option_name_str ] = "NULL";
+                        $variant[ $vend_options[$i].$option_value_str ] = "NULL";
                     }
                 }
             }

@@ -204,8 +204,8 @@ class LS_Vend_Helper
 
             for($i = $option_key; $i <= $vend_options_count; $i++){
                 if(isset($vend_options[$i])){
-                    $var_json_product->set($vend_options[$i] . $option_name_str, null);
-                    $var_json_product->set($vend_options[$i] . $option_value_str, null);
+                    $var_json_product->set($vend_options[$i] . $option_name_str, "NULL");
+                    $var_json_product->set($vend_options[$i] . $option_value_str, "NULL");
                 }
             }
         }

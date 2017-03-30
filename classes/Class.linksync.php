@@ -1284,7 +1284,7 @@ class linksync_class {
                     $current_product_status = get_post_status($result_reference['data']);//get current woocommerce product status data
 
 
-                    if ('pending' == $current_product_status) {
+                    if ('pending' == $current_product_status || empty($status)) {
                         /**
                          * Do not alter product status if current product status is pending
                          */
