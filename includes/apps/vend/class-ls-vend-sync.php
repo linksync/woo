@@ -3,10 +3,12 @@
 class LS_Vend_Sync
 {
     public static $orderSyncOption = null;
+    public static $productSyncOption = null;
 
     public function __construct()
     {
         self::$orderSyncOption = LS_Vend()->order_option();
+        self::$productSyncOption = LS_Vend()->product_option();
 
         if (self::$orderSyncOption->woocommerceToVend() == self::$orderSyncOption->sync_type()) {
             add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'), 1);
@@ -16,33 +18,62 @@ class LS_Vend_Sync
 
         self::add_action_save_post();
 
+        $pro_sync_type = self::$productSyncOption->sync_type();
+        if ($pro_sync_type == 'two_way' || $pro_sync_type == 'wc_to_vend') {
+            if ('on' == self::$productSyncOption->delete()) {
+                add_action('before_delete_post', array('LS_Vend_Sync', 'deleteVendProduct'));
+            }
+        }
+
     }
 
     public static function add_action_save_post()
     {
-        add_action('save_post', array('LS_Vend_Sync', 'save_product'), 999, 3);
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            add_action('save_post', array('LS_Vend_Sync', 'save_product'), 999, 3);
+        } else {
+
+            if (did_action('woocommerce_new_product') === 1 || did_action('woocommerce_update_product') === 1) {
+                add_action('woocommerce_new_product', array('LS_Vend_Sync', 'importProductToVend'), 999);
+                add_action('woocommerce_update_product', array('LS_Vend_Sync', 'importProductToVend'), 999);
+            } elseif (did_action('woocommerce_new_product_variation') === 1 || did_action('woocommerce_update_product_variation') === 1) {
+                add_action('woocommerce_new_product_variation', array('LS_Vend_Sync', 'importProductToVend'), 999);
+                add_action('woocommerce_update_product_variation', array('LS_Vend_Sync', 'importProductToVend'), 999);
+            } else {
+                add_action('save_post', array('LS_Vend_Sync', 'save_product'), 999, 3);
+            }
+
+        }
     }
 
     public static function remove_action_save_post()
     {
-        remove_action('save_post', array('LS_Vend_Sync', 'save_product'), 999);
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            remove_action('save_post', array('LS_Vend_Sync', 'save_product'), 999);
+        } else {
+            remove_action('woocommerce_new_product', array('LS_Vend_Sync', 'importProductToVend'), 999);
+            remove_action('woocommerce_update_product', array('LS_Vend_Sync', 'importProductToVend'), 999);
+            remove_action('save_post', array('LS_Vend_Sync', 'save_product'), 999);
+        }
     }
 
     public static function save_product($product_id, $post, $update)
     {
+
         // Dont' send product for revisions or autosaves and auto-draft post_status
         if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
             return $product_id;
         }
 
+
         // Don't save revisions and autosaves
-        if (wp_is_post_revision($product_id) || wp_is_post_autosave($product_id)) {
-            return $product_id;
+        if (false !== wp_is_post_revision($product_id) || wp_is_post_autosave($product_id)) {
+            return;
         }
 
         // Check post type is product
-        if ('product' != $post->post_type || 'auto-draft' == $post->post_status) {
-            return $product_id;
+        if ('product' != $post->post_type || 'auto-draft' == $post->post_status || 'revision' == $post->post_type) {
+            return;
         }
 
         //Do not send http post to linksync server if user is trashing product
@@ -65,13 +96,19 @@ class LS_Vend_Sync
         $product_meta = new LS_Product_Meta($product_id);
         $productOptionSyncType = LS_Vend()->product_option()->sync_type();
 
-
         if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
-            $product_type = $product->post->post_type;
-            $product_post_status = $product->post->post_status;
+            $product_type = $product->get_type();
+
+            if(LS_Product_Helper::isVariationProduct($product)){
+                $parent_id = LS_Product_Helper::getProductParentId($product);
+                $product = wc_get_product($parent_id);
+            }
+
+            $product_post_status = LS_Product_Helper::getProductStatus($product);
 
             //Check if the post type is product or product_variation
-            if (is_woo_product($product_type)) {
+            if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($product_type)) {
+
                 $json_product = new LS_Json_Product_Factory();
                 $productOptionNameTitle = LS_Vend()->product_option()->nameTitle();
                 $productOptionDescription = LS_Vend()->product_option()->description();
@@ -87,8 +124,11 @@ class LS_Vend_Sync
                 $sku = LS_Vend_Helper::removeSpacesOnsku($product->get_sku());
                 if (empty($sku)) {
                     $sku = 'sku_' . $product_id;
+                    $product_meta->update_sku($sku);
+                    if (!LS_Helper::isWooVersionLessThan_2_4_15()) {
+                        return; //sku is empty
+                    }
                 }
-                $product_meta->update_sku($sku);
                 $json_product->set_sku(html_entity_decode($sku));
 
 
@@ -99,13 +139,13 @@ class LS_Vend_Sync
 
                 $pTitle = null;
                 if ('on' == $productOptionNameTitle) {
-                    $pTitle = html_entity_decode(remove_escaping_str($product->get_title()));
+                    $pTitle = LS_Product_Helper::getProductName($product);
                 }
                 $json_product->set_name($pTitle);
 
                 $pDescription = null;
                 if ('on' == $productOptionDescription) {
-                    $pDescription = remove_escaping_str(html_entity_decode($product->post->post_content));
+                    $pDescription = LS_Product_Helper::getProductDescription($product);
                 }
                 $json_product->set_description($pDescription);
                 $tax_status = $product_meta->get_tax_status();
@@ -151,13 +191,13 @@ class LS_Vend_Sync
                     'product_stock' => $product_meta->get_stock()
                 );
 
-                if ($product_type == 'product') {
+                if (LS_Product_Helper::isSimpleProduct($product)) {
                     $pOutlets = LS_Vend_Helper::buildOutletJsonBaseOnParams($paramsToBuildJsonOutlets);
                     $json_product->set_outlets($pOutlets);
                 }
 
 
-                if (true == $product->is_type('variable')) {
+                if (true == LS_Product_Helper::isVariableProduct($product)) {
                     $has_children = $product->has_child();
                     if (true == $has_children) {
                         $variation_ids = $product->get_children();
@@ -181,7 +221,7 @@ class LS_Vend_Sync
 
                                 $varArray = LS_Vend_Helper::buildSingleVariantJsonBaseOnParams($variation_id, $paramsToBuildJsonVariant);
                                 $variation[] = $varArray;
-                                $variationTotalQuantity += (int) $varArray['quantity'];
+                                $variationTotalQuantity += (int)$varArray['quantity'];
                             }
 
 
@@ -199,6 +239,12 @@ class LS_Vend_Sync
 
 
                 $j_product = $json_product->get_json_product();
+
+                if (true == LS_Product_Helper::isVariableProduct($product) && false == LS_Product_Helper::hasChildren($product)) {
+                    $j_product = '';//Do not sync variable if no variation
+                }
+
+
                 if (!empty($j_product)) {
                     $result = LS_Vend()->api()->product()->save_product($j_product);
                     if (!empty($result['id'])) {
@@ -207,6 +253,8 @@ class LS_Vend_Sync
                         LSC_Log::add_dev_failed('LS_Vend_Sync::importProductToVend25', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
                     }
                 }
+
+
 
             }
         }
@@ -229,27 +277,32 @@ class LS_Vend_Sync
         $totalQuantity = 0;
         $json_order = new LS_Order_Json_Factory();
         $wooOrder = wc_get_order($order_id);
+        $wooOrderHelper = new LS_Order_Helper($wooOrder);
 
-        $orderStatus = $wooOrder->post->post_status;
+        $orderStatus = $wooOrderHelper->getStatus();
         $orderStatusToSyncWooToVend = LS_Vend()->getSelectedOrderStatusToTriggerWooToVendSync();
         if ($orderStatus != $orderStatusToSyncWooToVend) {
             //Do not continue importing to vend if it status was not selected
             return;
         }
 
+
         $orderTotal = $wooOrder->get_total();
-        $orderCurrency = $wooOrder->get_order_currency();
+        $orderCurrency = $wooOrder->get_currency();
         $taxesIncluded = false;
 
         $orderItems = $wooOrder->get_items();
         $orderTaxes = $wooOrder->get_taxes();
 
         foreach ($orderItems as $orderItem) {
+            $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
+
             $vendTaxDetails = array(
                 'taxId' => null,
                 'taxName' => null,
                 'taxRate' => null
             );
+
 
             foreach ($orderTaxes as $tax_label) {
                 $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
@@ -258,50 +311,55 @@ class LS_Vend_Sync
                 );
             }
 
-            if (isset($orderItem['variation_id']) && !empty($orderItem['variation_id'])) {
-                $product_id = $orderItem['variation_id'];
+            $variationId = $orderLineItem->get_variation_id();
+            if (!empty($variationId)) {
+                $product_id = $variationId;
             } else {
-                $product_id = $orderItem['product_id'];
+                $product_id = $orderLineItem->get_product_id();
             }
 
-            $wooProduct = new WC_Product($product_id);
-            $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
-
+            $wooProduct = wc_get_product($product_id);
             $product_amount = $wooProduct->get_price();
-            if (!empty($orderLineItem->lineItem['line_subtotal'])) {
-                $product_amount = (float)($orderLineItem->lineItem['line_subtotal'] / $orderLineItem->lineItem['qty']);
+            $lineSubTotal = $orderLineItem->get_subtotal();
+            $lineQuantity = $orderLineItem->get_quantity();
+
+            if (!empty($lineSubTotal)) {
+                $product_amount = (float)($lineSubTotal / $lineQuantity);
             }
+
 
             $discount = $orderLineItem->get_discount_amount();
             if (!empty($discount)) {
-                $discount = (float)($discount / $orderLineItem->lineItem['qty']);
+                $discount = (float)($discount / $lineQuantity);
             }
 
             //Product Amount = product org amount - discount amount
             $product_total_amount = (float)$product_amount - (float)$discount;
             if (!empty($product_total_amount) && !empty($vendTaxDetails['taxRate'])) {
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
+                error_log($orderLineItem->get_name() . " taxvalue => " . $taxValue);
             }
 
             $products[] = array(
                 'sku' => $wooProduct->get_sku(),
-                'title' => $orderItem['name'],
+                'title' => $orderLineItem->get_name(),
                 'price' => $product_total_amount,
-                'quantity' => $orderItem['qty'],
+                'quantity' => $lineQuantity,
                 'discountAmount' => $discount,
                 'taxName' => $vendTaxDetails['taxName'],
                 'taxId' => $vendTaxDetails['taxId'],
                 'taxRate' => $vendTaxDetails['taxRate'],
                 'taxValue' => isset($taxValue) ? $taxValue : null,
-                'discountTitle' => isset($discountTitle) ? $discountTitle : 'sale',
+                //'discountTitle' => isset($discountTitle) ? $discountTitle : 'sale',
             );
-            $totalQuantity += $orderItem['qty'];
+            $totalQuantity += $lineQuantity;
         }
+        //exit();
 
         $shippingMethod = $wooOrder->get_shipping_method();
 
         if (!empty($shippingMethod)) {
-            $shipping_cost = $wooOrder->get_total_shipping();
+            $shipping_cost = $wooOrder->get_shipping_total();
             $shipping_tax = $wooOrder->get_shipping_tax();
 
             $vendTaxDetails = array(
@@ -319,9 +377,8 @@ class LS_Vend_Sync
                 }
             }
 
-            $shippingCost = $wooOrder->get_total_shipping();
-            if (!empty($shippingCost) && !empty($vendTaxDetails['taxRate'])) {
-                $shippingTaxValue = (float)$shippingCost * (float)$vendTaxDetails['taxRate'];
+            if (!empty($shipping_cost) && !empty($vendTaxDetails['taxRate'])) {
+                $shippingTaxValue = (float)$shipping_cost * (float)$vendTaxDetails['taxRate'];
             }
             $products[] = array(
                 "price" => isset($shipping_cost) ? $shipping_cost : null,
@@ -335,7 +392,7 @@ class LS_Vend_Sync
         }
 
         $orderTransactionId = $wooOrder->get_transaction_id();
-        $orderPaymentMethod = $wooOrder->payment_method;
+        $orderPaymentMethod = $wooOrderHelper->getPaymentMethod();
         if (!empty($orderPaymentMethod)) {
             $vendPaymentDetails = self::$orderSyncOption->getMappedVendPaymentId($orderPaymentMethod);
             $payment = array(
@@ -357,20 +414,20 @@ class LS_Vend_Sync
         $export_user_details = get_option('wc_to_vend_export');
         $primaryEmail = null;
         if (!empty($export_user_details) && 'customer' == $export_user_details) {
-            $phone = !empty($_POST['_billing_phone']) ? $_POST['_billing_phone'] : $wooOrder->billing_phone;
+            $phone = !empty($_POST['_billing_phone']) ? $_POST['_billing_phone'] : $wooOrderHelper->getBillingPhone();
             // Formatted Addresses
             $filtered_billing_address = apply_filters('woocommerce_order_formatted_billing_address', array(
-                'firstName' => !empty($_POST['_billing_first_name']) ? $_POST['_billing_first_name'] : $wooOrder->billing_first_name,
-                'lastName' => !empty($_POST['_billing_last_name']) ? $_POST['_billing_last_name'] : $wooOrder->billing_last_name,
+                'firstName' => !empty($_POST['_billing_first_name']) ? $_POST['_billing_first_name'] : $wooOrderHelper->getBillingFirsName(),
+                'lastName' => !empty($_POST['_billing_last_name']) ? $_POST['_billing_last_name'] : $wooOrderHelper->getBillingLastName(),
                 'phone' => $phone,
-                'street1' => !empty($_POST['_billing_address_1']) ? $_POST['_billing_address_1'] : $wooOrder->billing_address_1,
-                'street2' => !empty($_POST['_billing_address_2']) ? $_POST['_billing_address_2'] : $wooOrder->billing_address_2,
-                'city' => !empty($_POST['_billing_city']) ? $_POST['_billing_city'] : $wooOrder->billing_city,
-                'state' => !empty($_POST['_billing_state']) ? $_POST['_billing_state'] : $wooOrder->billing_state,
-                'postalCode' => !empty($_POST['_billing_postcode']) ? $_POST['_billing_postcode'] : $wooOrder->billing_postcode,
-                'country' => !empty($_POST['_billing_country']) ? $_POST['_billing_country'] : $wooOrder->billing_country,
-                'company' => !empty($_POST['_billing_company']) ? $_POST['_billing_company'] : $wooOrder->billing_company,
-                'email_address' => !empty($_POST['_billing_email']) ? $_POST['_billing_email'] : $wooOrder->billing_email
+                'street1' => !empty($_POST['_billing_address_1']) ? $_POST['_billing_address_1'] : $wooOrderHelper->getBillingAddressOne(),
+                'street2' => !empty($_POST['_billing_address_2']) ? $_POST['_billing_address_2'] : $wooOrderHelper->getBillingAddressTwo(),
+                'city' => !empty($_POST['_billing_city']) ? $_POST['_billing_city'] : $wooOrderHelper->getBillingCity(),
+                'state' => !empty($_POST['_billing_state']) ? $_POST['_billing_state'] : $wooOrderHelper->getBillingState(),
+                'postalCode' => !empty($_POST['_billing_postcode']) ? $_POST['_billing_postcode'] : $wooOrderHelper->getBillingPostcode(),
+                'country' => !empty($_POST['_billing_country']) ? $_POST['_billing_country'] : $wooOrderHelper->getBillingCountry(),
+                'company' => !empty($_POST['_billing_company']) ? $_POST['_billing_company'] : $wooOrderHelper->getBillingCompany(),
+                'email_address' => !empty($_POST['_billing_email']) ? $_POST['_billing_email'] : $wooOrderHelper->getBillingEmail()
             ), $wooOrder);
 
             $billing_address = array(
@@ -388,16 +445,16 @@ class LS_Vend_Sync
             );
 
             $filtered_shipping_address = apply_filters('woocommerce_order_formatted_shipping_address', array(
-                'firstName' => !empty($_POST['_shipping_first_name']) ? $_POST['_shipping_first_name'] : $wooOrder->shipping_first_name,
-                'lastName' => !empty($_POST['_shipping_last_name']) ? $_POST['_shipping_last_name'] : $wooOrder->shipping_last_name,
+                'firstName' => !empty($_POST['_shipping_first_name']) ? $_POST['_shipping_first_name'] : $wooOrderHelper->getShippingFirstName(),
+                'lastName' => !empty($_POST['_shipping_last_name']) ? $_POST['_shipping_last_name'] : $wooOrderHelper->getShippingLastName(),
                 'phone' => $phone,
-                'street1' => !empty($_POST['_shipping_address_1']) ? $_POST['_shipping_address_1'] : $wooOrder->shipping_address_1,
-                'street2' => !empty($_POST['_shipping_address_2']) ? $_POST['_shipping_address_2'] : $wooOrder->shipping_address_2,
-                'city' => !empty($_POST['_shipping_city']) ? $_POST['_shipping_city'] : $wooOrder->shipping_city,
-                'state' => !empty($_POST['_shipping_state']) ? $_POST['_shipping_state'] : $wooOrder->shipping_state,
-                'postalCode' => !empty($_POST['_shipping_postcode']) ? $_POST['_shipping_postcode'] : $wooOrder->shipping_postcode,
-                'country' => !empty($_POST['_shipping_country']) ? $_POST['_shipping_country'] : $wooOrder->shipping_country,
-                'company' => !empty($_POST['_shipping_company']) ? $_POST['_shipping_company'] : $wooOrder->shipping_company,
+                'street1' => !empty($_POST['_shipping_address_1']) ? $_POST['_shipping_address_1'] : $wooOrderHelper->getShippingAddressOne(),
+                'street2' => !empty($_POST['_shipping_address_2']) ? $_POST['_shipping_address_2'] : $wooOrderHelper->getShippingAddressTwo(),
+                'city' => !empty($_POST['_shipping_city']) ? $_POST['_shipping_city'] : $wooOrderHelper->getShippingCity(),
+                'state' => !empty($_POST['_shipping_state']) ? $_POST['_shipping_state'] : $wooOrderHelper->getShippingState(),
+                'postalCode' => !empty($_POST['_shipping_postcode']) ? $_POST['_shipping_postcode'] : $wooOrderHelper->getShippingPostCode(),
+                'country' => !empty($_POST['_shipping_country']) ? $_POST['_shipping_country'] : $wooOrderHelper->getShippingCountry(),
+                'company' => !empty($_POST['_shipping_company']) ? $_POST['_shipping_company'] : $wooOrderHelper->getShippingCompany(),
             ), $wooOrder);
 
             $delivery_address = array(
@@ -435,7 +492,7 @@ class LS_Vend_Sync
         $primaryEmail = !empty($primaryEmail) ? $primaryEmail : get_option('admin_email');
         $billing_address = !empty($billing_address) ? $billing_address : null;
         $delivery_address = !empty($delivery_address) ? $delivery_address : null;
-        $comments = $wooOrder->post->post_excerpt;
+        $comments = "WooCommerce " . $order_id;
         $orderTaxTotal = $wooOrder->get_total_tax();
 
         $selectedVendUser = self::$orderSyncOption->getSelectedVendUser();
@@ -475,6 +532,20 @@ class LS_Vend_Sync
             LSC_Log::add_dev_failed('LS_Vend_Sync::importOrderToVend', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
         }
 
+    }
+
+    public static function deleteVendProduct($product_id)
+    {
+        set_time_limit(0);
+        $pro_object = wc_get_product($product_id);
+        $productHelper = new LS_Product_Helper($pro_object);
+
+        if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($productHelper->getType())) {
+            $product_sku = $productHelper->getSku();
+            if (!empty($product_sku)) {
+                LS_Vend()->api()->product()->delete_product($product_sku);
+            }
+        }
     }
 }
 

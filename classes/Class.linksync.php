@@ -470,7 +470,8 @@ class linksync_class {
 				'value'        => '',
 				'is_visible'   => $visible,
 				'is_variation' => '1',
-				'is_taxonomy'  => '1'
+				'is_taxonomy'  => '1',
+                'position'     => 0,
 			);
 
 			$terms = wp_set_object_terms( $product_ID, $attribute_value, $attribute_name, true );
@@ -2051,16 +2052,19 @@ class linksync_class {
                             foreach ($order['products'] as $products) {
                                 $product_id = $this->isReferenceExists_order($products['sku']);
                                 if ($product_id['result'] == 'success' && !empty($product_id['data'])) {
-                                    $product = new WC_Product($product_id['data']);
-                                    if ($product->post->post_type == 'product_variation') {
-                                        $variant_id = $product->id;
-                                        $product->id = $product->post->post_parent;
+                                    $product = wc_get_product($product_id['data']);
+                                    $product_id = $product_id['data'];
+                                    $productHelper = new LS_Product_Helper($product);
+
+                                    if ($productHelper->isVariation()) {
+                                        $variant_id = $product->get_id();
+                                        $product_id = $productHelper->getParendId();
                                     }
-                                    $wcproduct = $product->post;
+
                                     if ($product) {
 // add item
                                         $item_id = wc_add_order_item($order_id, array(
-                                            'order_item_name' => $wcproduct->post_title,
+                                            'order_item_name' => $productHelper->getName(),
                                             'order_item_type' => 'line_item',
                                         ));
                                         if ($item_id) {
@@ -2072,7 +2076,7 @@ class linksync_class {
                                             }
                                             $line_total = (float) $products['price'];
                                             wc_add_order_item_meta($item_id, '_qty', $products['quantity']); //Product Order Quantity From Vend
-                                            wc_add_order_item_meta($item_id, '_product_id', $product->id);
+                                            wc_add_order_item_meta($item_id, '_product_id', $product_id);
                                             wc_add_order_item_meta($item_id, '_line_total', $line_total);
                                             wc_add_order_item_meta($item_id, '_variation_id', isset($variant_id) ? $variant_id : '');
                                             $result_tax_class = $this->linksync_tax_classes_vend_to_wc($products['taxId']);

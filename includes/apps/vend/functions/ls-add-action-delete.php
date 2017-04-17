@@ -21,9 +21,3 @@ function linksync_DeleteProduct($post_id) {
     }
 }
 
-$pro_sync_type = get_option('product_sync_type');
-if ($pro_sync_type == 'two_way' || $pro_sync_type == 'wc_to_vend') {
-    if (get_option('ps_delete') == 'on') {
-        add_action('before_delete_post', 'linksync_DeleteProduct');
-    }
-}

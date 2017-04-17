@@ -128,7 +128,7 @@ class LS_Vend_Helper
         $vendOptionWooToVendOutletDetail = $arrayOfParams['vend_option_woo_to_vend_outlet_detail'];
         $parent_id = $arrayOfParams['parent_id'];
 
-        $var_product = new WC_Product($varId);
+        $var_product = wc_get_product($varId);
         $var_product_meta = new LS_Product_Meta($varId);
         $var_json_product = new LS_Json_Product_Factory();
 
@@ -142,7 +142,7 @@ class LS_Vend_Helper
 
         $varProductTitle = null;
         if ('on' == $productOptionNameTitle) {
-            $varProductTitle = html_entity_decode(remove_escaping_str($var_product->get_title()));
+            $varProductTitle = LS_Product_Helper::getProductName($var_product);
         }
         $var_json_product->set_name($varProductTitle);
 
@@ -243,5 +243,13 @@ class LS_Vend_Helper
         return $options;
     }
 
+    public static function isWooVersionLessThan_2_4_15()
+    {
+        if (version_compare(WC()->version, '2.6.15', '<')) {
+            return true;
+        }
+
+        return false;
+    }
 
 }

@@ -21,8 +21,14 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function __construct()
         {
             $this->includes();
+            $this->load_hooks();
 
             do_action('ls_vend_loaded');
+        }
+
+        public function load_hooks()
+        {
+
         }
 
         /**
@@ -82,7 +88,11 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             require_once LS_INC_DIR . 'apps/vend/ls-vend-log.php';
             require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
 
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-product-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-order-helper.php';
+            include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-helper.php';
+            include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-product-helper.php';
             if (is_vend()) {
                 include_once LS_INC_DIR . 'apps/vend/class-ls-vend-sync.php';
             }
@@ -203,6 +213,15 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         {
             $orderHookName = get_option('order_status_wc_to_vend');
             if(!empty($orderHookName)){
+                if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+                    return $orderHookName;
+                }
+
+                $wc_prefix = substr($orderHookName, 0, 3);
+                if('wc-' == $wc_prefix){
+                    return str_replace($wc_prefix, '', $orderHookName);
+                }
+
                 return $orderHookName;
             }
             return null;

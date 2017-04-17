@@ -120,4 +120,14 @@ class LS_Vend_Product_Option extends LS_Vend_Option
     {
         return update_option('linksync_tax_inclusive', $meta_value);
     }
+
+    public function delete()
+    {
+        return get_option('ps_delete');
+    }
+
+    public function update_delete($meta_value)
+    {
+        return update_option('ps_delete', $meta_value);
+    }
 }

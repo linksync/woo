@@ -36,7 +36,16 @@ if (isset($_REQUEST['page'], $_REQUEST['setting']) && $_REQUEST['page'] == 'link
 }
 ?>
 <h2>Linksync (Version: <?php echo linksync::$version; ?>)</h2>
-<?php  
+<?php
+
+
+
+
+
+
+if (is_vend()) {
+    $webhook = LS_Vend()->updateWebhookConnection();
+}
 
 $file_perms = wp_is_writable(plugin_dir_path(__FILE__)); 
 
@@ -47,6 +56,7 @@ if(!$file_perms){ ?>
     </div> 
 <?php } ?>
 
+<?php do_action('before_linksync_tab_menu'); ?>
 <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
     <a href="<?php echo admin_url('admin.php?page=linksync')?>" class="nav-tab <?php if (isset($configuration_tab)) echo $configuration_tab; ?>">Configuration</a>
     <a href="<?php echo admin_url('admin.php?page=linksync&setting=product_config')?>"  class="nav-tab <?php if (isset($product_config_tab)) echo $product_config_tab; ?> ">Product Syncing Setting</a>
