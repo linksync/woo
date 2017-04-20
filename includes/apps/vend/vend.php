@@ -88,6 +88,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             require_once LS_INC_DIR . 'apps/vend/ls-vend-log.php';
             require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
 
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-user-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-support-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-product-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-order-helper.php';
@@ -117,6 +119,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 } elseif ($_GET['setting'] == 'order_config') {
 
                     require_once LS_INC_DIR . 'view/vend/ls-plugins-tab-order-config.php';
+
+                } elseif ($_GET['setting'] == 'support') {
+
+                    LS_Support_Helper::renderFormForSupportTab();
 
                 } else {
                     include_once LS_INC_DIR . 'view/ls-plugins-tab-configuration.php';

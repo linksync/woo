@@ -136,15 +136,11 @@ class LS_ApiController{
     public static function get_connected_app($app){
         $apps = self::get_apps();
 
-        if(is_numeric($app)){
-
-            if (array_key_exists($app, $apps)) {
-                return $apps[$app];
-            }else{
-                return 'The supplied API Key is not valid for use with linksync for WooCommerce.';
-            }
-
+        if(is_numeric($app) && array_key_exists($app, $apps)) {
+            return $apps[$app];
         }
+
+        return false;
 
     }
 
@@ -208,6 +204,16 @@ class LS_ApiController{
         return update_option('linksync_laid', trim($laid));
     }
 
+    public static function get_current_laid_info($default = '')
+    {
+        return get_option('linksync_laid_info', $default);
+    }
+
+    public static function update_current_laid_info($laid_info)
+    {
+        return update_option('linksync_laid_info', $laid_info);
+    }
+
 
     /**
      * Return the previous laid key being used
@@ -262,6 +268,8 @@ class LS_ApiController{
 
         return $return;
     }
+
+
 
 
 }

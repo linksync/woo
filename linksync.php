@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.4.18
+  Version: 2.4.19
  */
 
 /*
@@ -23,14 +23,13 @@ class linksync {
 	/**
 	 * @var string
 	 */
-	public static $version = '2.4.18';
+	public static $version = '2.4.19';
 
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
 		$this->includes();
 		add_action('admin_menu', array(&$this, 'linksync_add_menu'), 99); # To create custom menu in Wordpress Side Bar
         add_action('admin_menu', array(&$this, 'linksync_wooVersion_check'));
-        add_action('admin_notices', array('linksync', 'linksync_show_message'));
         add_action('plugins_loaded', array(&$this, 'linsksyncVend_init'), 0);
         
         add_action('admin_notices', array('linksync', 'linksync_video_message'));
@@ -52,7 +51,7 @@ class linksync {
         include_once 'ls-constants.php';
         include_once 'ls-functions.php';
 
-        include_once LS_PLUGIN_DIR . 'linksync_plugin_updater/plugin-update-checker.php';
+        include_once LS_PLUGIN_DIR . 'plugin-update-checker/plugin-update-checker.php';
 
         include_once LS_INC_DIR . 'apps/ls-core-functions.php';
         include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
@@ -69,23 +68,6 @@ class linksync {
 
 
     }
-
-	/**
-	 * Return the current laid key
-	 * @return mixed|void
-	 */
-	public static function get_current_laid( $default = '' ){
-		return get_option( 'linksync_laid', $default );
-	}
-
-	/**
-	 * Update current laid key
-	 * @param $laid
-	 * @return bool
-	 */
-	public static function update_current_laid( $laid ){
-		return update_option( 'linksync_laid', trim($laid) );
-	}
 
     public function ls_custom_styles_and_scripts(){
        //Check for linksync plugin page before adding the styles and scripts to wp-admin
@@ -108,7 +90,7 @@ class linksync {
             wp_enqueue_style( 'ls-jquery-ui', LS_ASSETS_URL.'css/jquery-ui/jquery-ui.css' );
             wp_enqueue_style( 'ls-tab-configuration-style', LS_ASSETS_URL.'css/admin-tabs/ls-plugins-tab-configuration.css' );
 
-            
+            LS_Support_Helper::supportScripts();
        }
 
         $screen = get_current_screen();
@@ -268,8 +250,7 @@ class linksync {
 		if (isset($check_laid) && !empty($check_laid)) {
 			self::checkForConnection($check_laid);
 		}
-// Removing Spaces b/w  sku value of product 
-// linksync::linksync_removespaces_of_exists_product();
+
     }
 
     public static function linksync_wooVersion_check() {
@@ -325,7 +306,7 @@ class linksync {
     }
 
     public function linksync_settings() {
-        include LS_INC_DIR.'view/admin-tabs/ls-plugins-setting.php';
+        include LS_INC_DIR.'view/ls-plugins-setting.php';
     }
 
     public static function check_required_plugins() {
@@ -336,11 +317,10 @@ class linksync {
 
     function linsksyncVend_init() {
         if (is_admin()) { 
-            $className = PucFactory::getLatestClassVersion('PucGitHubChecker');
-            $myUpdateChecker = new $className(
-                            'https://github.com/linksync/woo',
-                            __FILE__,
-                            'master'
+            $myUpdateChecker = Puc_v4_Factory::buildUpdateChecker(
+                'https://github.com/linksync/woo',
+                __FILE__,
+                'linksync'
             );
          }
     }
@@ -390,19 +370,6 @@ class linksync {
             $result['error'] = 'The supplied API Key is not valid for use with linksync for WooCommerce.';
         }
         return $result;
-    }
-
-    public static function linksync_show_message() {
-        $laid_message = get_option('laid_message');
-        if (isset($laid_message) && !empty($laid_message)) {
-            ?>
-            <div  class="error" style=" border-color: #007AB1;margin-bottom: 10px;
-                  margin-top: 10px;
-                  ">
-                <p><?php echo @$laid_message; ?></p>
-            </div> 
-            <?php
-        }
     }
 
     public static function linksync_video_message() {
@@ -485,50 +452,6 @@ class linksync {
     public static function linksync_productPost() {
         include_once dirname(__FILE__) . '/classes/Class.linksync.php'; # Handle Module Functions
         include_once  LS_INC_DIR. 'apps/vend/functions/ls-add-action-product.php'; #POST Product hook file
-    }
-
-
-// Function to used to remove space b/w sku 
-    public static function linksync_removespaces($vars) {
-//echo "<pre>";print_r($_POST);
-        if (isset($_POST['_sku']) && !empty($_POST['_sku'])) {
-            $sku = $_POST['_sku'];
-            if (strpos($sku, ' ')) {
-                $sku_replaced = str_replace(' ', '', $sku);
-                $_POST['_sku'] = $sku_replaced;
-            }
-            $search = array('/', '\\', ':', ';', '!', '@', '#', '$', '%', '^', '*', '(', ')', '+', '=', '|', '{', '}', '[', ']', '"', "'", '<', '>', ',', '?', '~', '`', '&', '.');
-            foreach ($search as $special) {
-                $sku = $_POST['_sku'];
-                if (strpos($sku, $special)) {
-                    $sku_replaced = str_replace($special, '-', $sku);
-                    $_POST['_sku'] = $sku_replaced;
-                }
-            }
-        }
-        if (isset($_POST['product-type']) && $_POST['product-type'] == 'variable') {
-            if (isset($_POST['variable_sku']) && !empty($_POST['variable_sku'])) {
-                foreach ($_POST['variable_sku'] as $key => $sku) {
-//  print_r($sku);
-//Remove the Space in the SKU 
-                    if (isset($sku) && !empty($sku)) {
-                        if (strpos($sku, ' ')) {
-                            $sku_replaced = str_replace(' ', '', $sku);
-                            $_POST['variable_sku']["{$key}"] = $sku_replaced;
-                        }
-                    }
-                    $search = array('/', '\\', ':', ';', '!', '@', '#', '$', '%', '^', '*', '(', ')', '+', '=', '|', '{', '}', '[', ']', '"', "'", '<', '>', ',', '?', '~', '`', '&', '.');
-                    foreach ($search as $special) {
-                        if (isset($_POST['variable_sku']["{$key}"]) && !empty($_POST['variable_sku']["{$key}"])) {
-                            if (strpos($_POST['variable_sku']["{$key}"], $special)) {
-                                $sku_replaced = str_replace($special, '-', $_POST['variable_sku']["{$key}"]);
-                                $_POST['variable_sku']["{$key}"] = $sku_replaced;
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     public static function linksync_restOptions() {
@@ -653,29 +576,30 @@ class linksync {
                 $class2 = 'error';
                 $response['error'] = 'Connection Not Established because of ' . $result['userMessage'];
             } else {
+                $app_name_status = 'Inactive';
+                $status = 'Inactive';
                 if (isset($result['app']) && !empty($result['app'])) {
-                    $app_name = self::appid_app($result['app']);
-                    if (isset($app_name) && !empty($app_name['success'])) {
-                        update_option('linksync_connectionwith', $app_name['success']);
+                    $app_name = LS_ApiController::get_connected_app($result['app']);
+                    if(false !== $app_name){
+                        update_option('linksync_connectionwith', $app_name);
                         $app_name_status = 'Active';
                     } else {
                         update_option('linksync_connectionwith', 'Supplied API Key not valid');
                         $checkKey = 'Supplied API Key not valid';
-                        $app_name_status = 'Inactive';
                     }
                 }
                 if (isset($result['connected_app']) && !empty($result['connected_app'])) {
-                    $connected_app = self::appid_app($result['connected_app']);
-                    if (isset($connected_app) && !empty($connected_app['success'])) {
-                        update_option('linksync_connectedto', $connected_app['success']);
+                    $connected_app = LS_ApiController::get_connected_app($result['connected_app']);
+                    if(false !== $connected_app){
+                        update_option('linksync_connectedto', $connected_app);
                         $status = 'Active';
                     } else {
-                        update_option('linksync_connectedto', "The supplied API Key is not valid for use with linksync for WooCommerce.");
-                        $checkKey = 'Supplied API Key not valid for use with WooCommerce';
-                        $status = 'Inactive';
+                        $checkKey = 'The supplied API Key is not valid for use with linksync for WooCommerce.';
+                        update_option('linksync_connectedto', $checkKey);
                     }
                 }
-                if (isset($status) && isset($app_name_status) && $status == 'Active' && $app_name_status == 'Active') {
+
+                if ($status == 'Active' && $app_name_status == 'Active') {
 
                     if (isset($result['time']) && !empty($result['time'])) {
                         $server_response = strtotime($result['time']);
@@ -696,18 +620,7 @@ class linksync {
                                     $response_ = $response_outlets['userMessage'];
                                     LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
                                 } else {
-//                                    /**
-//                                     * Make ps_outlet_details option in sync with the outlets in vend.
-//                                     */
-//
-//									$selected_outlets = get_option( 'ps_outlet_details' );
-//
-//									foreach ($response_outlets['outlets'] as $key => $value) {
-//										$oulets["{$key}"] = $value['id'];
-//									}
-//									$ouletsdb = implode('|', $oulets);
-//									update_option('ps_outlet_details', $ouletsdb);
-//									update_option('ps_outlet', 'on');
+
                                     $selected_outlets = get_option( 'ps_outlet_details' );
                                     /**
                                      * Check if current settings for outlets is empty then select all outlets
@@ -737,18 +650,7 @@ class linksync {
                                 update_option('wc_to_vend_outlet_detail', 'off');
                                 $response_ = $response_outlets['userMessage'];
                                 LSC_Log::add('linksync_getOutlets', 'fail', $response_, $LAIDKey);
-                            } else {
-//                                $outlets = explode('|', get_option( 'ps_outlet_details' )); ls_print_r($outlets);
-//                                if ( count($outlets) == 1 ) {
-//                                    $two_way_wc_to_vend = $response_outlets['outlets'][0]['name'] . '|' . $response_outlets['outlets'][0]['id'];
-//                                } else {
-//                                    $two_way_wc_to_vend = get_option('wc_to_vend_outlet_detail');
-//                                }
-//
-//                                ls_print_r($two_way_wc_to_vend);
-//                                update_option('wc_to_vend_outlet_detail', $two_way_wc_to_vend);
-//                                update_option('ps_wc_to_vend_outlet', 'on');
-                            }
+                            } 
                         }
                         /*
                          * display_retail_price_tax_inclusive(0 or 1)
@@ -809,71 +711,14 @@ class linksync {
             $class2 = 'error';
             $response['error'] = "The supplied API Key is not valid for use with linksync for WooCommerce.";
         }
-        return $response;
-    }
 
-    public static function linksync_removespaces_of_exists_product() {
-        $posts_array = get_posts(array(
-            'numberposts' => -1,
-            'post_type' => 'product',
-            'post_status' => 'any'
-                ));
-        if (isset($posts_array) && !empty($posts_array)) {
-            foreach ($posts_array as $product_wc) {
-                $post_detail = get_post_meta($product_wc->ID);
-                if (isset($post_detail['_sku'][0]) && !empty($post_detail['_sku'][0])) {
-                    $sku = $post_detail['_sku'][0];
-                    if (strpos($sku, ' ')) {
-                        $sku = str_replace(' ', '', $sku);
-                    }
-                    $search = array('/', '\\', ':', ';', '!', '@', '#', '$', '%', '^', '*', '(', ')', '+', '=', '|', '{', '}', '[', ']', '"', "'", '<', '>', ',', '?', '~', '`', '&', '.');
-                    foreach ($search as $special) {
-                        if (strpos($sku, $special)) {
-                            $sku = str_replace($special, '-', $sku);
-                        }
-                    }
-                    update_post_meta($product_wc->ID, '_sku', $sku);
-                }
-#Variants product
-                $variants_data = get_posts(array(
-                    'post_type' => 'product_variation',
-                    'post_parent' => $product_wc->ID
-                        ));
-                if (isset($variants_data) && !empty($variants_data)) {
-                    foreach ($variants_data as $variant_data) {
-                        $variants_detail = get_post_meta($variant_data->ID);
-                        if (isset($variants_detail['_sku'][0]) && !empty($variants_detail['_sku'][0])) {
-                            $sku = $variants_detail['_sku'][0]; //SKU(unique Key)
-                            if (strpos($sku, ' ')) {
-                                $sku = str_replace(' ', '', $sku);
-                            }
-                            $search = array('/', '\\', ':', ';', '!', '@', '#', '$', '%', '^', '*', '(', ')', '+', '=', '|', '{', '}', '[', ']', '"', "'", '<', '>', ',', '?', '~', '`', '&', '.');
-                            foreach ($search as $special) {
-                                if (strpos($sku, $special)) {
-                                    $sku = str_replace($special, '-', $sku);
-                                }
-                                update_post_meta($variant_data->ID, '_sku', $sku);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        return $response;
     }
 
 }
 
 register_activation_hook(__FILE__, array('linksync', 'activate')); # When plugin get activated it will triger class method "activate"
-if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
-    //add_action('save_post', array('linksync', 'linksync_removespaces'), 1);
-    //add_action('save_post', array('linksync', 'linksync_productPost'), 2);
-}
 
-if (get_option('order_sync_type') == 'wc_to_vend') {
-//    add_action('woocommerce_process_shop_order_meta', 'linksync_OrderFromBackEnd'); # Order From Back End (Admin Order)
-//    add_action('woocommerce_thankyou', 'linksync_OrderFromFrontEnd',10); # Order From Front End (User Order)
-//    add_action('transition_post_status', 'post_unpublished', 12, 3);
-}
 if (get_option('order_sync_type') == 'disabled') {
     $check_product_syncing_setting = get_option('product_sync_type');
     if ($check_product_syncing_setting == 'two_way' || $check_product_syncing_setting == 'wc_to_vend') {
@@ -919,6 +764,6 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 
 	}
 
-	add_action( 'woocommerce_loaded', 'load_linskync_after_woocommerce_loaded' );
+	add_action( 'woocommerce_init', 'load_linskync_after_woocommerce_loaded' );
 
 }
