@@ -77,6 +77,7 @@
 
         $order_sync_type = get_option('order_sync_type');
         if (isset($order_sync_type) && $order_sync_type == 'vend_to_wc-way') {
+            $url = '';
             update_option('order_detail', '');
             #order update  Request time
             update_option('order_time_req', $result_time);

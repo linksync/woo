@@ -31,7 +31,7 @@ class LS_Vend_Product_Option extends LS_Vend_Option
 
     public function nameTitle()
     {
-        return get_option('ps_name_title');
+        return get_option('ps_name_title', 'on');
     }
 
     public function updateNameTitle($meta_value)
@@ -41,12 +41,22 @@ class LS_Vend_Product_Option extends LS_Vend_Option
 
     public function description()
     {
-        return get_option('ps_description');
+        return get_option('ps_description', 'on');
     }
 
     public function updateDescription($meta_value)
     {
         return update_option('ps_description', $meta_value);
+    }
+
+    public function shortDescription()
+    {
+        return get_option('ps_desc_copy', 'off');
+    }
+
+    public function updateShortDescription($meta_value)
+    {
+        return get_option('ps_desc_copy', $meta_value);
     }
 
     public function price()
@@ -81,7 +91,7 @@ class LS_Vend_Product_Option extends LS_Vend_Option
 
     public function quantity()
     {
-        return get_option('ps_quantity');
+        return get_option('ps_quantity', 'on');
     }
 
     public function updateQuantity($meta_value)
@@ -89,10 +99,9 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return update_option('ps_quantity', $meta_value);
     }
 
-
     public function tag()
     {
-        return get_option('ps_tags');
+        return get_option('ps_tags', 'off');
     }
 
     public function updatTag($meta_value)
@@ -100,6 +109,45 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return update_option('ps_tags', $meta_value);
     }
 
+    public function category()
+    {
+        return get_option('ps_categories', 'off');
+    }
+
+    public function updateCategory($meta_value)
+    {
+        return $this->update_option('ps_categories', $meta_value);
+    }
+
+    public function productStatus()
+    {
+        return get_option('ps_pending', 'off');
+    }
+
+    public function updateProductStatus($meta_value)
+    {
+        return update_option('ps_pending', $meta_value);
+    }
+
+    public function image()
+    {
+        return get_option('ps_images', 'off');
+    }
+
+    public function updateImage($meta_value)
+    {
+        return update_option('ps_images', $meta_value);
+    }
+
+    public function createNew()
+    {
+        return get_option('ps_create_new', 'on');
+    }
+
+    public function updateCreateNew($meta_value)
+    {
+        return update_option('ps_create_new', $meta_value);
+    }
 
     public function linksyncStatus($default = '')
     {
@@ -123,11 +171,32 @@ class LS_Vend_Product_Option extends LS_Vend_Option
 
     public function delete()
     {
-        return get_option('ps_delete');
+        return get_option('ps_delete', 'off');
     }
 
     public function update_delete($meta_value)
     {
         return update_option('ps_delete', $meta_value);
     }
+
+    public function attributes()
+    {
+        return get_option('ps_attribute', 'on');
+    }
+
+    public function updateAttributes($meta_value)
+    {
+        return update_option('ps_attribute', $meta_value);
+    }
+
+    public function attributeVisibleOnProductPage()
+    {
+        return get_option('linksync_visiable_attr', '1');
+    }
+
+    public function updateAttributeVisibleOnProductPage($meta_value)
+    {
+        return update_option('linksync_visiable_attr', $meta_value);
+    }
+
 }

@@ -73,12 +73,17 @@ class LS_User_Helper
 
     public static function getRemainingDaysOfTrial($productRegistrationDate, DateTime $current_api_time)
     {
-        $next_due_date = date('Y-m-d', strtotime($productRegistrationDate . "+13 days"));
-        $today = $current_api_time;
-        $expiry_date = new DateTime($next_due_date);
-        $trialDaysRemaining = $today->diff($expiry_date);
-        return $trialDaysRemaining->days;
+        $duedate = new DateTime($productRegistrationDate);
 
+        $next_due_date = $duedate->add(new DateInterval('P14D'));
+
+        $dueDateEnds = new DateTime($next_due_date->format('Y-m-d'));
+
+        $today = new DateTime($current_api_time->format('Y-m-d'));
+
+        $trialDaysRemaining = $today->diff($dueDateEnds);
+
+        return $trialDaysRemaining->format("%d");
     }
 
     public static function isFreeTrial($package_id)

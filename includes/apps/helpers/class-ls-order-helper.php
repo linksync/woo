@@ -188,5 +188,40 @@ class LS_Order_Helper
 
     }
 
+    public function getCurrency()
+    {
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            return $this->order->get_order_currency();
+        }
+        return $this->order->get_currency();
+    }
+
+    public function getTotal()
+    {
+        return $this->order->get_total();
+    }
+
+    public function getTotalTax()
+    {
+        return $this->order->get_total_tax();
+    }
+
+    public function getShippingMethod()
+    {
+        return $this->order->get_shipping_method();
+    }
+
+    public function getShippingTotal()
+    {
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            return $this->order->get_total_shipping();
+        }
+        return $this->order->get_shipping_total();
+    }
+
+    public function getShippingTax()
+    {
+        return $this->order->get_shipping_tax();
+    }
 
 }

@@ -175,18 +175,24 @@ if (get_option('order_sync_type') == 'disabled') {
                         <td class="forminp forminp-checkbox">
                             <?php
                             if (isset($order_Status) && !empty($order_Status)) {
+                                if (isset($order_Status['wc-failed'])) {
+                                    unset($order_Status['wc-failed']);
+                                }
                                 foreach ($order_Status as $order_name => $order_value) {
-                                    ?><input type="radio" <?php
-                            echo (get_option('order_status_wc_to_vend') == $order_name ? 'checked' : '');
-                                    ?> value="<?php echo $order_name ?>" name="order_status_wc_to_vend" /><?php echo $order_value ?>  <br>
-                                           <?php
-                                       }
-                                       ?>
+                                    ?><input type="radio"
+                                    <?php echo(get_option('order_status_wc_to_vend') == $order_name ? 'checked' : ''); ?>
+                                             value="<?php echo $order_name ?>"
+                                             name="order_status_wc_to_vend" /><?php echo $order_value ?>  <br>
+                                    <?php
+                                }
+                                ?>
                                 <br><?php
-                               } else {
-                                       ?><span style='color:red; '><?php echo 'Error in getting  Order-Status: No Getting Expecting Data!!<br>' ?></span><?php
-                        }
-                                   ?></td>
+                            } else {
+                                ?>
+                                <span style='color:red; '><?php echo 'Error in getting  Order-Status: No Getting Expecting Data!!<br>' ?></span><?php
+                            }
+                            ?>
+                        </td>
                     </tr>
                     <!------------------------------------------------------------------ Outlet Wc_to_Vend------------------------------------>
                     <tr valign="top">
@@ -564,16 +570,19 @@ if (get_option('order_sync_type') == 'disabled') {
 
                                 <?php
                                 foreach ($order_Status as $order_name => $order_value) {
-                                    ?> <input type="radio" <?php
-                            echo (get_option('order_vend_to_wc') == $order_name ? 'checked' : '');
-                                    ?> value="<?php echo $order_name ?>" name="order_vend_to_wc" /><?php echo $order_value ?><br>
-                                           <?php
-                                       }
-                                       ?><br><?php
-                        } else {
-                                       ?><span style='color:red; '><?php echo 'Error in getting  Outlets: No Getting Expecting Data!!<br>' ?></span><?php
-                        }
-                                   ?></td>
+                                    ?> <input type="radio"
+                                    <?php echo(get_option('order_vend_to_wc') == $order_name ? 'checked' : '');  ?>
+                                              value="<?php echo $order_name ?>"
+                                              name="order_vend_to_wc" /><?php echo $order_value ?><br>
+                                    <?php
+                                }
+                                ?><br><?php
+                            } else {
+                                ?>
+                                <span style='color:red; '><?php echo 'Error in getting  Outlets: No Getting Expecting Data!!<br>' ?></span><?php
+                            }
+                            ?>
+                        </td>
                     </tr>
                     <!------------------------------------------------------------------ Tax Mapping vend_to_wc---------------------------------------->
                     <tr valign="top">

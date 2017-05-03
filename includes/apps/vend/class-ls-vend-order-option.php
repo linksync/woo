@@ -47,6 +47,47 @@ class LS_Vend_Order_Option extends LS_Vend_Option
         return true;
     }
 
+    public function orderStatusWooToVend()
+    {
+        return get_option('order_status_wc_to_vend');
+    }
+
+    public function updateOrderStatusWooToVend($meta_value)
+    {
+        return update_option('order_status_wc_to_vend', $meta_value);
+    }
+
+    public function orderStatusVendToWoo()
+    {
+        return get_option('order_vend_to_wc', 'wc-processing');
+    }
+
+    public function updateOrderStatusVendToWoo($meta_value)
+    {
+        return update_option('order_vend_to_wc', $meta_value);
+    }
+
+
+    public function customerExport()
+    {
+        return get_option('wc_to_vend_export', 'customer');
+    }
+
+    public function updateCustomerExport($meta_value)
+    {
+        return update_option('wc_to_vend_export', $meta_value);
+    }
+
+    public function customerImport()
+    {
+        return get_option('vend_to_wc_customer', 'customer_data');
+    }
+
+    public function updateCustomerImport($meta_value)
+    {
+        return update_option('vend_to_wc_customer', $meta_value);
+    }
+
     public function setFlagOrderWasSyncToVend($WoocommerceOrderId, $vendOrderId)
     {
         update_post_meta($WoocommerceOrderId, '_ls_vend_order_id', $vendOrderId);

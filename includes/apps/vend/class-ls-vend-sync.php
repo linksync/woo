@@ -23,6 +23,31 @@ class LS_Vend_Sync
             if ('on' == self::$productSyncOption->delete()) {
                 add_action('before_delete_post', array('LS_Vend_Sync', 'deleteVendProduct'));
             }
+
+            /**
+             * Update Vend product on every Woocommmerce Order creation
+             */
+            add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
+            add_action('woocommerce_thankyou', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
+        }
+
+    }
+
+    public static function updateVendProductOnWooCommerceOrderUpdate($order_id)
+    {
+        $wooOrder = wc_get_order($order_id);
+        $orderItems = $wooOrder->get_items();
+        foreach ($orderItems as $orderItem) {
+            $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
+
+            $variationId = $orderLineItem->get_variation_id();
+            if (!empty($variationId)) {
+                $product_id = $variationId;
+            } else {
+                $product_id = $orderLineItem->get_product_id();
+            }
+
+            LS_Vend_Sync::importProductToVend($product_id);
         }
 
     }
@@ -287,8 +312,8 @@ class LS_Vend_Sync
         }
 
 
-        $orderTotal = $wooOrder->get_total();
-        $orderCurrency = $wooOrder->get_currency();
+        $orderTotal = $wooOrderHelper->getTotal();
+        $orderCurrency = $wooOrderHelper->getCurrency();
         $taxesIncluded = false;
 
         $orderItems = $wooOrder->get_items();
@@ -337,7 +362,6 @@ class LS_Vend_Sync
             $product_total_amount = (float)$product_amount - (float)$discount;
             if (!empty($product_total_amount) && !empty($vendTaxDetails['taxRate'])) {
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
-                error_log($orderLineItem->get_name() . " taxvalue => " . $taxValue);
             }
 
             $products[] = array(
@@ -356,11 +380,11 @@ class LS_Vend_Sync
         }
         //exit();
 
-        $shippingMethod = $wooOrder->get_shipping_method();
+        $shippingMethod = $wooOrderHelper->getShippingMethod();
 
         if (!empty($shippingMethod)) {
-            $shipping_cost = $wooOrder->get_shipping_total();
-            $shipping_tax = $wooOrder->get_shipping_tax();
+            $shipping_cost = $wooOrderHelper->getShippingTotal();
+            $shipping_tax = $wooOrderHelper->getShippingTax();
 
             $vendTaxDetails = array(
                 'taxId' => null,
@@ -493,7 +517,7 @@ class LS_Vend_Sync
         $billing_address = !empty($billing_address) ? $billing_address : null;
         $delivery_address = !empty($delivery_address) ? $delivery_address : null;
         $comments = "WooCommerce " . $order_id;
-        $orderTaxTotal = $wooOrder->get_total_tax();
+        $orderTaxTotal = $wooOrderHelper->getTotalTax();
 
         $selectedVendUser = self::$orderSyncOption->getSelectedVendUser();
 

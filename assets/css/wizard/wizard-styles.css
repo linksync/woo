@@ -1,0 +1,50 @@
+.clearfix {
+	clear: both;
+	height: 0px;
+}
+.wizard-form h3 {
+	margin-top: 50px;
+    font-size: 25px;
+}
+.form-holder strong {
+	margin: 10px 0px;
+    display: block;
+    font-size: 14px;
+	font-weight: bold;
+}
+.form-field {
+	width: 100%;
+	padding: 10px;
+}
+.wp-admin select.form-field {
+    padding: 10px;
+    line-height: 28px;
+    height: auto;
+}
+.form-holder input[type="submit"] {
+    background-color: #347bc1;
+    border: none;
+    padding: 10px 15px;
+    color: #fff;
+    float: right;
+    cursor: pointer;
+}
+
+.update-nag, .updated, #adminmenumain, #wpfooter, #wpadminbar, #screen-meta, #screen-meta-links {
+	display:none;
+}
+
+#wpcontent {
+	margin-left: 0px;
+	padding-left: 0px;
+}
+#logo img {
+	margin: 0 auto;
+	display: block;
+}
+.wizard-content {
+	padding: 20px;
+	background-color: #fff;
+	width: 60%;
+	margin: 0 auto;
+}

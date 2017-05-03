@@ -31,8 +31,10 @@ class linksync {
 		add_action('admin_menu', array(&$this, 'linksync_add_menu'), 99); # To create custom menu in Wordpress Side Bar
         add_action('admin_menu', array(&$this, 'linksync_wooVersion_check'));
         add_action('plugins_loaded', array(&$this, 'linsksyncVend_init'), 0);
-        
-        add_action('admin_notices', array('linksync', 'linksync_video_message'));
+
+        if(is_vend()){
+            add_action('admin_notices', array($this, 'linksync_video_message'));
+        }
         add_filter('contextual_help', array('linksync', 'linksync_help'));
         add_filter('plugin_action_links_' . plugin_basename(__FILE__), array(&$this, 'plugin_action_links'));
 
@@ -40,6 +42,9 @@ class linksync {
          * Add Styles and Javascript files to wp-admin area
          */
          add_action( 'admin_enqueue_scripts', array($this, 'ls_custom_styles_and_scripts') );
+
+        add_action('init', array($this, 'wizard_process'), 1);
+        Linksync_installation::init();
     }
 
 	/**
@@ -67,6 +72,8 @@ class linksync {
         require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
 
 
+        include_once(LS_PLUGIN_DIR . 'classes/class.linksync-install.php');
+        include_once(LS_PLUGIN_DIR . 'classes/wizard.php');
     }
 
     public function ls_custom_styles_and_scripts(){
@@ -93,6 +100,11 @@ class linksync {
             LS_Support_Helper::supportScripts();
        }
 
+        if (isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
+            add_action('admin_head', array('Wizard_Model', 'remove_all_admin_notices_during_wizard_process'));
+            wp_enqueue_style('admin-linksync-style', LS_ASSETS_URL . 'css/wizard/wizard-styles.css');
+        }
+
         $screen = get_current_screen();
         if('shop_order' == $screen->id){
             wp_enqueue_script( 'ls-shop-order-scripts', LS_ASSETS_URL.'js/ls-shop-order.js', array( 'jquery' ) );
@@ -114,6 +126,23 @@ class linksync {
         $url = admin_url('admin-ajax.php?action=' . $webHookUrlCode);
         return $url;
     }
+
+    /**
+     * Default options for LAID key configuration
+     * @param array $options
+     */
+    public static function update_laid_key_options(array $options)
+    {
+        $apiConfig = LS_ApiController::get_config();
+        LS_ApiController::update_current_laid(isset($options['linksync_laid']) ? $options['linksync_laid'] : '');
+        update_option('linksync_last_test_time', isset($options['linksync_last_test_time']) ?: current_time('mysql'));
+        update_option('linksync_status', $options['linksync_status']);
+        update_option('linksync_connected_url', $apiConfig['url']);
+        update_option('linksync_frequency', isset($options['linksync_frequency']) ? $options['linksync_frequency'] : '');
+        update_option('linksync_connectedto', isset($options['linksync_connectedto']) ? $options['linksync_connectedto'] : '');
+        update_option('linksync_connectionwith', isset($options['linksync_connectionwith']) ? $options['linksync_connectionwith'] : '');
+    }
+
 
     public static function activate() {
         global $wpdb;
@@ -251,6 +280,8 @@ class linksync {
 			self::checkForConnection($check_laid);
 		}
 
+        add_option('linksync_do_activation_redirect', 'linksync-wizard');
+
     }
 
     public static function linksync_wooVersion_check() {
@@ -289,7 +320,40 @@ class linksync {
     public function linksync_add_menu() {
         if (get_option('linksync_wooVersion') == 'off') {
             $my_admin_page = add_submenu_page('woocommerce', 'linksync', 'linksync', 'manage_options', 'linksync', array(&$this, 'linksync_settings'));
+            $wizard_page = add_submenu_page(null, 'linksync wizard', 'linksync wizard', 'manage_options', 'linksync-wizard', array($this, 'linksync_wizard'));
         }
+    }
+
+    public function wizard_process()
+    {
+        if (isset($_POST['process']) && $_POST['process'] == 'wizard') {
+            if (isset($_POST['action'])) {
+                Wizard_Model::processall();
+            }
+        }
+    }
+
+    public function linksync_wizard()
+    {
+        $apikey = get_option('linksync_laid');
+        $response = false;
+        if (!empty($apikey)) {
+            $response = LS_ApiController::check_api_key($apikey);
+            if (isset($response['linksync_status']) && $response['linksync_status'] == 'Inactive' && isset($_GET['step']) && $_GET['step'] > 1) {
+                update_option('linksync_error_message', $response['lws_laid_key_info']['userMessage']);
+                wp_redirect(admin_url('admin.php?page=linksync-wizard'));
+                exit();
+            }
+        }
+
+        if (empty($apikey) && isset($_GET['step']) && $_GET['step'] > 1) {
+            update_option('linksync_error_message', 'Please provide the valid API Key before proceeding to next step.');
+            wp_redirect(admin_url('admin.php?page=linksync-wizard'));
+            exit();
+        }
+
+        // Display UI
+        Linksync_installation::wizard_handler($response);
     }
 
     public static function linksync_help() {
@@ -719,13 +783,6 @@ class linksync {
 
 register_activation_hook(__FILE__, array('linksync', 'activate')); # When plugin get activated it will triger class method "activate"
 
-if (get_option('order_sync_type') == 'disabled') {
-    $check_product_syncing_setting = get_option('product_sync_type');
-    if ($check_product_syncing_setting == 'two_way' || $check_product_syncing_setting == 'wc_to_vend') {
-        add_action('woocommerce_process_shop_order_meta', 'order_product_post'); # Order From Back End (Admin Order)
-        add_action('woocommerce_thankyou', 'order_product_post'); # Order From Front End (User Order)
-    }
-}
 if (get_option('linksync_update_notic') == 'on') {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
     $linksync_version = get_option('linksync_version');

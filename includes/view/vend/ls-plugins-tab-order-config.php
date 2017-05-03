@@ -14,9 +14,13 @@
             include_once LS_INC_DIR.'apps/vend/vend_order_config.php';
 
         }  else {
-            echo "<p align=center style='color:red;font-size:17px;margin-top:150px;'><b>" . $LAIDKey . "</b> does not appear to be a valid API Key</p>";
+            LS_User_Helper::setUpLaidInfoMessage();
         }
     } else {
-        echo "<p align=center style='color:red;font-size:17px;margin-top:150px;'>Not Connected Or Missing API Key</p>";
+        ?>
+        <div class="error notice">
+            <h3><?php echo LS_Constants::NOT_CONNECTED_MISSING_API_KEY; ?> </h3>
+        </div>
+        <?php
     }
 ?> 
