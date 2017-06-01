@@ -76,7 +76,7 @@ class LS_Support_Helper
             <tr>
                 <td class="titledesc"><br/><br/><b>Summary</b><br/><br/></td>
                 <td align="left">
-                    <strong>Hey there - are you having issue configuring linksync? Fear not. Just fill out this form with your issue, submit, and we'll get right back to you.</strong>
+                    <strong>Hey there - are you having issues configuring linksync? Fear not. Just fill out this form with your issue, submit, and we'll get right back to you.</strong>
                     <br/><br/>
                     <input type="text" id="support_summary" name="linksync_support[summary]" value=""
                            style="width: 630px;">

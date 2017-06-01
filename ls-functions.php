@@ -25,6 +25,17 @@ function ls_print_r($data){
 	print_r($data);
 	echo '</pre>';
 }
+/**
+ * A wrapper function that will wrap var_dump into pre tag
+ * Useful in debuging purposes.
+ * @param array or object $data
+ */
+function ls_var_dump($data){
+	echo '<pre>';
+	var_dump($data);
+	echo '</pre>';
+}
+
 
 /**
  * Download an image from the specified URL uses ls_generate_woo_product_image function
@@ -39,7 +50,6 @@ function ls_set_product_thumbnail( $post_id, $image_url, $desc = null ){
 	if( !is_wp_error( $id ) ){
 		set_post_thumbnail( $post_id, $id );
 	}
-	error_log( " ang id sa sa generation ".$id );
 	return $id;
 
 }
@@ -99,15 +109,16 @@ function ls_generate_woo_product_image( $post_id, $image_url, $desc = null ){
  * Show Image help link
  */
 function help_link($attribute){
-    /**
-     * Check if href key has been added if not set to default link
-     */
-    $href = isset($attribute['href'])? $attribute['href']: 'https://www.linksync.com/help/woocommerce';
+	/**
+	 * Check if href key has been added if not set to default link
+	 */
+	$href = isset($attribute['href'])? $attribute['href']: 'https://www.linksync.com/help/woocommerce';
 
-    $src = '../wp-content/plugins/linksync/assets/images/linksync/help.png';
-    echo '	<a style="color: transparent !important" target="_blank" href="', $href ,'">
+	$src = '../wp-content/plugins/linksync/assets/images/linksync/help.png';
+	echo '	<a style="color: transparent !important" target="_blank" href="', $href ,'">
 				<img title="',$attribute['title'],'"
 					 src="', $src ,'"
 					 height="16" width="16">
 			</a>';
 }
+

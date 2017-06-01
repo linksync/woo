@@ -119,6 +119,11 @@ class LS_Order_Json_Factory{
 		$this->set( 'products', $products );
 	}
 
+    public function getOrderArray()
+    {
+        return $this->json_orders;
+    }
+
 	/**
 	 * Returns a json representation of a single product for LWS
 	 * @return string

@@ -17,6 +17,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         protected static $_instance = null;
 
         public static $api = null;
+        private static $laid = null;
 
         public function __construct()
         {
@@ -28,7 +29,34 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
         public function load_hooks()
         {
+            /**
+             * Add Styles and Javascript files to wp-admin area
+             */
+            add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_and_styles'));
+        }
 
+        public function enqueue_scripts_and_styles()
+        {
+            //Check for linksync plugin page before adding the styles and scripts to wp-admin
+            if (isset($_GET['page']) && $_GET['page'] == 'linksync') {
+
+                if (isset($_GET['setting'])) {
+                    if ($_GET['setting'] == 'product_config') {
+                        wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'));
+                        wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'));
+                        wp_enqueue_script('ls-product-syncing-settings', LS_ASSETS_URL . 'js/vend/ls-product-syncing-settings.js', array('jquery'));
+
+                        wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
+                    }
+                } else {
+                    wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'));
+                    wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'));
+                    wp_enqueue_script('ls-configuration', LS_ASSETS_URL . 'js/vend/ls-configuration.js', array('jquery'));
+
+                    wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
+                }
+
+            }
         }
 
         /**
@@ -52,6 +80,15 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             return self::$api;
         }
 
+        public function laid()
+        {
+            if (is_null(self::$laid)) {
+                self::$laid = new LS_Vend_Laid();
+            }
+
+            return self::$laid;
+        }
+
 
         /**
          * Vend Includes
@@ -61,23 +98,28 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/ls-core-functions.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-tax.php';
 
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-tax-helper.php';
+            include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-tax-helper.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-order-line-item.php';
             include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
-
+            include_once LS_INC_DIR . 'apps/class-ls-order-meta.php';
 
 
             include_once LS_INC_DIR . 'api/ls-api.php';
             include_once LS_INC_DIR . 'api/ls-api-controller.php';
             include_once LS_INC_DIR . 'apps/class-ls-product-api.php';
             include_once LS_INC_DIR . 'apps/class-ls-order-api.php';
-            require_once LS_INC_DIR . 'apps/vend/class-ls-vend-api.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-api.php';
 
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-option.php';
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-order-option.php';
-            include_once LS_INC_DIR . 'apps/vend/class-ls-vend-product-option.php';
 
-            include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-option.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-order-option.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-product-option.php';
+
+            include_once LS_INC_DIR . 'apps/classes/class-ls-address.php';
+            include_once LS_INC_DIR . 'apps/classes/class-ls-order.php';
+            include_once LS_INC_DIR . 'apps/classes/class-ls-product.php';
+            include_once LS_INC_DIR . 'apps/classes/class-ls-product-variant.php';
+            include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-variant-product.php';
 
@@ -89,6 +131,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             require_once LS_INC_DIR . 'apps/vend/controllers/ls-log.php';
 
             include_once LS_INC_DIR . 'apps/helpers/class-ls-constant.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-image-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-user-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-support-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-helper.php';
@@ -96,8 +139,14 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/helpers/class-ls-order-helper.php';
             include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-helper.php';
             include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-product-helper.php';
+            include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-order-helper.php';
+            include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-image-helper.php';
+
             if (is_vend()) {
-                include_once LS_INC_DIR . 'apps/vend/class-ls-vend-sync.php';
+                include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-notice.php';
+                include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-ajax.php';
+                include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-sync.php';
+                require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-laid.php';
             }
 
         }

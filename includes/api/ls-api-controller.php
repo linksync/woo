@@ -165,7 +165,7 @@ class LS_ApiController{
         /**
          * Get the configuration or the selection of api config.
          */
-        $config = require(LS_PLUGIN_DIR.'ls-config.php');
+        $config = require(LS_PLUGIN_DIR.'ls-api-config.php');
 
         /**
          * Check if test mode is set to true

@@ -9,6 +9,15 @@ class LS_Order_Helper
         $this->order = $order;
     }
 
+    public function getId()
+    {
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            return $this->order->id;
+        }
+
+        return $this->order->get_id();
+    }
+
     public function getStatus()
     {
         if (LS_Helper::isWooVersionLessThan_2_4_15()) {
@@ -188,6 +197,27 @@ class LS_Order_Helper
 
     }
 
+    public function getShippingTotal()
+    {
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            return $this->order->get_total_shipping();
+        }
+
+        return $this->order->get_shipping_total();
+        
+    }
+
+    public function getCustomerNotes()
+    {
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            $orderPost = get_post($this->getId());
+
+            return !empty($orderPost['post_excerpt']) ? $orderPost['post_excerpt'] : '';
+        }
+
+        return $this->order->get_customer_note();
+    }
+
     public function getCurrency()
     {
         if (LS_Helper::isWooVersionLessThan_2_4_15()) {
@@ -211,17 +241,10 @@ class LS_Order_Helper
         return $this->order->get_shipping_method();
     }
 
-    public function getShippingTotal()
-    {
-        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
-            return $this->order->get_total_shipping();
-        }
-        return $this->order->get_shipping_total();
-    }
-
     public function getShippingTax()
     {
         return $this->order->get_shipping_tax();
     }
+
 
 }

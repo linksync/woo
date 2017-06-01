@@ -19,6 +19,26 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return self::$_instance;
     }
 
+    public function import_by_tag()
+    {
+        return get_option('ps_imp_by_tag', 'off');
+    }
+
+    public function update_import_by_tag($option_value)
+    {
+        return update_option('ps_imp_by_tag', $option_value);
+    }
+
+    public function import_by_tags_list()
+    {
+        return get_option('import_by_tags_list', '');
+    }
+
+    public function update_import_by_tags_list($option_value)
+    {
+        return update_option('import_by_tags_list', $option_value);
+    }
+
     public function sync_type($default = '')
     {
         return get_option('product_sync_type', $default);
@@ -119,7 +139,7 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return $this->update_option('ps_categories', $meta_value);
     }
 
-    public function productStatus()
+    public function productStatusToPending()
     {
         return get_option('ps_pending', 'off');
     }
@@ -139,6 +159,17 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return update_option('ps_images', $meta_value);
     }
 
+    public function importImage()
+    {
+        return get_option('ps_import_image_radio');
+    }
+
+    public function updateImportImage($meta_value)
+    {
+        return update_option('ps_import_image_radio', $meta_value);
+    }
+
+
     public function createNew()
     {
         return get_option('ps_create_new', 'on');
@@ -147,6 +178,17 @@ class LS_Vend_Product_Option extends LS_Vend_Option
     public function updateCreateNew($meta_value)
     {
         return update_option('ps_create_new', $meta_value);
+    }
+
+
+    public function excluding_tax()
+    {
+        return get_option('excluding_tax');
+    }
+
+    public function udpate_excluding_tax($value)
+    {
+        return update_option('excluding_tax', $value);
     }
 
     public function linksyncStatus($default = '')
@@ -197,6 +239,16 @@ class LS_Vend_Product_Option extends LS_Vend_Option
     public function updateAttributeVisibleOnProductPage($meta_value)
     {
         return update_option('linksync_visiable_attr', $meta_value);
+    }
+
+    public function changeProductStatusBaseOnQuantity()
+    {
+        return get_option('ps_unpublish');
+    }
+
+    public function updateChangeProductStatusBaseOnQuantity($value)
+    {
+        return update_option('ps_unpublish', $value);
     }
 
 }

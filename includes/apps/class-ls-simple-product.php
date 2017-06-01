@@ -32,7 +32,7 @@ class LS_Simple_Product
     }
 
     /**
-     * @param $name
+     * @param $key
      * @return null|mixed
      */
     public function __get($key)

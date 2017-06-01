@@ -2068,6 +2068,22 @@ class linksync_class {
                                             'order_item_type' => 'line_item',
                                         ));
                                         if ($item_id) {
+
+                                            $productSyncingOption = LS_Vend()->product_option();
+                                            $productSyncType = $productSyncingOption->sync_type();
+                                            $productQuantityOption = $productSyncingOption->quantity();
+                                            if ('wc_to_vend' == $productSyncType && 'on' == $productQuantityOption) {
+                                                $product_meta = new LS_Product_Meta($product);
+                                                $current_product_stock = $product_meta->get_stock();
+                                                $new_product_stock = $current_product_stock - $products['quantity'];
+                                                $product_meta->update_stock($new_product_stock);
+                                                if ($new_product_stock <= 0) {
+                                                    $product_meta->update_stock_status('outofstock');
+                                                } else {
+                                                    $product_meta->update_stock_status('instock');
+                                                }
+                                            }
+
                                             $line_tax = array();
                                             $line_subtax = array();
 // add item meta data

@@ -332,53 +332,65 @@ function ls_is_excluding_tax(){
 	return $excluding_tax;
 }
 
+function ls_attribute_taxonomy_name($attribute_label)
+{
+    return 'pa_' . stripslashes(urldecode(sanitize_title(urldecode($attribute_label))));
+}
+
+function ls_sanitize_taxonomy_name($taxonomy)
+{
+    return urldecode( sanitize_title( urldecode( $taxonomy ) ) );
+}
+
 /**
  * Create Woocommerce product attribute if it does not exists
  *
  * @param $attribute_label
  * @return bool|string
  */
-function ls_create_woo_attribute( $attribute_label ){
-	global $wpdb;
-	if( empty($attribute_label) ){
-		return null;
-	}
+function ls_create_woo_attribute($attribute_label)
+{
+    global $wpdb;
+    if (empty($attribute_label)) {
+        return null;
+    }
 
-	$attribute_name = wc_attribute_taxonomy_name( stripslashes( $attribute_label ) );
-	$attribute = ls_woo_product_attribute_exist($attribute_label);
+    $attribute_name = ls_attribute_taxonomy_name(stripslashes($attribute_label));
+    $attribute = ls_woo_product_attribute_exist($attribute_label);
+    if (false == $attribute) {
+        $attr_name = ls_sanitize_taxonomy_name(stripslashes($attribute_label));
+        $attr_label = wc_clean(stripslashes($attribute_label));
+        $attribute = array(
+            'attribute_label' => $attr_label,
+            'attribute_name' => $attr_name,
+            'attribute_type' => 'select',
+            'attribute_orderby' => 'menu_order'
+        );
 
-	if( false == $attribute ){
-		$attr_name = wc_sanitize_taxonomy_name( stripslashes( $attribute_label ) );
-		$attr_label = wc_clean( stripslashes( $attribute_label ) );
-		$attribute = array(
-			'attribute_label'   =>  $attr_label,
-			'attribute_name'    =>  $attr_name,
-			'attribute_type'    =>  'select',
-			'attribute_orderby' =>  'menu_order'
-		);
+        $attr = $wpdb->insert($wpdb->prefix . 'woocommerce_attribute_taxonomies', $attribute);
+        //Todo make sure to make an eye on the next following line because it should run on init hook
+        // Register the taxonomy now so that the import works!
+        register_taxonomy(
+            $attribute_name,
+            apply_filters('woocommerce_taxonomy_objects_' . $attribute_name, array('product')),
+            apply_filters('woocommerce_taxonomy_args_' . $attribute_name, array(
+                'hierarchical' => true,
+                'show_ui' => false,
+                'query_var' => true,
+                'rewrite' => false,
+            ))
+        );
 
-		$attr = $wpdb->insert( $wpdb->prefix . 'woocommerce_attribute_taxonomies', $attribute );
-		//Todo make sure to make an eye on the next following line because it should run on init hook
-		// Register the taxonomy now so that the import works!
-		register_taxonomy(
-			$attribute_name,
-			apply_filters( 'woocommerce_taxonomy_objects_' . $attribute_name, array( 'product' ) ),
-			apply_filters( 'woocommerce_taxonomy_args_' . $attribute_name, array(
-				'hierarchical' => true,
-				'show_ui'      => false,
-				'query_var'    => true,
-				'rewrite'      => false,
-			) )
-		);
+        delete_transient('wc_attribute_taxonomies');
 
-		delete_transient( 'wc_attribute_taxonomies' );
+    } else {
+        $attribute_name = ls_attribute_taxonomy_name($attribute['attribute_name']);
+    }
 
-	}else{
-		$attribute_name = wc_attribute_taxonomy_name( stripslashes( $attribute['attribute_name'] ) );
-	}
-
-	return $attribute_name;
+    return $attribute_name;
 }
+
+
 
 /**
  * Check if attribute exist via database direct call of the woocommerce_attribute_taxonomies table
@@ -393,6 +405,7 @@ function ls_woo_product_attribute_exist( $attr_label ){
 
 	$where_clause = $wpdb->prepare( " attribute_label = %s ", $attr_name );
 	$attribute = $wpdb->get_row( "SELECT * FROM $tbl_name WHERE ".$where_clause , ARRAY_A);
+
 	if( null !== $attribute ){
 		return $attribute;
 	}else{

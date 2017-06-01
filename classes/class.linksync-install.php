@@ -64,7 +64,7 @@ class Linksync_installation {
                                 $quantity = $product_option->quantity();
                                 $tag = $product_option->tag();
                                 $category = $product_option->category();
-                                $product_status = $product_option->productStatus();
+                                $product_status = $product_option->productStatusToPending();
                                 $image = $product_option->image();
                                 $create_new = $product_option->createNew();
                                 $delete = $product_option->delete();

@@ -252,4 +252,25 @@ class LS_Vend_Helper
         return false;
     }
 
+    public static function isExcludingTax()
+    {
+        $excluding_tax = 'on';
+
+        if (get_option('woocommerce_calc_taxes') == 'yes') {
+            if (get_option('linksync_woocommerce_tax_option') == 'on') {
+                if (get_option('woocommerce_prices_include_tax') == 'yes') {
+                    $excluding_tax = 'off'; //Include tax is on
+                } else {
+                    $excluding_tax = 'on'; //Excluding tax is on
+                }
+            } else {
+                $excluding_tax = get_option('excluding_tax');
+            }
+        } else {
+            $excluding_tax = get_option('excluding_tax');
+        }
+
+        return $excluding_tax;
+    }
+
 }

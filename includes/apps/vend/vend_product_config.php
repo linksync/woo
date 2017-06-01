@@ -1,5 +1,7 @@
 <?php
 $apicall = new linksync_class($LAIDKey, $testMode);
+$saving_sync_type = null;
+
 if (isset($_POST['save_product_sync_setting'])) {
     if (isset($_POST['product_sync_type']) && !empty($_POST['product_sync_type'])) {
         update_option('product_sync_type', $_POST['product_sync_type']);
@@ -268,39 +270,11 @@ if (isset($_POST['save_product_sync_setting'])) {
         } else {
             update_option('ps_delete', 'off');
         }
-        if ($_POST['product_sync_type'] == 'two_way') {
-            ?>     <div id="pop_up_two-way" class="clientssummarybox" style=" width:600px !important; top: 24% !important; display: none;  z-index: 9999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 25%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
-                <a name="lnkViews" href="javascript:;"><img style="height: 13px;float: right;"src="../wp-content/plugins/linksync/assets/images/linksync/cross_icon.png"></a><center><div id="showMessage"><center><h4>Your changes will require a full re-sync of product data.</h4></center>
-                        <center><h4>Do you want to re-sync now?</h4></center></div></center> 
-                <center><h4 style="display:none;" id="syncing_loader_all"><img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif"></h4></center> 
-                <center><h4 id="sync_start"></h4><h4 id="sync_start_export_product"></h4></center>
-                <center><p id="show-result_all"></p></center>
-                <div id="pop_button"><input type="button" title="This option will update product in your WooCommerce store with Product data from Vend. " style="color: green; margin-left: 97px; width: 138px; font-weight: 900;float: left;margin-bottom: 12px;"  class="button"   onclick="return re_sync_process_start2();"  value="Product from Vend"> 
-                    <input type="button" title="This option will update product in your Vend store with the Product data from WooCommerce." style="color: green; margin-left: 130px; width: 130px; font-weight: 900;float: left;"  class="button"   onclick="return sync_process_start();"  value="Product to Vend">
-                </div> </div> 
-            <script>
-                jQuery(window).load(function() {
-                    jQuery('#pop_up_two-way').fadeIn(500);
-                });                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-            </script><?php
-        }
-        if ($_POST['product_sync_type'] == 'vend_to_wc-way') {
-            ?>     <div id="pop_up" class="clientssummarybox" style=" width:600px !important; top: 24% !important; display: none;  z-index: 999999999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 25%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
-                <a name="lnkViews" href="javascript:;"><img id="syncing_close" style="display: none;height: 13px;float: right;"src="../wp-content/plugins/linksync/assets/images/linksync/cross_icon.png"></a>
-                <center><div id="showMessage"><center><h4>Your changes will require a full re-sync of product data from Vend.</h4></center>
-                        <center><h4>Do you want to re-sync now?</h4></center></div></center> 
-                <center><h4 style="display:none;" id="syncing_loader"><img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif"></h4></center> 
-                <center><h4 id="sync_start"></h4></center> 
-                <div id="pop_button"><input type="button" style="color: green; margin-left: 168px; width: 90px; font-weight: 900;float: left;"  class="button"   onclick="return re_sync_process_start2();"  value="Yes"> 
-                    <input  type="button" class="button" style="color: red;
-                            margin-left: 83px;
-                            width: 90px;font-weight: 900;"  name="close"   value='No'/></div> </div> 
-            <script>
-                jQuery(window).load(function() {
-                    jQuery('#pop_up').fadeIn(500);
-                });                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-            </script><?php
-        }
+
+        /**
+         * Set $saving_sync_type to have the currently selected syncing type
+         */
+        $saving_sync_type = $_POST['product_sync_type'];
         if ($_POST['product_sync_type'] != 'disabled_sync') {
             if ($_POST['product_sync_type'] == 'vend_to_wc-way') {
                 $enable = 'Vend to Woo';
@@ -319,27 +293,8 @@ if (isset($_POST['save_product_sync_setting'])) {
     if (is_vend()) {
         LS_Vend()->updateWebhookConnection();
     }
-} elseif (isset($_POST['sync_reset_btn'])) {
-    update_option('prod_update_suc', NULL);
-    update_option('prod_last_page', NULL);
-    update_option('product_detail', NULL);
-    update_option('image_process', 'complete');
-    ?> 
-    <div id="pop_up" class="clientssummarybox" style=" width:600px !important; top: 24% !important; display: none;  z-index: 999999999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 25%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
-        <center><div id="showMessage"><center><h4>Your changes will require a full re-sync of product data from Vend.</h4></center>
-                <center><h4>Do you want to re-sync now?</h4></center></div>  </center>  
-        <center><h4 style="display:none;" id="syncing_loader1"><img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif"></h4></center> 
-        <center><h4 id="sync_start"></h4></center>
-        <center><div id="total_product"></div></center>
-        <center><p id="show-result"></p></center>
-        <center><h4 id="sync_start_export1"></h4></center>
-        <div id="pop_button"><input type="button" style="color: green; margin-left: 168px; width: 90px; font-weight: 900;float: left;"  class="button"   onclick="return re_sync_process_start2();"  value="Yes"> 
-            <input  type="button" class="button" style="color: red;  margin-left: 83px;  width: 90px;font-weight: 900;"  name="no"   value='No'/></div></div>  <script>
-                jQuery(window).load(function() { 
-                    jQuery('#pop_up').fadeIn(500);
-                });
-    </script><?php
 }
+
 ?>    <h3>Product Syncing Configuration</h3>
 <?php
 if (isset($message) && !empty($message)) {
@@ -390,16 +345,17 @@ if ($product_sync_type == 'disabled_sync') {
 }
 ?>"  id="product_sync_settig">
 
-        <p>    <input type="submit" name="sync_reset_btn" title="Selecting the Sync Reset button resets linksync to update all WooCommerce products with data from Vend, based on your existing Product Sync Settings."  value="Sync Reset" id="sync_reset_btn_id" class="button button-primary" style="display:<?php
+        <p>
+            <input type="button" name="sync_reset_btn" title="Selecting the Sync Reset button resets linksync to update all WooCommerce products with data from Vend, based on your existing Product Sync Settings."  value="Sync Reset" id="sync_reset_btn_id" class="button button-primary btn-sync-vend-to-woo" style="display:<?php
          if ($product_sync_type == 'wc_to_vend') {
              echo "none";
          }
 ?>" name="sync_reset"/> 
-            <input id="sync_reset_all_btn_id" type="button" title="Selecting this option will sync your entire WooCommerce product catalogue to Vend, based on your existing Product Sync Settings. It takes 3-5 seconds to sync each product, depending on the performance of your server, and your geographic location."  onclick="show_confirm_box();" value="Sync all product to Vend" style="display:<?php
+            <input id="sync_reset_all_btn_id" type="button" title="Selecting this option will sync your entire WooCommerce product catalogue to Vend, based on your existing Product Sync Settings. It takes 3-5 seconds to sync each product, depending on the performance of your server, and your geographic location." value="Sync all product to Vend" style="display:<?php
                       if ($product_sync_type == 'vend_to_wc-way') {
                           echo "none";
                       }
-?>" class="button button-primary" />
+?>" class="button button-primary btn-sync-woo-to-vend" />
         </p> 
         <table class="form-table">
             <tbody>
@@ -844,203 +800,132 @@ if ($product_sync_type == 'disabled_sync') {
         </table></div>
     <p style="text-align: center;"><input  class="button button-primary button-large save_changes" type="submit"  name="save_product_sync_setting" value="Save Changes" /></p>
 </form>
-<div id="pop_up_syncll" class="clientssummarybox" style="width: 500px !important; top: 24% !important; display: none;  z-index: 999999999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 34%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
-    <center><h4 style="display:none;" id="syncing_loader1"><img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif"></h4></center>
-    <center><div id="total_product"></div></center>
-    <center><p id="show-result"></p></center>
-    <center><h4 id="sync_start_export1"></h4></center>
-    <center><h4 id="sync_start_export_all">Do you want to sync all product to Vend?</h4></center>
 
-    <form target="" method="post" action=""><input type="button" onclick="return sync_process_start();"  name="sync_all_product_to_vend" style="color: green;
-                                                   margin-left: 118px;
-                                                   width: 90px;
-                                                   font-weight: 900;float: left;" target="_blank" class="button hidesync"   value="Yes"></form>
+<?php
+    $display_modal = ($saving_sync_type != null && in_array($saving_sync_type, array('two_way', 'vend_to_wc-way'))) ?  '': 'display: none;';
+    $modal_message = '';
 
-    <input  type="button" class="button hidesync" style="color: red;
-            margin-left: 83px;
-            width: 90px;font-weight: 900;"  name="close_syncall"  onclick="jQuery('#pop_up_syncll').fadeOut();"  value='No'/></div>  
-<style> 
-    .loader-please-wait {
-        background-image: url(../wp-content/plugins/linksync/assets/images/linksync/shader.png);
-        position: fixed;
-        display: none;
-        z-index: 1000000000;
-        height: 100%;
-        width: 100%;
-        left: 0;
-        top: 0;
+    if ('two_way' == $saving_sync_type) {
+        $modal_message = 'Your changes will require a full re-sync of product data. <br/>Do you want to re-sync now?<br/>';
+    } else if ('vend_to_wc-way' == $saving_sync_type) {
+        $modal_message = 'Your changes will require a full re-sync of product data from Vend.<br/>Do you want to re-sync now?';
     }
-    #h2_linksync{
-        font-size: 17px !important;
-        font-weight: 400;
-        padding: 0px 0px 0px 0;  
-        font-style: normal;
-        color: #333;
-        font-family: Helvetica,Arial,sans-serif;
-        margin: 0 0 5px;
-        text-align: center;
-        line-height: 1.3em !important; 
-    }
-    .loader-please-wait .loader-content {
 
-        border-radius: 10px; 
-        box-shadow: 3px 6px 8px #555;
-        position: relative;
-        top: 200px;
-        width: 300px;
-        margin: auto;
-        padding: 20px 0;
-        text-align: center;
-        background-color: #fff;
-        border: 1px solid #666;
-    }
-    </style>
+?>
 
-    <div id="please-wait" class="loader-please-wait" style="display: none;">
-        <div class="loader-content"> 
-            <h3 id="h2_linksync">Linksync is Updating data<br>Please wait...</h3>
-            <p><img style="color: blue" src="../wp-content/plugins/linksync/assets/images/linksync/loading_please_wait.gif"></p>
+<div class="ls-vend-sync-modal">
+    <div class="ls-vend-sync-modal-content"
+         style="width: 500px !important; top: 24% !important; <?php echo $display_modal; ?>   z-index: 9999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 34%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
+
+        <center>
+            <h4 id="sync_start_export_all" class="sync-modal-message"><?php echo $modal_message; ?> </h4>
+        </center>
+
+        <div id="sync_progress_container" style="display: none;">
+
+            <center>
+                <br/>
+                <div id="syncing_loader">
+                    <p style="font-weight: bold;">Please do not close or refresh the browser while syncing is in progress.</p>
+                </div>
+            </center>
+            <center>
+                <div>
+                    <div id="progressbar"></div>
+                    <div class="progress-label">Loading...</div>
+                </div>
+                <?php
+                if(isset($_GET['page']) && 'linksync' != $_GET['page']){
+                    ?>
+                    <p class="form-holder hide ls-dashboard-link" >
+                        <a href="<?php echo admin_url('admin.php?page=linksync'); ?>" class="a-href-like-button">Go To Dashboard</a>
+                    </p>
+                    <?php
+                }
+                ?>
+            </center>
+            <br/>
+
+        </div>
+
+        <div id="pop_button">
+
+            <div class="sync-buttons two-way-sync-vend-buttons"  style="width: 330px; <?php echo ('two_way' == $saving_sync_type) ? '': 'display: none;'; ?>"  >
+
+                <input type="button"
+                       title="This option will update product in your WooCommerce store with Product data from Vend. "
+                       class="button product_sync_to_woo btn-yes"
+                       style="width: 145px;"
+                       value="Product from Vend">
+
+                <input type="button"
+                       title="This option will update product in your Vend store with the Product data from WooCommerce."
+                       class="button product_sync_to_vend btn-yes "
+                       style="width: 145px;"
+                       value='Product to Vend'/>
             </div>
-        </div> 
-        <script type="text/javascript"> 
-            jQuery(".outlets_check").change(function(){
-                if (jQuery('.outlets_check:checked').length ==0) {
-                    jQuery("#check_outlets").show(); 
-                    jQuery("#check_outlets").html('You didn\'t select any outlet !'); 
-                    return false;
-                }else{ 
-                    jQuery("#check_outlets").hide();
-                    return true;
-                } 
-            });
-            function  show_confirm_box() { 
-                if(jQuery("#pop_up_syncll").is(":visible")==false && jQuery("#pop_up_two-way").is(":visible")==false && jQuery("#pop_up").is(":visible")==false){
-                    jQuery(document).ready(function() {
-                        jQuery('.hidesync').show(); 
-                        jQuery('#sync_start_export').show();
-                        jQuery("#sync_start_export").html('Do you want to sync all product to Vend?'); 
-                        jQuery('#pop_up_syncll').fadeIn();   });
-<?php update_option('post_product', 0); ?>
-      
+
+            <div class="sync-buttons sync-to-vend-buttons" style="display: none;">
+                <input type="button" name="sync_all_product_to_vend" class="button hidesync product_sync_to_vend btn-yes" value="Yes">
+                <input type="button" class="button hidesync ls-modal-close btn-no ls-modal-close"  name="close_syncall" value='No'/>
+            </div>
+
+            <div class="sync-buttons sync-to-woo-buttons" <?php echo ('vend_to_wc-way' == $saving_sync_type) ? '': 'style="display: none;"'; ?>">
+                <input type="button" class="button product_sync_to_woo btn-yes" value="Yes">
+                <input type="button" class="button btn-no ls-modal-close"  name="no" value='No'/>
+            </div>
+
+            <div class="sync-buttons sync-to-woo-buttons-since-last-update" style="display: none;">
+                <input type="button" class="button product_sync_to_woo_since_last_sync btn-yes" value="Yes">
+                <input type="button" class="button btn-no ls-modal-close"  name="no" value='No'/>
+            </div>
+        </div>
+
+
+    </div>
+
+    <div class="ls-modal-backdrop close" ></div>
+</div>
+
+<script type="text/javascript">
+    jQuery(".outlets_check").change(function () {
+        if (jQuery('.outlets_check:checked').length == 0) {
+            jQuery("#check_outlets").show();
+            jQuery("#check_outlets").html('You didn\'t select any outlet !');
+            return false;
+        } else {
+            jQuery("#check_outlets").hide();
+            return true;
         }
-    }  
-    var request_time=3000;
-    var communication_key='<?php echo get_option('webhook_url_code'); ?>';
-    var mycounter=1;  
-    function ajaxRequestForproduct(i,totalreq){ 
-        var ajaxobj= jQuery.ajax({
-            type: "POST",  
-            dataType:'json',
-            data:{'offset':i,'communication_key':communication_key},
-            url: '../wp-content/plugins/linksync/includes/apps/vend/sync_all_product_to_vend.php',
-            success:function(data){ 
-                console.log(data);
-            },
-            complete:function(responsedata){ 
-                if(responsedata){ 
-                    var incounter=mycounter++;
-                    jQuery('#sync_start_export_product').show();
-                    jQuery('#sync_start_export_product').html("<p style='font-size:15px;'><b>"+incounter+"</b> of <b>"+totalreq+"</b> product(s) exporting..</p>");
-                    jQuery("#sync_start_export1").show();    
-                    jQuery("#sync_start_export1").html("<p style='font-size:15px;'><b>"+incounter+"</b> of <b>"+totalreq+"</b> product(s) exporting..</p>");
-                    if(incounter>=totalreq){ 
-                        jQuery.ajax({
-                            url:  '../wp-content/plugins/linksync/includes/apps/vend/sync_all_product_to_vend.php',
-                            type: 'POST',
-                            data: { "get_total": "1",'communication_key':communication_key},
-                            success: function(response) { 
-                            }
-                        });
-                        jQuery("#show-result").show();   
-                        jQuery("#show-result").html("<p style='font-size:15px;'><b>Completed!</b></p>");
-                        jQuery("#show-result_all").show();   
-                        jQuery("#show-result_all").html("<p style='font-size:15px;'><b>Completed!</b></p>");
-                        jQuery('#syncing_loader1').hide(); 
-                        jQuery("#pop_up_syncll").hide(1500); 
-                        jQuery("#pop_up_two-way").hide(1500); 
-                        jQuery('#sync_start_export1').hide();
-                        jQuery('#sync_start_export_product').hide();
-                        jQuery("#show-result").hide(1500);  
-                        jQuery("#show-result_all").hide(1500); 
-                        jQuery("#sync_start_export_all").show(1500);
-                        ajaxobj.abort();
-                        return false;
-                    }else {
-                        ajaxRequestForproduct(i,totalreq);
-                    }
-                                     
-                }  
-            },  
-            statusCode: {
-                404: function(){
-                    console.log('sync_all_product_to_vend.php File not Found !');
-                }, 
-                200: function(){
-                    // jQuery("#export_report").html(i++);
-                }, 
-                504:function(){
-                    console.log('Got 504 status code in response then request again '); 
-                }
-            }
-        }); 
-        i++;
+    });
+
+    function show_confirm_box() {
+        if (jQuery("#pop_up_syncll").is(":visible") == false && jQuery("#pop_up_two-way").is(":visible") == false && jQuery("#pop_up").is(":visible") == false) {
+            jQuery(document).ready(function () {
+                jQuery('.hidesync').show();
+                jQuery('#sync_start_export').show();
+                jQuery("#sync_start_export").html('Do you want to sync all product to Vend?');
+                jQuery('#pop_up_syncll').fadeIn();
+            });
+            <?php update_option('post_product', 0); ?>
+
+        }
     }
-    function sync_process_start() {
-        jQuery('#showMessage').hide();
-        jQuery('#pop_button').hide(); 
-        jQuery('#sync_start_export_all').hide();  
-        jQuery('#syncing_loader_all').css("display", "block");
-        jQuery('#sync_start_export_product').show();
-        jQuery('#sync_start_export_product').html("<h3>Starting....</h3>");
-        jQuery('#syncing_loader1').css("display", "block");
-        jQuery('#sync_start_export1').show();
-        jQuery('#sync_start_export1').html("<h3>Starting....</h3>");
-        var dataupper;
-        var communication_key='<?php echo get_option('webhook_url_code'); ?>';
-        jQuery.ajax({
-            type: "POST",  
-            dataType:'json',
-            data:{'communication_key':communication_key},
-            url: '../wp-content/plugins/linksync/includes/apps/vend/sync_all_product_to_vend.php',
-            success:function(dataupper){ 
-                if(dataupper.total_post_id!=0){ 
-                    var totalreq=dataupper.total_post_id;  
-                    ajaxRequestForproduct(1,totalreq);
-                   
-                }else{
-                    jQuery("#show-result").show();   
-                    jQuery("#show-result").html("<p style='font-size:15px;'><b>Completed!</b></p>");
-                    jQuery("#show-result_all").show();   
-                    jQuery("#show-result_all").html("<p style='font-size:15px;'><b>Completed!</b></p>");
-                    jQuery('#syncing_loader1').css("display", "none");
-                    jQuery('#syncing_loader_all').css("display", "none");
-                    jQuery("#pop_up_syncll").hide(1500);  
-                    jQuery("#pop_up_two-way").hide(1500);
-                    jQuery('#sync_start_export1').hide();
-                    jQuery('#sync_start_export_product').hide();
-                    jQuery("#show-result").hide(1500);
-                    jQuery("#show-result_all").hide(1500); 
-                    jQuery("#sync_start_export_all").show(1500);
-                }
-            }
-        }); 
-        jQuery('.hidesync').hide();
-         
-    } 
-    jQuery(document).ready(function() {
-        jQuery("input[name='product_sync_type']").click(function() {
+
+    jQuery(document).ready(function () {
+        jQuery("input[name='product_sync_type']").click(function () {
             if (jQuery("#disabled_sync_id").is(":checked")) {
                 jQuery('#product_sync_settig').slideUp(500);
             } else {
                 jQuery('#product_sync_settig').slideDown(500);
             }
             if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
-                jQuery('#sync_reset_all_btn_id').hide(500); 
+                jQuery('#sync_reset_all_btn_id').hide(500);
                 jQuery('#import_by_tags_tr').fadeIn(500);
-            } else { 
+            } else {
                 jQuery('#sync_reset_all_btn_id').show(500);
-            } 
-            if (jQuery("input[value='two_way']").is(":checked")) { 
+            }
+            if (jQuery("input[value='two_way']").is(":checked")) {
                 jQuery('#import_by_tags_tr').fadeIn(500);
             }
             if (jQuery("input[value='wc_to_vend']").is(":checked")) {
@@ -1050,7 +935,7 @@ if ($product_sync_type == 'disabled_sync') {
                 jQuery('#ps_import_image_id').fadeOut(500);
                 jQuery("input[name='ps_create_new_p']").fadeOut(500);
                 jQuery('#ps_create_tr').fadeOut(500);
-                jQuery('#ps_pending').fadeOut(500); 
+                jQuery('#ps_pending').fadeOut(500);
                 jQuery('#import_by_tags_tr').fadeOut(500);
             } else {
                 jQuery('#sync_reset_btn_id').show(500);
@@ -1061,54 +946,54 @@ if ($product_sync_type == 'disabled_sync') {
                 jQuery('#ps_create_tr').fadeIn(500);
                 jQuery('#ps_pending').fadeIn(500);
             }
-            if(jQuery("#ps_quantity").is(":checked")){ 
-                if (jQuery("input[value='two_way']").is(":checked")||jQuery("input[value='wc_to_vend']").is(":checked")){
-                    if(jQuery("input[value='two_way']").is(":checked")) {
-                        jQuery("#unpublish_stock_id").fadeIn(500);   
-                    }else{
-                        jQuery("#unpublish_stock_id").fadeOut(500); 
+            if (jQuery("#ps_quantity").is(":checked")) {
+                if (jQuery("input[value='two_way']").is(":checked") || jQuery("input[value='wc_to_vend']").is(":checked")) {
+                    if (jQuery("input[value='two_way']").is(":checked")) {
+                        jQuery("#unpublish_stock_id").fadeIn(500);
+                    } else {
+                        jQuery("#unpublish_stock_id").fadeOut(500);
                     }
                     jQuery("#wctovend_outlet").fadeIn(500);
-                }else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
-                    jQuery("#unpublish_stock_id").fadeIn(500); 
+                } else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
+                    jQuery("#unpublish_stock_id").fadeIn(500);
                     jQuery("#outlet").fadeIn(500);
                     jQuery("#wctovend_outlet").fadeOut(500);
                 }
-            }else{ 
-                jQuery("#unpublish_stock_id").fadeOut(500); 
+            } else {
+                jQuery("#unpublish_stock_id").fadeOut(500);
                 jQuery("#outlet").fadeOut(500);
-                jQuery("#wctovend_outlet").fadeOut(500); 
+                jQuery("#wctovend_outlet").fadeOut(500);
             }
             if (jQuery("input[value='two_way']").is(":checked") || jQuery("input[value='wc_to_vend']").is(":checked")) {
-                jQuery('#ps_pricebook_id').fadeOut(500); 
-                jQuery('#product_attribute').fadeOut(500);  
+                jQuery('#ps_pricebook_id').fadeOut(500);
+                jQuery('#product_attribute').fadeOut(500);
             } else {
                 jQuery('#ps_pricebook_id').fadeIn(500);
-                jQuery('#product_attribute').fadeIn(500);  
+                jQuery('#product_attribute').fadeIn(500);
             }
             if (jQuery("input[value='wc_to_vend']").is(":checked")) {
                 jQuery("#wc_to_vend_outlet").fadeIn(500);
-                jQuery("#vend-to-wc_outlet").fadeOut(500); 
+                jQuery("#vend-to-wc_outlet").fadeOut(500);
             } else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
-                if (jQuery('.outlets_check:checked').length ==0) { 
-                    jQuery("#check_outlets").show(); 
+                if (jQuery('.outlets_check:checked').length == 0) {
+                    jQuery("#check_outlets").show();
                     jQuery("#check_outlets").html('You didn\'t select any outlet !');
                 }
                 jQuery("#wc_to_vend_outlet").fadeOut(500);
-                jQuery("#vend-to-wc_outlet").fadeIn(500); 
-                
+                jQuery("#vend-to-wc_outlet").fadeIn(500);
+
             } else {
                 jQuery("#wc_to_vend_outlet").fadeIn(500);
-                jQuery("#vend-to-wc_outlet").fadeOut(500); 
+                jQuery("#vend-to-wc_outlet").fadeOut(500);
             }
 
         });
-        
+
         if (jQuery("input[name='ps_description']").is(":checked")) {
             jQuery("#ps_desc_span").fadeIn(500);
         }
 
-        jQuery("input[name='ps_description']").click(function() {
+        jQuery("input[name='ps_description']").click(function () {
             if (jQuery("input[name='ps_description']").is(":checked")) {
                 jQuery("#ps_desc_span").fadeIn(500);
             } else {
@@ -1116,7 +1001,7 @@ if ($product_sync_type == 'disabled_sync') {
             }
         });
 
-        jQuery("input[name='ps_price']").click(function() {
+        jQuery("input[name='ps_price']").click(function () {
             if (jQuery(this).is(":checked")) {
                 jQuery(".ps_price_sub_options").fadeIn(500);
             } else {
@@ -1128,7 +1013,7 @@ if ($product_sync_type == 'disabled_sync') {
         } else {
             jQuery(".ps_price_sub_options").fadeOut(500);
         }
-        jQuery("input[name='ps_imp_by_tag']").click(function() {
+        jQuery("input[name='ps_imp_by_tag']").click(function () {
             if (jQuery(this).is(":checked")) {
                 jQuery("#import_by_tags_list").fadeIn(500);
             } else {
@@ -1136,47 +1021,47 @@ if ($product_sync_type == 'disabled_sync') {
             }
         });
 
-        jQuery("input[name='ps_quantity']").click(function() {
-            if (jQuery(this).is(":checked")) { 
-                if (jQuery("input[value='two_way']").is(":checked")||jQuery("input[value='wc_to_vend']").is(":checked")){
-                    if(jQuery("input[value='two_way']").is(":checked")) {
-                        jQuery("#unpublish_stock_id").fadeIn(500);   
-                    }else{
-                        jQuery("#unpublish_stock_id").fadeOut(500); 
+        jQuery("input[name='ps_quantity']").click(function () {
+            if (jQuery(this).is(":checked")) {
+                if (jQuery("input[value='two_way']").is(":checked") || jQuery("input[value='wc_to_vend']").is(":checked")) {
+                    if (jQuery("input[value='two_way']").is(":checked")) {
+                        jQuery("#unpublish_stock_id").fadeIn(500);
+                    } else {
+                        jQuery("#unpublish_stock_id").fadeOut(500);
                     }
                     jQuery("#wctovend_outlet").fadeIn(500);
-                }else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
-                    jQuery("#unpublish_stock_id").fadeIn(500); 
+                } else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
+                    jQuery("#unpublish_stock_id").fadeIn(500);
                     jQuery("#outlet").fadeIn(500);
                     jQuery("#wctovend_outlet").fadeOut(500);
                 }
-                
+
             } else {
                 jQuery("#outlet").fadeOut(500);
                 jQuery("#wctovend_outlet").fadeOut(500);
-                jQuery("#unpublish_stock_id").fadeOut(500);  
-            } 
-             
+                jQuery("#unpublish_stock_id").fadeOut(500);
+            }
+
         });
-        if (jQuery("#ps_quantity").is(":checked")) { 
-            if (jQuery("input[value='two_way']").is(":checked")||jQuery("input[value='wc_to_vend']").is(":checked")){
-                if(jQuery("input[value='two_way']").is(":checked")) {
-                    jQuery("#unpublish_stock_id").fadeIn(500);   
-                }else{
-                    jQuery("#unpublish_stock_id").fadeOut(500); 
+        if (jQuery("#ps_quantity").is(":checked")) {
+            if (jQuery("input[value='two_way']").is(":checked") || jQuery("input[value='wc_to_vend']").is(":checked")) {
+                if (jQuery("input[value='two_way']").is(":checked")) {
+                    jQuery("#unpublish_stock_id").fadeIn(500);
+                } else {
+                    jQuery("#unpublish_stock_id").fadeOut(500);
                 }
                 jQuery("#wctovend_outlet").fadeIn(500);
-            }else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
-                jQuery("#unpublish_stock_id").fadeIn(500); 
+            } else if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
+                jQuery("#unpublish_stock_id").fadeIn(500);
                 jQuery("#outlet").fadeIn(500);
                 jQuery("#wctovend_outlet").fadeOut(500);
             }
-        } else { 
+        } else {
             jQuery("#outlet").fadeOut(500);
-            jQuery("#unpublish_stock_id").fadeOut(500);  
+            jQuery("#unpublish_stock_id").fadeOut(500);
             jQuery("#wctovend_outlet").fadeOut(500);
-        } 
-        jQuery("input[name='ps_wc_to_vend_outlet']").click(function() {
+        }
+        jQuery("input[name='ps_wc_to_vend_outlet']").click(function () {
             if (jQuery("input[name='ps_wc_to_vend_outlet']").is(":checked")) {
                 jQuery("#wc_to_vend_outlet").fadeIn(500);
             } else {
@@ -1188,22 +1073,22 @@ if ($product_sync_type == 'disabled_sync') {
         } else {
             jQuery(".ps_categories").fadeOut(500);
         }
-        jQuery("input[name='ps_categories']").click(function() {
+        jQuery("input[name='ps_categories']").click(function () {
             if (jQuery("input[name='ps_categories']").is(":checked")) {
                 jQuery(".ps_categories").fadeIn(500);
             } else {
                 jQuery(".ps_categories").fadeOut(500);
             }
         });
-        if (jQuery("input[name='linksync_woocommerce_tax_option']").is(":checked")) {  
+        if (jQuery("input[name='linksync_woocommerce_tax_option']").is(":checked")) {
             jQuery('#linksync_taxes').fadeOut(500);
-        } else { 
-            jQuery('#linksync_taxes').fadeIn(500); 
+        } else {
+            jQuery('#linksync_taxes').fadeIn(500);
         }
-        jQuery("input[name='linksync_woocommerce_tax_option']").click(function() {
+        jQuery("input[name='linksync_woocommerce_tax_option']").click(function () {
             if (jQuery("input[name='linksync_woocommerce_tax_option']").is(":checked")) {
                 jQuery("#linksync_taxes").fadeOut(500);
-            } else {  
+            } else {
                 jQuery("#linksync_taxes").fadeIn(500);
             }
         });
@@ -1212,7 +1097,7 @@ if ($product_sync_type == 'disabled_sync') {
         } else {
             jQuery(".ps_images").fadeOut(500);
         }
-        jQuery("input[name='ps_images']").click(function() {
+        jQuery("input[name='ps_images']").click(function () {
             if (jQuery("input[name='ps_images']").is(":checked")) {
                 jQuery(".ps_images").fadeIn(500);
             } else {
@@ -1220,195 +1105,18 @@ if ($product_sync_type == 'disabled_sync') {
             }
         });
     });
-    jQuery(document).on("click","a[name='lnkViews']", function (e) {
-        jQuery('#sync_reset_all_btn_id').attr('disabled',true);
-        jQuery('#sync_reset_btn_id').attr('disabled',true); 
-        jQuery("#pop_up_two-way").fadeOut(500); 
+
+    jQuery(document).on("click", "a[name='lnkViews']", function (e) {
+        jQuery('#sync_reset_all_btn_id').attr('disabled', true);
+        jQuery('#sync_reset_btn_id').attr('disabled', true);
+        jQuery("#pop_up_two-way").fadeOut(500);
         jQuery('#response').removeClass('error').addClass('updated').html("Changes has been saved successfully!!").fadeIn(500).delay(3000).fadeOut(4000);
-        location.reload();  
+        location.reload();
     });
-    jQuery("input[name='close']").click(function() {  
-        jQuery("#pop_up").fadeOut(200); 
+    jQuery("input[name='close']").click(function () {
+        jQuery("#pop_up").fadeOut(200);
         jQuery('#response').removeClass('error').addClass('updated').html("Changes has been saved successfully!!").fadeIn(500).delay(3000).fadeOut(4000);
 
     });
-    jQuery("input[name='no']").click(function() {
-        jQuery("#pop_up").fadeOut(500); 
-        jQuery('#response').removeClass('error').addClass('updated').html("Synchronic Reset successfully!!").fadeIn(500).delay(3000).fadeOut(4000);
 
-    }); 
-    function  re_sync_process_start2() {
-<?php
-update_option('image_process', 'complete');
-update_option('prod_last_page', NULL);
-//update_option('product_image_ids', NULL);
-?>
-        jQuery('#showMessage').hide();
-        jQuery('#pop_button').hide();
-        jQuery('#syncing_loader1').css('display','block');
-        jQuery('#syncing_loader').css('display','block');
-        jQuery('#syncing_loader_all').css('display','block'); 
-        jQuery('#sync_start').show();
-        jQuery('#sync_start').html("<h3>Starting....</h3>"); 
-        importProduct(); 
-    } 
-    var check_error =0;
-    function importProduct(){ 
-        var ajaxupdate=jQuery.ajax({
-            type: "POST",  
-            dataType:'json', 
-            url: "<?php echo content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'); ?>", 
-            success:function(dataupper){
-                if(dataupper.message!=''){
-                    jQuery("#please-wait").css("display", "none");
-                    jQuery("#sync_start").show();    
-                    jQuery("#sync_start").html("<p style='font-size:15px;'><b>"+dataupper.message+"</b>");  
-                    jQuery('#syncing_loader1').css('display','none');
-                    jQuery('#syncing_loader').css('display','none');
-                    jQuery('#syncing_loader_all').css('display','none'); 
-                    jQuery("#pop_up").fadeOut(2000); 
-                    jQuery("#pop_up_two-way").hide(1500);
-                }else if(dataupper.image_process=='running'){
-                    jQuery("#please-wait").css("display", "none"); 
-                    uploading_process_start_for_image(dataupper.product_count); 
-                }else if(dataupper.image_process=='complete'){
-                    jQuery("#please-wait").css("display", "block");
-                    importProduct();
-                }
-            },
-            error: function(xhr, status, error) {  
-                console.log("Error Empty Response");
-                console.log(xhr);
-                console.log(status);
-                console.log(error);
-                if(check_error==10){
-                    check_error =0; 
-                    ajaxupdate.abort();
-                    jQuery("#sync_start").html("<p style='font-size:15px;color:red'><b>Internal Connection Error : Please refresh and try again</b>");  
-                    jQuery('#syncing_loader1').css('display','none');
-                    jQuery('#syncing_loader').css('display','none');
-                    jQuery('#syncing_loader_all').css('display','none'); 
-                    jQuery('#syncing_close').css('display','block');
-                }else{
-                    importProduct(); 
-                }
-                check_error++;
-            },
-            statusCode: {
-                404: function(){
-                    console.log('Got 404 status File not found! '); 
-                }, 
-                200: function(){
-                    // jQuery("#export_report").html(i++);
-                }, 
-                504:function(){
-                    console.log('Got 504 Gateway Time-out! ');  
-                }, 
-                500:function(){
-                    console.log('Got 500 Error ! '); 
-                }
-            }
-               
-        }); 
-    }
-                  
-    function ajaxRequestForproduct_image(i,totalreq,total_product,product_count,status){ 
-        jQuery("#sync_start").html("linksync update is running.<br> Importing from product <b>"+ (product_count + 1) +" of "+total_product+"</b>");
-        var ajaxobj= jQuery.ajax({
-            type: "POST",  
-            dataType:'json',
-            data:{'product_id':i,'communication_key':communication_key,'check_status':status},
-            url: '../wp-content/plugins/linksync/image_uploader.php',
-            success:function(data){
-
-				if( data ){
-					var result=data.response;
-					if( result && result.image ){
-						if(result.image=='on'){
-							if(result.gallery == 'success' && result.thumbnail=='success'){
-								status='send';
-								i++;
-								product_count++;
-							}else{
-								status='resend';
-								console.log('Resend Request for the same product: Process Not complete yet');
-							}
-						}else{
-							status='send';
-							i++;
-							product_count++;
-						}
-					}else{
-						status='send';
-						i++;
-						product_count++;
-					}
-				}
-                 
-            },
-            error: function(xhr, status, error) { 
-                status='resend';
-                console.log(xhr);
-                console.log(status);
-                console.log(error);
-                console.log('Resend Request for the same product');
-            },
-            complete:function(responsedata){ 
-                if(responsedata){  
-                    if(i>totalreq){ 
-                        jQuery.ajax({
-                            url:  '../wp-content/plugins/linksync/image_uploader.php',
-                            type: 'POST',
-                            data: { get_total: "1",communication_key:communication_key},
-                            success: function(response) { 
-                                jQuery("#please-wait").css("display", "block");
-                                importProduct();
-                            }
-                        }); 
-                        ajaxobj.abort();
-                        return false;
-                    }else {
-                        console.log(i);
-                        ajaxRequestForproduct_image(i,totalreq,total_product,product_count,status);
-                    }
-                                     
-                }  
-            },  
-            statusCode: {
-                404: function(){  
-                    console.log('File not Found !'); 
-                }, 
-                200: function(){
-                    // jQuery("#export_report").html(i++);
-                }, 
-                504:function(){
-                    console.log('Got 504 status code in response then request again '); 
-                }
-            }
-        }); 
-           
-    }
-    function uploading_process_start_for_image(product_count) { 
-        var dataupper;
-        var communication_key='<?php echo get_option('webhook_url_code'); ?>';
-        jQuery.ajax({
-            type: "POST",  
-            dataType:'json',
-            data:{'communication_key':communication_key},
-            url: '../wp-content/plugins/linksync/image_uploader.php',
-            success:function(dataupper){ 
-                if(dataupper.total_post_id!=0){ 
-                    var totalreq=dataupper.total_post_id;  
-                    ajaxRequestForproduct_image(1,totalreq,dataupper.total_product,product_count,'send'); 
-                } 
-            },error: function(xhr, status, error){  
-                console.log('Error');
-                console.log(xhr);
-                console.log(status);
-                console.log(error);
-                uploading_process_start_for_image(product_count);
-            }
-        }); 
-    } 
-          
-        </script> 
+</script>

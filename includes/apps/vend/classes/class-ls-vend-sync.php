@@ -10,6 +10,8 @@ class LS_Vend_Sync
         self::$orderSyncOption = LS_Vend()->order_option();
         self::$productSyncOption = LS_Vend()->product_option();
 
+        LS_Vend_Ajax::init_hook();
+
         if (self::$orderSyncOption->woocommerceToVend() == self::$orderSyncOption->sync_type()) {
             add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'), 1);
             add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'importOrderToVend'));
@@ -30,8 +32,8 @@ class LS_Vend_Sync
             add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
             add_action('woocommerce_thankyou', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
         }
-
     }
+
 
     public static function updateVendProductOnWooCommerceOrderUpdate($order_id)
     {
@@ -124,7 +126,7 @@ class LS_Vend_Sync
         if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
             $product_type = $product->get_type();
 
-            if(LS_Product_Helper::isVariationProduct($product)){
+            if (LS_Product_Helper::isVariationProduct($product)) {
                 $parent_id = LS_Product_Helper::getProductParentId($product);
                 $product = wc_get_product($parent_id);
             }
@@ -277,15 +279,89 @@ class LS_Vend_Sync
                     } else {
                         LSC_Log::add_dev_failed('LS_Vend_Sync::importProductToVend25', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
                     }
+
+                    /**
+                     * Fires once a product in WooCommerce has been sync to Vend.
+                     *
+                     * @since 2.4.21
+                     *
+                     * @param int           $product_id   Product ID.
+                     */
+                    do_action('ls_after_woo_to_vend_product_sync', $product_id, $json_product, $result);
                 }
-
-
-
             }
         }
 
     }
 
+    public static function importProductToWoo($product)
+    {
+
+        //Make sure its the instance of LS_Simple_Product class
+        if (!$product instanceof LS_Product) {
+            $product = new LS_Product($product);
+        }
+
+        $productSyncOption = LS_Vend()->product_option();
+
+        if (
+            'disabled_sync' == $productSyncOption->sync_type() ||
+            'shipping' == $product->get_sku()
+        ) {
+            //Do not create this product in woocommerce if the sku is shipping
+            //Or return if sync type is disabled
+            return;
+        }
+
+        remove_all_actions('save_post');
+        $wooProductId = LS_Product_Helper::getProductIdBySku($product->get_sku());
+        $productDeletedAt = $product->get_deleted_at();
+
+        if (!empty($productDeletedAt) && !empty($wooProductId)) {
+            LS_Vend_Product_Helper::deleteWooProducts($wooProductId);
+            //set last sync to the current update_at key
+            LS_Vend()->option()->lastProductUpdate($product->get_update_at());
+            //Do not continue the rest of the code since product is already deleted
+            return;
+        }
+
+
+        $is_new = false;
+        if (empty($wooProductId)) {
+            $is_new = true;
+            $wooProductId = LS_Vend_Product_Helper::createWooProduct($productSyncOption, $product, $is_new);
+        }
+
+        if (!empty($wooProductId)) {
+
+            //set last sync to the current update_at key
+            LS_Vend()->option()->lastProductUpdate($product->get_update_at());
+
+            //Get the product meta object for product
+            $product_meta = new LS_Product_Meta($wooProductId);
+            $product_meta->updateFromLinkSyncJson($product->getJsonProduct());
+
+            //set last sync to the current update_at key
+            LS_Vend()->option()->lastProductUpdate($product->get_update_at());
+            LS_Vend_Product_Helper::updateWooProduct(
+                $product_meta,
+                $product,
+                $is_new
+            );
+        }
+
+        /**
+         * Fires once a product has been created or updated in WooCommerce.
+         *
+         * @since 2.4.21
+         *
+         * @param int           $wooProductId   Product ID.
+         * @param LS_Product    $product        linksync Json product getters.
+         * @param bool          $is_new         Whether this is an existing product being updated or not.
+         */
+        do_action('ls_after_vend_to_woo_product_sync', $wooProductId, $product, $is_new);
+
+    }
 
     /**
      * Imports woocommerce order to Vend
@@ -311,30 +387,32 @@ class LS_Vend_Sync
             return;
         }
 
-
         $orderTotal = $wooOrderHelper->getTotal();
         $orderCurrency = $wooOrderHelper->getCurrency();
-        $taxesIncluded = false;
 
         $orderItems = $wooOrder->get_items();
         $orderTaxes = $wooOrder->get_taxes();
+        $orderTaxData = null;
+        $orderTaxLabel = null;
+        $orderTaxRateId = null;
+        $orderShippingTaxTotal = 0;
+        $orderShippingTaxRateId = null;
+
+        foreach ($orderTaxes as $tax_label) {
+            $orderTaxData = new LS_Woo_Order_Line_Item($tax_label);
+            $orderShippingTaxTotal = $orderTaxData->get_shipping_tax_total();
+
+            if (empty($orderShippingTaxTotal)) {
+                $orderTaxLabel = $orderTaxData->get_tax_label();
+                $orderTaxRateId = $orderTaxData->get_tax_rate_id();
+            } else {
+                $orderShippingTaxRateId = $orderTaxData->get_tax_rate_id();
+            }
+        }
 
         foreach ($orderItems as $orderItem) {
             $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
-
-            $vendTaxDetails = array(
-                'taxId' => null,
-                'taxName' => null,
-                'taxRate' => null
-            );
-
-
-            foreach ($orderTaxes as $tax_label) {
-                $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
-                    $tax_label['label'],
-                    $orderItem['item_meta']['_tax_class'][0]
-                );
-            }
+            $taxClass = $orderLineItem->get_tax_class();
 
             $variationId = $orderLineItem->get_variation_id();
             if (!empty($variationId)) {
@@ -344,27 +422,37 @@ class LS_Vend_Sync
             }
 
             $wooProduct = wc_get_product($product_id);
+            $product_meta = new LS_Product_Meta($wooProduct);
+            $wooProductTaxStatus = $product_meta->get_tax_status();
+            $vendTaxDetails = array(
+                'taxName' => null,
+                'taxId' => null,
+                'taxRate' => null
+            );
+            if('taxable' == $wooProductTaxStatus){
+
+                $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
+                    $orderTaxLabel,
+                    $taxClass
+                );
+
+            }
+
+
             $product_amount = $wooProduct->get_price();
-            $lineSubTotal = $orderLineItem->get_subtotal();
             $lineQuantity = $orderLineItem->get_quantity();
-
-            if (!empty($lineSubTotal)) {
-                $product_amount = (float)($lineSubTotal / $lineQuantity);
-            }
-
-
             $discount = $orderLineItem->get_discount_amount();
-            if (!empty($discount)) {
-                $discount = (float)($discount / $lineQuantity);
-            }
 
+            $taxValue = 0;
             //Product Amount = product org amount - discount amount
             $product_total_amount = (float)$product_amount - (float)$discount;
             if (!empty($product_total_amount) && !empty($vendTaxDetails['taxRate'])) {
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
             }
 
-            $products[] = array(
+            $product_total_amount = LS_Vend_Order_Helper::prepareProductPriceForSyncingOrderToVend($product_total_amount, $taxValue);
+
+            $productArgs = array(
                 'sku' => $wooProduct->get_sku(),
                 'title' => $orderLineItem->get_name(),
                 'price' => $product_total_amount,
@@ -376,9 +464,10 @@ class LS_Vend_Sync
                 'taxValue' => isset($taxValue) ? $taxValue : null,
                 //'discountTitle' => isset($discountTitle) ? $discountTitle : 'sale',
             );
+
+            $products[] = $productArgs;
             $totalQuantity += $lineQuantity;
         }
-        //exit();
 
         $shippingMethod = $wooOrderHelper->getShippingMethod();
 
@@ -393,12 +482,9 @@ class LS_Vend_Sync
             );
 
             if (!empty($shipping_tax)) {
-                foreach ($orderTaxes as $tax_label) {
-                    $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
-                        $tax_label['label'],
-                        $orderItem['item_meta']['_tax_class'][0]
-                    );
-                }
+                $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
+                    $orderShippingTaxRateId
+                );
             }
 
             if (!empty($shipping_cost) && !empty($vendTaxDetails['taxRate'])) {
@@ -517,7 +603,6 @@ class LS_Vend_Sync
         $billing_address = !empty($billing_address) ? $billing_address : null;
         $delivery_address = !empty($delivery_address) ? $delivery_address : null;
         $comments = "WooCommerce " . $order_id;
-        $orderTaxTotal = $wooOrderHelper->getTotalTax();
 
         $selectedVendUser = self::$orderSyncOption->getSelectedVendUser();
 
@@ -529,9 +614,7 @@ class LS_Vend_Sync
         $json_order->set_register_id(!empty($registerDb) ? $registerDb : null);
         $json_order->set_primary_email($primaryEmail);
         $json_order->set_total($orderTotal);
-        $json_order->set_total_tax(!empty($orderTaxTotal) ? $orderTaxTotal : 0);
         $json_order->set_comments($comments);
-        $json_order->set_taxes_included($taxesIncluded);
         $json_order->set_currency($orderCurrency);
 
         $json_order->set_shipping_method(!empty($orderPaymentMethod) ? $orderPaymentMethod : null);
@@ -544,6 +627,13 @@ class LS_Vend_Sync
 
         $order_json_data = $json_order->get_json_orders();
         $post_order = LS_Vend()->api()->order()->save_orders($order_json_data);
+
+        $order_meta = new LS_Order_Meta($order_id);
+        $order_meta->updateOrderJsonFromWooToVend(array(
+            'order_being_sent' => $json_order->getOrderArray(),
+            'response' => $post_order
+        ));
+
         if (!empty($post_order['id'])) {
             self::$orderSyncOption->setFlagOrderWasSyncToVend($order_id, $post_order['orderId']);
             $note = sprintf(__('This Order was exported to Vend with the Receipt Number %s', 'woocommerce'), $post_order['orderId']);
@@ -556,6 +646,15 @@ class LS_Vend_Sync
             LSC_Log::add_dev_failed('LS_Vend_Sync::importOrderToVend', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
         }
 
+        /**
+         * Fires once an order has been sync to vend.
+         *
+         * @since 2.4.21
+         *
+         * @param int           $order_id   Order ID.
+         */
+        do_action('ls_after_woo_to_vend_order_sync', $order_id);
+
     }
 
     public static function deleteVendProduct($product_id)
@@ -567,9 +666,129 @@ class LS_Vend_Sync
         if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($productHelper->getType())) {
             $product_sku = $productHelper->getSku();
             if (!empty($product_sku)) {
-                LS_Vend()->api()->product()->delete_product($product_sku);
+                $delete_response = LS_Vend()->api()->product()->delete_product($product_sku);
+
+                /**
+                 * Fires once the product in vend was deleted.
+                 *
+                 * @since 2.4.21
+                 *
+                 * @param String           $delete_response   Json response from linksync after sending delete request for product.
+                 */
+                do_action('ls_after_vend_product_deletion', $delete_response);
             }
         }
+    }
+
+    /**
+     * Importing all products to Woocommerce from page one to the last page.
+     * @param int $page
+     * @return null
+     */
+    public static function all_product_to_woo($page = 1)
+    {
+        $products = LS_Vend()->api()->product()->get_product_by_page($page);
+        if (!empty($products['products'])) {
+            foreach ($products['products'] as $product) {
+
+                $product = new LS_Product($product);
+                LS_Vend_Sync::importProductToWoo($product);
+
+            }
+        }
+
+        if ($products['pagination']['page'] <= $products['pagination']['pages']) {
+
+            $page = $products['pagination']['page'] + 1;
+            if ($page <= $products['pagination']['pages']) {
+                self::all_product_to_woo($page);
+            }
+        }
+        return $products;
+    }
+
+    /**
+     * Importing products from Vend to WooCommerce since last update from page one to the last page
+     * @param int $page
+     * @return array|null
+     */
+    public static function all_product_to_woo_since_last_update($page = 1)
+    {
+        $last_product_sync = LS_Vend()->option()->lastProductUpdate();
+        $params = self::prepare_url_params_for_get_product($page, $last_product_sync);
+        $products = LS_Vend()->api()->product()->get_product($params);
+
+        if (!empty($products['products'])) {
+
+            foreach ($products['products'] as $product) {
+
+                $product = new LS_Product($product);
+                self::importProductToWoo($product);
+
+            }
+        }
+
+        if ($products['pagination']['page'] <= $products['pagination']['pages']) {
+
+            $page = $products['pagination']['page'] + 1;
+            if ($page <= $products['pagination']['pages']) {
+                self::all_product_to_woo_since_last_update($page);
+            }
+        }
+        return $products;
+    }
+
+    /**
+     * Returns url params in getting products from linksync server base product syncing settings
+     * @param int $page
+     * @param null $last_product_sync
+     * @return string
+     */
+    public static function prepare_url_params_for_get_product($page = 1, $last_product_sync = null)
+    {
+        $productSyncOption = LS_Vend()->product_option();
+        $product_sync_type = $productSyncOption->sync_type();
+
+        $urlParams ='';
+
+        $importByTag = $productSyncOption->import_by_tag();
+        if ('on' == $importByTag) {
+            $import_tags = $productSyncOption->import_by_tags_list();
+            $import_unserialize = unserialize($import_tags);
+            $tags_import = explode('|', $import_unserialize);
+            foreach ($tags_import as $value) {
+                $urlParams .= 'tags=' . urlencode($value) . '&';
+            }
+        }
+
+        $outletOption = $productSyncOption->vendToWooOutlet();
+        if ('on' == $outletOption) {
+            if ($product_sync_type == 'vend_to_wc-way') {
+                $outletDb = $productSyncOption->vendToWooOutletDetail();
+                if (!empty($outletDb)) {
+                    $outletDb_arr = explode('|', $outletDb);
+                    //    Outlets - use the 'outlet' parameter for the Product endpoint to request product
+                    foreach ($outletDb_arr as $outlet_name) {
+                        $urlParams .= 'outlet=' . urlencode($outlet_name) . '&';
+                    }
+                }
+            } elseif ($product_sync_type == 'two_way') {
+                $wooToVendOutlet = $productSyncOption->wooToVendOutlet();
+                if ('on' == $wooToVendOutlet) {
+                    $getoutlet = get_option('wc_to_vend_outlet_detail');
+                    $outlet = explode('|', $getoutlet);
+                    $urlParams .= 'outlet=' . urlencode(isset($outlet[1]) ? $outlet[1] : '') . '&';
+                }
+            }
+        }
+
+        if (null != $last_product_sync) {
+            $urlParams.='since=' . urlencode($last_product_sync).'&';
+        }
+
+        $urlParams .= 'page='.urlencode($page);
+
+        return $urlParams;
     }
 }
 

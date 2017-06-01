@@ -218,9 +218,9 @@ $laid = LS_ApiController::get_current_laid();
     <?php $webhook = get_option('linksync_addedfile'); ?>
     <fieldset style="display: <?php echo isset($webhook) && !empty($webhook) ? 'block': 'none';?>">
         <legend>Update</legend>
-        <b>Update URL : </b><a onclick="show_confirm_box();" href="javascript:void(0)"><?php echo content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'); ?></a>
+        <b>Update URL : </b><a class="vend_to_woo_since_last_update" href="javascript:void(0)"><?php echo content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'); ?></a>
         <br><br>Use the Trigger button to open the Update URL in a new window. linksync for WooCommerce is engineered to automatically have changes synced immediately for both products and orders, but you can use this option to manually trigger a sync.
-        <p><input type="button" onclick="show_confirm_box();"   class="button button-primary"   value="Trigger"> </p>
+        <p><input type="button" class="button button-primary vend_to_woo_since_last_update"   value="Trigger"> </p>
 
     </fieldset>
     <?php
@@ -240,28 +240,66 @@ $laid = LS_ApiController::get_current_laid();
             </form>
         </fieldset>
     <?php } ?>
-</div> 
-<div id="pop_up_syncll" class="clientssummarybox" >
-    <a name="lnkViews" href="javascript:;"><img id="syncing_close" src="../wp-content/plugins/linksync/assets/images/linksync/cross_icon.png "></a>
-    <center><h4 style="display:none;" id="syncing_loader"><img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif"></h4></center>
-    <center><div id="total_product"></div></center>
-    <center><h4 id="export_report">Do you want to sync of product data from   <?php echo (get_option('linksync_connectedto') == 'WooCommerce') ? get_option('linksync_connectionwith') : get_option('linksync_connectedto'); ?> ?</h4></center> 
-    <center><h4 id="sync_start"></h4></center> 
-    <div id="button">
-        <?php
-        if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') { ?>
+</div>
+<div class="ls-vend-sync-modal">
+    <div class="ls-vend-sync-modal-content"
+         style="width: 500px !important; top: 24% !important; display: none;  z-index: 999999999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 34%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
 
-            <input type="button" onclick="return sync_process_start();"  name="sync_all_product_to_vend"   class="button hidesync"   value="Yes"> 
-        
-        <?php } elseif (get_option('linksync_connectionwith') == 'QuickBooks Online' || get_option('linksync_connectedto') == 'QuickBooks Online') { ?>
-        
-            <input type="button" onclick="return sync_process_startQBO();"  name="sync_all_product_to_vend"  class="button hidesync"   value="Yes"> 
-        
-        <?php } ?> 
+        <center>
+            <h4 id="sync_start_export_all" class="sync-modal-message">1Do you want to sync all product to Vend?</h4>
+        </center>
 
-        <input  type="button" class="button hidesync"   name="close_syncall"  onclick="jQuery('#pop_up_syncll').fadeOut();"  value='No'/>
+        <div id="sync_progress_container" style="display: none;">
+
+            <center>
+                <br/>
+                <div id="syncing_loader">
+                    <p style="font-weight: bold;">Please do not close or refresh the browser while syncing is in progress.</p>
+                </div>
+            </center>
+            <center>
+                <div>
+                    <div id="progressbar"></div>
+                    <div class="progress-label">Loading...</div>
+                </div>
+                <?php
+                if(isset($_GET['page']) && 'linksync' != $_GET['page']){
+                    ?>
+                    <p class="form-holder hide ls-dashboard-link" >
+                        <a href="<?php echo admin_url('admin.php?page=linksync'); ?>" class="a-href-like-button">Go To Dashboard</a>
+                    </p>
+                    <?php
+                }
+                ?>
+            </center>
+            <br/>
+
+        </div>
+
+        <div id="pop_button">
+
+            <div class="sync-buttons sync-to-vend-buttons">
+                <input type="button" name="sync_all_product_to_vend" class="button hidesync product_sync_to_vend btn-yes" value="Yes">
+                <input type="button" class="button hidesync ls-modal-close btn-no ls-modal-close"  name="close_syncall" value='No'/>
+            </div>
+
+            <div class="sync-buttons sync-to-woo-buttons">
+                <input type="button" class="button product_sync_to_woo btn-yes" value="Yes">
+                <input type="button" class="button btn-no ls-modal-close"  name="no" value='No'/>
+            </div>
+
+            <div class="sync-buttons sync-to-woo-buttons-since-last-update">
+                <input type="button" class="button product_sync_to_woo_since_last_sync btn-yes" value="Yes">
+                <input type="button" class="button btn-no ls-modal-close"  name="no" value='No'/>
+            </div>
+        </div>
+
+
     </div>
-</div> 
+
+    <div class="ls-modal-backdrop close" ></div>
+</div>
+
                 <?php
                 if (isset($check_duplicate_tool) && $check_duplicate_tool == 'enabled') {
                     if (isset($_POST['confirm'])) {

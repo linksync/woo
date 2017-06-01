@@ -28,6 +28,7 @@ class LS_Api{
 	 */
 	public $response;
 
+	public $curl;
 
 	/**
 	* @param config array
@@ -39,7 +40,7 @@ class LS_Api{
 		$this->laid   = $laid;
 
 		$this->url    = $config['url'];
-
+		//$this->curl   = curl_init();
 	}
 
 	/**
@@ -80,8 +81,10 @@ class LS_Api{
 	 */
 	public function request($endpoint, $http_method, $data = null ){
 
-		$curl  = curl_init($this->url.$endpoint);
-
+		//$curl  = $this->curl;
+		$curl = curl_init();
+		$url   = $this->url.$endpoint;
+		curl_setopt($curl, CURLOPT_URL, $url);
 		/**
 		 *	FALSE to stop cURL from verifying the peer's certificate. 
 		 */
@@ -124,15 +127,16 @@ class LS_Api{
             "LAID: " . $this->laid
         ));
 
-        if (curl_error($curl)) {
+		$curl_response = curl_exec($curl);
+
+        if (false === $curl_response) {
             $error = "Connection Error: " . curl_errno($curl) . ' - ' . curl_error($curl);
             return array(
                 'errorCode' => 007,
                 'userMessage' => $error
             );
         }
-
-        $this->response = json_decode(curl_exec($curl),true);
+        $this->response = json_decode($curl_response,true);
         return $this->get_response();
 
 	}

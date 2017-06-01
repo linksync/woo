@@ -2,16 +2,20 @@
 
 class LS_Woo_Tax{
 
-    public static function get_mapped_quickbooks_tax_for_product($taxMappingInfo, $orderTax, $taxClass){
+    public static function get_mapped_quickbooks_tax_for_product($taxMappingInfo, $orderTax, $taxClass)
+    {
 
-        $qbo_tax =   '';
+        $qbo_tax = '';
         if (!empty($orderTax)) {
             foreach ($orderTax as $tax_label) {
                 $tax_line_item = new LS_Woo_Order_Line_Item($tax_label);
-                $tax_info = LS_Woo_Tax::get_tax_rate_by_name_and_class(
-                    $tax_line_item->get_tax_name(),
-                    $taxClass
-                );
+                if (LS_Vend_Helper::isWooVersionLessThan_2_4_15()) {
+                    $rate_id = $tax_line_item->lineItem['rate_id'];
+                } else {
+                    $wc_order_tax = new WC_Order_Item_Tax($tax_label);
+                    $rate_id = $wc_order_tax->get_rate_id();
+                }
+                $tax_info = LS_Woo_Tax::get_tax_rate_by_rate_id($rate_id);
 
                 if (isset($tax_info['tax_rate_id']) && isset($tax_info['tax_rate_class'])) {
                     $wc_tax_class = ('' == $tax_info['tax_rate_class']) ? 'standard' : $tax_info['tax_rate_class'];
@@ -26,15 +30,25 @@ class LS_Woo_Tax{
         return $qbo_tax;
     }
 
-    public static function get_mapped_quickbooks_tax_for_shipping($taxMappingInfo, $orderTax){
-        $qbo_tax =   '';
+    public static function get_mapped_quickbooks_tax_for_shipping($taxMappingInfo, $orderTax)
+    {
+        $qbo_tax = '';
         if (!empty($orderTax)) {
             foreach ($orderTax as $tax_label) {
                 $tax_line_item = new LS_Woo_Order_Line_Item($tax_label);
-                if(empty($tax_line_item->lineItem['shipping_tax_amount'])){
+                $shipping_tax_amount = $tax_line_item->get_shipping_tax_total();
+                if (empty($shipping_tax_amount)) {
                     return '';//No tax was set up for shipping
                 }
-                $tax_info = LS_Woo_Tax::get_tax_rate_by_rate_id($tax_line_item->lineItem['rate_id']);
+
+                if (LS_Vend_Helper::isWooVersionLessThan_2_4_15()) {
+                    $rate_id = $tax_line_item->lineItem['rate_id'];
+                } else {
+                    $wc_order_tax = new WC_Order_Item_Tax($tax_label);
+                    $rate_id = $wc_order_tax->get_rate_id();
+                    $wc_order_tax->get_shipping_tax_total();
+                }
+                $tax_info = LS_Woo_Tax::get_tax_rate_by_rate_id($rate_id);
 
                 if (isset($tax_info['tax_rate_id']) && isset($tax_info['tax_rate_class'])) {
                     $wc_tax_class = ('' == $tax_info['tax_rate_class']) ? 'standard' : $tax_info['tax_rate_class'];
@@ -102,6 +116,21 @@ class LS_Woo_Tax{
         $table_name = '`' . $wpdb->prefix . 'woocommerce_tax_rates`';
         $sql_prepare = 'SELECT * FROM ' . $table_name.' WHERE  tax_rate_name= %s AND tax_rate_class= %s ';
         $tax_rate_info = $wpdb->get_row($wpdb->prepare($sql_prepare, $tax_name, $tax_class), ARRAY_A);
+        if ($tax_rate_info) return $tax_rate_info;
+        return null;
+    }
+
+    /**
+     * Get tax rate using tax_rate_name
+     * @param string $tax_rate_name
+     * @return array|null|object|void
+     */
+    public static function getTaxRateByTaxRateName($tax_rate_name = '')
+    {
+        global $wpdb;
+        $table_name = '`' . $wpdb->prefix . 'woocommerce_tax_rates`';
+        $sql_prepare = 'SELECT * FROM ' . $table_name . ' WHERE  tax_rate_name= %s ';
+        $tax_rate_info = $wpdb->get_row($wpdb->prepare($sql_prepare, $tax_rate_name), ARRAY_A);
         if ($tax_rate_info) return $tax_rate_info;
         return null;
     }
@@ -185,7 +214,7 @@ class LS_Woo_Tax{
             return 'empty_woo_tax_id';
         }
 
-        $productOptions = '';//LS_QBO()->product_option();
+        $productOptions = LS_QBO()->product_option();
         $taxClasses = $productOptions->tax_class();
 
         if(!empty($taxClasses[$wooTaxId])){
@@ -218,6 +247,39 @@ class LS_Woo_Tax{
     public static function getQuickBooksTaxClasses()
     {
         return get_option('ls_qbo_tax_classes');
+    }
+
+    /**
+     * Returns the tax data to be used either use qbo/taxcode or qbo/tax endpoint
+     *
+     * @param null $currentLaidInfo
+     * @return array
+     */
+    public static function getQuickBookTaxDataToBeUsed($currentLaidInfo = null)
+    {
+        set_time_limit(0);
+        $taxDataToBeUsed = array();
+        $qbo_api = LS_QBO()->api();
+        $laidInfo = null;
+
+
+        if (null == $currentLaidInfo) {
+            $laidInfo = $qbo_api->get_laid_info();
+            update_option('ls_laid_info', $laidInfo);
+            $currentLaidInfo = $laidInfo;
+        }
+
+        if (!empty($laidInfo)) {
+            /**
+             * Use Taxcode data
+             */
+            $taxDataToBeUsed = $qbo_api->get_all_active_tax_code();
+            LS_QBO()->options()->setTaxRateAndCodeObjects($taxDataToBeUsed);
+        }
+
+
+
+        return $taxDataToBeUsed;
     }
 
 }

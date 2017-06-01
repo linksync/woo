@@ -54,7 +54,7 @@ class LS_Product_Meta
     {
 
         if ($product instanceof WC_Product) {
-            $this->product_id = $product->id;
+            $this->product_id = $product->get_id();
         } else if (is_numeric($product)) {
             $this->product_id = $product;
         }
@@ -108,6 +108,11 @@ class LS_Product_Meta
             }
 
         }
+    }
+
+    public function getWooProductId()
+    {
+        return $this->product_id;
     }
 
     public function get_cost_price()
@@ -631,7 +636,8 @@ class LS_Product_Meta
 
     public function get_stock()
     {
-        return $this->get_meta('_stock');
+        $stock = $this->get_meta('_stock');
+        return empty($stock) ? 0 : $stock;
     }
 
     public function update_stock($meta_value)
@@ -784,6 +790,94 @@ class LS_Product_Meta
         return $this->get_meta('_ls_product_description');
     }
 
+    public function getThumbnailId()
+    {
+        return $this->get_meta('_thumbnail_id');
+    }
+
+    public function updateThumbnailId($meta_value)
+    {
+        return $this->update_meta('_thumbnail_id', $meta_value);
+    }
+
+    public function deleteThumbnailId()
+    {
+        return $this->dete_meta('_thumbnail_id');
+    }
+
+    public function getVendImageThumbnail()
+    {
+        return $this->get_meta('_ls_vend_thumbnail_image');
+    }
+
+    public function updateVendImageThumbnail($imageThumbnailArray)
+    {
+        return $this->update_meta('_ls_vend_thumbnail_image', $imageThumbnailArray);
+    }
+
+    public function getVendImageGallery()
+    {
+        return $this->get_meta('_ls_vend_image_gallery');
+    }
+
+    public function addVendImageGalleryUrl($image_url)
+    {
+        global $wpdb;
+        $wpdb->query($wpdb->prepare(
+            "UPDATE `" . $wpdb->postmeta . "`
+                                                            SET meta_value=CONCAT(meta_value,',$image_url')
+                                                            WHERE post_id= %d AND meta_key='_ls_vend_image_gallery'"
+            , $this->getWooProductId()
+        ));
+    }
+
+    public function updateVendImageGallery($meta_value)
+    {
+        return $this->update_meta('_ls_vend_image_gallery', $meta_value);
+    }
+
+    public function get_image_gallery()
+    {
+        return $this->get_meta('_product_image_gallery');
+    }
+
+    public function add_image_gallery_id($attach_id)
+    {
+        global $wpdb;
+        $wpdb->query($wpdb->prepare(
+            "UPDATE `" . $wpdb->postmeta . "`
+                                                     SET meta_value=CONCAT(meta_value,',$attach_id')
+                                                     WHERE post_id= %d  AND meta_key='_product_image_gallery'"
+            , $this->getWooProductId()
+        ));
+
+    }
+
+    public function update_image_gallery($meta_value)
+    {
+        return $this->update_meta('_product_image_gallery', $meta_value);
+    }
+
+    public function fromLinkSyncJson()
+    {
+        return $this->get_meta('_from_ls_product_json');
+    }
+
+    public function updateFromLinkSyncJson($jsonProduct)
+    {
+        return $this->update_meta('_from_ls_product_json', $jsonProduct);
+    }
+
+    public function toLinkSyncJson()
+    {
+        return $this->get_meta('_to_ls_product_json');
+    }
+
+    public function updateToLinkSyncJson($jsonProduct)
+    {
+        return $this->update_meta('_to_ls_product_json', $jsonProduct);
+    }
+
 
     public function get_metas()
     {
@@ -807,9 +901,8 @@ class LS_Product_Meta
     }
 
     /**
-     * Get the meta value in a single product
-     *
-     * @param $name
+     *  Get the meta value in a single product
+     * @param $meta_key
      * @return mixed
      */
     public function __get($meta_key)
@@ -820,8 +913,8 @@ class LS_Product_Meta
     /**
      * Update product meta
      *
-     * @param $name
-     * @param $value
+     * @param $meta_key
+     * @param $meta_value
      */
     public function __set($meta_key, $meta_value)
     {
@@ -856,5 +949,14 @@ class LS_Product_Meta
     public function get_meta($meta_key)
     {
         return get_post_meta($this->product_id, $meta_key, true);
+    }
+
+    /**
+     * @param $meta_key
+     * @return bool
+     */
+    public function dete_meta($meta_key)
+    {
+        return delete_post_meta($this->product_id, $meta_key);
     }
 }

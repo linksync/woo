@@ -26,6 +26,7 @@ class LS_Woo_Order_Line_Item
     public $wooLineItem = null;
 
     public $productOrderItem = null;
+    public $lineOrderItemTax = null;
 
     public function __construct($lineItemArray = array(), $order = null)
     {
@@ -39,6 +40,7 @@ class LS_Woo_Order_Line_Item
 
         if (!LS_Vend_Helper::isWooVersionLessThan_2_4_15()) {
             $this->productOrderItem = new WC_Order_Item_Product($lineItemArray);
+            $this->lineOrderItemTax = new WC_Order_Item_Tax($lineItemArray);
         }
 
         $this->wooLineItem = $lineItemArray;
@@ -68,6 +70,18 @@ class LS_Woo_Order_Line_Item
         }
     }
 
+    public function get_product_amount()
+    {
+        $product_amount = 0;
+        $lineSubTotal = $this->get_subtotal();
+        $lineQuantity = $this->get_quantity();
+        if (!empty($lineSubTotal)) {
+            $product_amount = (float)($lineSubTotal / $lineQuantity);
+        }
+
+        return $product_amount;
+    }
+
     /**
      * Get Discount Amount of the order perline item
      *
@@ -77,20 +91,54 @@ class LS_Woo_Order_Line_Item
     {
         $discount = 0;
         if (null == $this->productOrderItem) {
-            return (float)$this->line_subtotal - (float)$this->line_total;
+            $discount = (float)$this->line_subtotal - (float)$this->line_total;
+        } else {
+            $discount = (float)$this->productOrderItem->get_subtotal() - (float)$this->productOrderItem->get_total();
         }
 
-        return (float)$this->productOrderItem->get_subtotal() - (float)$this->productOrderItem->get_total();
+
+
+        if (!empty($discount)) {
+            $discount = (float)($discount / $this->get_quantity());
+        }
+        return $discount;
     }
 
     public function get_tax_class()
     {
-        return isset($this->lineItem['tax_class']) ? $this->lineItem['tax_class'] : '';
+        if (null == $this->productOrderItem) {
+            return isset($this->wooLineItem['tax_class']) ? $this->wooLineItem['tax_class'] : '';
+        }
+
+        return $this->productOrderItem->get_tax_class();
+
     }
 
-    public function get_tax_name()
+    public function get_tax_rate_id()
     {
-        return isset($this->lineItem['label']) ? $this->lineItem['label'] : '';
+        if (null == $this->productOrderItem) {
+            return isset($this->wooLineItem['rate_id']) ? $this->wooLineItem['rate_id'] : '';
+        }
+
+        return $this->lineOrderItemTax->get_rate_id();
+    }
+
+    public function get_tax_label()
+    {
+        if (null == $this->productOrderItem) {
+            return isset($this->lineItem['label']) ? $this->lineItem['label'] : '';
+        }
+
+        return $this->lineOrderItemTax->get_label();
+    }
+
+    public function get_line_tax()
+    {
+        if (null == $this->productOrderItem) {
+            return isset($this->lineItem['line_tax']) ? $this->lineItem['line_tax'] : '';
+        }
+
+        return $this->productOrderItem->get_total_tax();
     }
 
     public function get_subtotal()
@@ -163,6 +211,18 @@ class LS_Woo_Order_Line_Item
 
         return $this->productOrderItem->get_name();
     }
+
+    public function get_shipping_tax_total()
+    {
+        if(null == $this->lineOrderItemTax){
+            return $this->lineItem['shipping_tax_amount'];
+        }
+
+        return $this->lineOrderItemTax->get_shipping_tax_total();
+
+    }
+
+
 
     /**
      * Get line item base on its key

@@ -53,6 +53,20 @@
     color: #000;
 }
 
+.btn-yes{
+    color: green !important;
+    width: 90px;
+    font-weight: 900;
+    float: left;
+}
+
+.btn-no{
+    color: red !important;
+    width: 90px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
 .popup{
 	background:rgb(240, 240, 240); 
 	border-radius:5px;
@@ -151,4 +165,83 @@
 label {
     display: inline-block;
     width: 5em;
+}
+
+.ls-modal-backdrop{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    min-height: 360px;
+    background: #000;
+    opacity: .7;
+    z-index: 99900;
+}
+
+.hide, .close{
+    display: none !important;
+}
+
+.open{
+    display: block;
+}
+
+.ls-sync-modal .ui-progressbar,
+.ls-vend-sync-modal .ui-progressbar{
+    position: relative;
+}
+.ls-sync-modal .progress-label,
+.ls-vend-sync-modal .progress-label {
+    position: relative;
+    /*right: 38% !important;*/
+    top: 1px;
+    font-weight: normal;
+    text-shadow: none;
+    color: #c7c7c7;
+    height: 24px;
+    font-size: 12px;
+}
+
+.ls-sync-modal .ui-widget.ui-widget-content,
+.ls-vend-sync-modal .ui-widget.ui-widget-content{
+    border: 1px solid #21a54f !important;
+}
+
+.ls-sync-modal .ui-widget-header,
+.ls-vend-sync-modal .ui-widget-header {
+    border: 1px solid #21a54f !important;
+    background: #21a54f !important;
+    color: #fff !important;
+}
+
+.ls-sync-modal .ui-progressbar,
+.ls-vend-sync-modal .ui-progressbar {
+    height: 23px !important;
+    text-align: left !important;
+    margin-top: 19px;
+}
+.ls-sync-modal #progressbar ,
+.ls-vend-sync-modal #progressbar {
+    width: 450px;
+}
+
+.ls-sync-modal .form-holder .a-href-like-button,
+.ls-vend-sync-modal .form-holder .a-href-like-button {
+    background-color: #347bc1;
+    border: none;
+    padding: 10px 15px;
+    color: #fff;
+    float: right;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.sync-buttons {
+    margin: auto;
+    width: 220px;
+}
+
+.sync-buttons .button {
+    margin: 10px;
 }

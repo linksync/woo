@@ -28,7 +28,7 @@ class LS_Order_Api{
 			$str_params = '';
 			if( is_array($params) ){
 				foreach($params as $key => $value){
-					$str_params .= $key.'='.$value.'&';
+					$str_params .= $key.'='.urlencode($value).'&';
 				}
 			}else{
 				$str_params = $params;
@@ -47,6 +47,18 @@ class LS_Order_Api{
 
 		return $results;
 	}
+
+    public function get_order_since($stringDateTime = null)
+    {
+        $url = array();
+        if (!is_null($stringDateTime)) {
+            $url = array(
+                'since' => $stringDateTime
+            );
+        }
+
+        return $this->get_orders($url);
+    }
 
 
 	public function get_order_per_page(){
