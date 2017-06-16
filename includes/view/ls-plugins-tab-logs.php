@@ -1,21 +1,22 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit('Access is Denied');
+<?php if (!defined('ABSPATH')) exit('Access is Denied');
 
 
- if (isset($_POST['clearlog'])) {
+if (isset($_POST['clearlog'])) {
     $empty = LSC_Log::instance()->truncate_table();
     if ($empty) {
         $response = "Logs Clear successfully!";
     } else {
         $response = "Error:Unable to Clear Logs Details";
     }
-    ?><script>
+    ?>
+    <script>
         jQuery('#response').removeClass('error').addClass('updated').html("<?php echo $response; ?>").fadeIn().delay(3000).fadeOut(4000);
     </script><?php
- }
+}
 
- if (isset($_GET['check']) && $_GET['check'] == 'all') {
+if (isset($_GET['check']) && $_GET['check'] == 'all') {
     if (isset($_POST['send_log'])) {
-        $fileName = LS_PLUGIN_DIR. '/classes/raw-log.txt';
+        $fileName = LS_PLUGIN_DIR . '/classes/raw-log.txt';
         $data = file_get_contents($fileName);
         $encoded_data = base64_encode($data);
         $result = array(
@@ -28,12 +29,13 @@
         } else {
             $response = "Error:Unable to Send Logs Details";
         }
-            ?><script>
-                jQuery('#response').removeClass('error').addClass('updated').html("<?php echo $response; ?>").fadeIn().delay(3000).fadeOut(4000);
-            </script><?php
+        ?>
+        <script>
+            jQuery('#response').removeClass('error').addClass('updated').html("<?php echo $response; ?>").fadeIn().delay(3000).fadeOut(4000);
+        </script><?php
     }
 
-    echo  "<fieldset>
+    echo "<fieldset>
                 <legend>Linksync Log</legend>
                 <div style='float: left;margin-bottom: 10px;'>
                     <form method='POST'>
@@ -61,9 +63,10 @@
         } else {
             $response = "Error:Unable to Send Logs Details ";
         }
-            ?><script>
-                jQuery('#response').removeClass('error').addClass('updated').html("<?php echo $response; ?>").fadeIn().delay(3000).fadeOut(4000);
-            </script><?php
+        ?>
+        <script>
+            jQuery('#response').removeClass('error').addClass('updated').html("<?php echo $response; ?>").fadeIn().delay(3000).fadeOut(4000);
+        </script><?php
     }
 
     echo "<fieldset id=test>
@@ -80,7 +83,7 @@
                 </form>
             </div>" . LSC_Log::getLogs() . "
 
-            <a href='?page=linksync&setting=logs&check=all'><br>
+            <a href='?page=" . LS_Vend::$slug . "&setting=logs&check=all'><br>
                 <center>
                     <input type='button' class='button' style='color:#0074a2' name='allLogs' value='Show all'>
             </a>

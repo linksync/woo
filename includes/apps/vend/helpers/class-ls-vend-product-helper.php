@@ -6,7 +6,7 @@ class LS_Vend_Product_Helper
     public static function isTypeSyncAbleToVend($type)
     {
         $bool = false;
-        $product_types = array('simple', 'variable');
+        $product_types = array('simple', 'variable', 'product');
 
         if (in_array($type, $product_types)) {
             $bool = true;
@@ -88,8 +88,7 @@ class LS_Vend_Product_Helper
     {
         $productSyncOption = LS_Vend()->product_option();
         $productSyncQuantityOption = $productSyncOption->quantity();
-        $wooProduct = wc_get_product($productId);
-        $wooProductHelper = new LS_Product_Helper($wooProduct);
+        $wooProduct = new LS_Woo_Product($productId);
         $postArg['ID'] = $productId;
 
         $productDescription = $product->get_description();
@@ -107,7 +106,7 @@ class LS_Vend_Product_Helper
             }
         }
 
-        if ('pending' == $wooProductHelper->getStatus()) {
+        if ('pending' == $wooProduct->get_status()) {
             $postArg['post_status'] = 'pending';
         }
 
@@ -177,7 +176,7 @@ class LS_Vend_Product_Helper
                 foreach ($variants as $variant) {
                     $variant = new LS_Product_Variant($products_meta, $variant);
                     $res = self::createUpdateVariantProduct($variant);
-                    $productAttributes = array_merge($productAttributes, $res['_product_attributes']);
+                    $productAttributes = array_merge((array)$productAttributes, isset($res['_product_attributes']) ? (array)$res['_product_attributes'] : array());
                 }
                 $products_meta->update_product_attributes($productAttributes);
             }
@@ -584,6 +583,8 @@ class LS_Vend_Product_Helper
                 $var_meta->update_tax_id($variant->get_tax_id());
                 $var_meta->update_sku($variant->get_sku());
                 $var_meta->update_visibility($status == 'publish' ? 'visible' : '');
+                $var_meta->updateFromLinkSyncJson($variant->getJsonProduct());
+                $var_meta->update_vend_product_id(get_vend_id($variant->get_id()));
                 $variantQuantity = self::getProductQuantity($variant);
 
                 if ('on' == $productSyncOption->price()) {
@@ -627,7 +628,7 @@ class LS_Vend_Product_Helper
                         'attr_value' => $attr_value
                     );
 
-                    if (!empty($attr_name) && !empty($attr_value)) {
+                    if (!empty($attr_name) && !empty($attr_value) && 'NULL' != $attr_value) {
 
                         //use for setting _product_attributes meta attribute
                         $attr_data = self::toWooVariantAttributes($attr_args);
@@ -659,6 +660,69 @@ class LS_Vend_Product_Helper
             }
         }
 
+    }
+
+
+    public static function get_vend_connected_products($orderBy = '', $order = 'asc')
+    {
+        global $wpdb;
+
+        $orderBySql = '';
+        if (!empty($orderBy)) {
+            $orderBySql = 'ORDER BY ' . $orderBy . ' ' . strtoupper($order);
+        } else {
+            $orderBySql = 'ORDER BY wpmeta.meta_value ASC';
+        }
+
+        $sql = "
+					SELECT
+							wposts.ID,
+							wposts.post_title AS product_name,
+                            wposts.post_status AS product_status,
+                            wpmeta.meta_key,
+                            wpmeta.meta_value,
+                            wposts.post_type AS product_type,
+                            wposts.post_parent AS product_parent
+					FROM $wpdb->postmeta AS wpmeta
+					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
+					WHERE 
+					      wpmeta.meta_key IN ('_ls_vend_pid') AND wpmeta.meta_value != '' AND 
+					      wposts.post_type IN('product','product_variation')
+					  $orderBySql
+				";
+
+        //get all products with empty sku
+        $empty_skus = $wpdb->get_results($sql, ARRAY_A);
+
+        return $empty_skus;
+    }
+
+    /**
+     * Update Product Vend Ids
+     * @param $linksync_product
+     */
+    public static function update_vend_ids($linksync_product)
+    {
+        if (!empty($linksync_product) && !empty($linksync_product['id'])) {
+            $responseProduct = new LS_Product($linksync_product);
+            $productId = LS_Product_Helper::getProductIdBySku($responseProduct->get_sku());
+            if (!empty($productId)) {
+                $product_meta = new LS_Product_Meta($productId);
+                $product_meta->update_vend_product_id(get_vend_id($responseProduct->get_id()));
+            }
+
+            if ($responseProduct->has_variant()) {
+                $variants = $responseProduct->get_variants();
+                foreach ($variants as $variation) {
+                    $variationProduct = new LS_Product($variation);
+                    $variationId = LS_Product_Helper::getProductIdBySku($variationProduct->get_sku());
+                    if (!empty($variationId)) {
+                        $variationMeta = new LS_Product_Meta($variationId);
+                        $variationMeta->update_vend_product_id(get_vend_id($variationProduct->get_id()));
+                    }
+                }
+            }
+        }
     }
 
 }

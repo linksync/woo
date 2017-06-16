@@ -251,4 +251,42 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return update_option('ps_unpublish', $value);
     }
 
+    public function selected_radio_for_category()
+    {
+        return get_option('cat_radio');
+    }
+
+    public function get_syncing_options()
+    {
+        return array(
+            'sync_type' => $this->sync_type(),
+            'name_or_title' => $this->nameTitle(),
+            'description' => $this->description(),
+            'short_description' => $this->shortDescription(),
+            'price_option_group' => array(
+                'price' => $this->price(),
+                'price_field' => $this->priceField(),
+                'treat_price' => $this->excluding_tax(),
+                'use_woocommerce_tax_opton' => $this->linksync_woocommerce_tax_option()
+            ),
+            'quantity_option_group' => array(
+                'quantity' => $this->quantity(),
+                'change_product_status' => $this->changeProductStatusBaseOnQuantity()
+            ),
+            'tags' => $this->tag(),
+            'category_option_group' => array(
+                'category' => $this->category(),
+                'category_selected_radio' => $this->selected_radio_for_category()
+            ),
+            'product_status' => $this->productStatusToPending(),
+            'import_by_tag' => $this->import_by_tag(),
+            'image_option_group' => array(
+                'image' => $this->image(),
+                'image_sync_type' => $this->importImage()
+            ),
+            'create_new' => $this->createNew(),
+            'delete' => $this->delete()
+        );
+    }
+
 }

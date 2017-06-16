@@ -8,9 +8,10 @@ class LS_Vend_Order_Option extends LS_Vend_Option
      */
     protected static $_instance = null;
 
-    public static function instance(){
+    public static function instance()
+    {
 
-        if( is_null( self::$_instance ) ){
+        if (is_null(self::$_instance)) {
             self::$_instance = new self();
         }
 
@@ -34,13 +35,13 @@ class LS_Vend_Order_Option extends LS_Vend_Option
 
     public function get_all_sync_type()
     {
-        return array('wc_to_vend', 'vend_to_wc-way','disabled');
+        return array('wc_to_vend', 'vend_to_wc-way', 'disabled');
     }
 
     public function isTheOrderWasSyncToVend($WoocommerceOrderId)
     {
         $vendOrderId = get_post_meta($WoocommerceOrderId, '_ls_vend_order_id', true);
-        if(empty($vendOrderId)){
+        if (empty($vendOrderId)) {
             return false;
         }
 
@@ -155,7 +156,7 @@ class LS_Vend_Order_Option extends LS_Vend_Option
     public function setBillingAddressToBePhysicalAddress($optionValue)
     {
         $optValue = 'no';
-        if('yes' == $optionValue){
+        if ('yes' == $optionValue) {
             $optValue = $optionValue;
         }
 
@@ -170,11 +171,22 @@ class LS_Vend_Order_Option extends LS_Vend_Option
     public function setShippingAddressToBePostalAddress($optionValue)
     {
         $optValue = 'no';
-        if('yes' == $optionValue){
+        if ('yes' == $optionValue) {
             $optValue = $optionValue;
         }
 
         return self::instance()->update_option('useshippingtobepostal', $optValue);
+    }
+
+    public function get_syncing_options()
+    {
+        return array(
+            'sync_type' => $this->sync_type(),
+            'order_status_vend_to_woo' => $this->orderStatusVendToWoo(),
+            'customer_import' => $this->customerImport(),
+            'order_status_woo_to_vend' => $this->orderStatusWooToVend(),
+            'customer_export' => $this->customerExport()
+        );
     }
 }
 

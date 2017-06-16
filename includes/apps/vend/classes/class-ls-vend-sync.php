@@ -7,12 +7,15 @@ class LS_Vend_Sync
 
     public function __construct()
     {
-        self::$orderSyncOption = LS_Vend()->order_option();
-        self::$productSyncOption = LS_Vend()->product_option();
+        $orderSyncOption = LS_Vend()->order_option();
+        $productSyncOption = LS_Vend()->product_option();
 
         LS_Vend_Ajax::init_hook();
 
-        if (self::$orderSyncOption->woocommerceToVend() == self::$orderSyncOption->sync_type()) {
+        if ($orderSyncOption->woocommerceToVend() == $orderSyncOption->sync_type()) {
+            /**
+             * Add the hook for syncing WooCommerce order if order syncing tye is WooCommerce to Vend
+             */
             add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'), 1);
             add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'importOrderToVend'));
         }
@@ -20,9 +23,13 @@ class LS_Vend_Sync
 
         self::add_action_save_post();
 
-        $pro_sync_type = self::$productSyncOption->sync_type();
+        $pro_sync_type = $productSyncOption->sync_type();
         if ($pro_sync_type == 'two_way' || $pro_sync_type == 'wc_to_vend') {
-            if ('on' == self::$productSyncOption->delete()) {
+            if ('on' == $productSyncOption->delete()) {
+
+                /**
+                 * Enable vend product deletion if linksync product syncing delete option is enable
+                 */
                 add_action('before_delete_post', array('LS_Vend_Sync', 'deleteVendProduct'));
             }
 
@@ -54,6 +61,9 @@ class LS_Vend_Sync
 
     }
 
+    /**
+     * Will add hook on saving WooCommerce product
+     */
     public static function add_action_save_post()
     {
         if (LS_Helper::isWooVersionLessThan_2_4_15()) {
@@ -108,7 +118,7 @@ class LS_Vend_Sync
             return $product_id;
         }
 
-        LS_Vend_Sync::importProductToVend($product_id);
+        self::importProductToVend($product_id);
 
     }
 
@@ -119,16 +129,17 @@ class LS_Vend_Sync
     public static function importProductToVend($product_id)
     {
         set_time_limit(0);
-        $product = wc_get_product($product_id);
+        $product = new LS_Woo_Product($product_id);
         $product_meta = new LS_Product_Meta($product_id);
+        $productHelper = new LS_Product_Helper($product);
         $productOptionSyncType = LS_Vend()->product_option()->sync_type();
 
         if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
-            $product_type = $product->get_type();
+            $product_type = $productHelper->getType();
 
             if (LS_Product_Helper::isVariationProduct($product)) {
                 $parent_id = LS_Product_Helper::getProductParentId($product);
-                $product = wc_get_product($parent_id);
+                $product = new LS_Woo_Product($parent_id);
             }
 
             $product_post_status = LS_Product_Helper::getProductStatus($product);
@@ -182,8 +193,8 @@ class LS_Vend_Sync
                     'product_option_price_field' => $productOptionPriceField,
                     'tax_status' => $tax_status,
                     'tax_class' => $product_meta->get_tax_class(),
-                    'product_regular_price' => $product->get_regular_price(),
-                    'product_sale_price' => $product->get_sale_price(),
+                    'product_regular_price' => $product_meta->get_regular_price(),
+                    'product_sale_price' => $product_meta->get_sale_price(),
                     'excluding_tax' => $excluding_tax,
                     'display_retail_price_tax_inclusive' => $display_retail_price_tax_inclusive,
                     'vend_option_woo_to_vend_outlet' => $vendOptionWooToVendOutlet,
@@ -271,10 +282,10 @@ class LS_Vend_Sync
                     $j_product = '';//Do not sync variable if no variation
                 }
 
-
                 if (!empty($j_product)) {
                     $result = LS_Vend()->api()->product()->save_product($j_product);
                     if (!empty($result['id'])) {
+                        LS_Vend_Product_Helper::update_vend_ids($result);
                         LSC_Log::add_dev_success('LS_Vend_Sync::importProductToVend', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
                     } else {
                         LSC_Log::add_dev_failed('LS_Vend_Sync::importProductToVend25', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
@@ -285,7 +296,7 @@ class LS_Vend_Sync
                      *
                      * @since 2.4.21
                      *
-                     * @param int           $product_id   Product ID.
+                     * @param int $product_id Product ID.
                      */
                     do_action('ls_after_woo_to_vend_product_sync', $product_id, $json_product, $result);
                 }
@@ -306,7 +317,8 @@ class LS_Vend_Sync
 
         if (
             'disabled_sync' == $productSyncOption->sync_type() ||
-            'shipping' == $product->get_sku()
+            'shipping' == $product->get_sku() ||
+            'refund' == $product->get_sku()
         ) {
             //Do not create this product in woocommerce if the sku is shipping
             //Or return if sync type is disabled
@@ -334,12 +346,10 @@ class LS_Vend_Sync
 
         if (!empty($wooProductId)) {
 
-            //set last sync to the current update_at key
-            LS_Vend()->option()->lastProductUpdate($product->get_update_at());
-
             //Get the product meta object for product
             $product_meta = new LS_Product_Meta($wooProductId);
             $product_meta->updateFromLinkSyncJson($product->getJsonProduct());
+            $product_meta->update_vend_product_id(get_vend_id($product->get_id()));
 
             //set last sync to the current update_at key
             LS_Vend()->option()->lastProductUpdate($product->get_update_at());
@@ -355,9 +365,9 @@ class LS_Vend_Sync
          *
          * @since 2.4.21
          *
-         * @param int           $wooProductId   Product ID.
-         * @param LS_Product    $product        linksync Json product getters.
-         * @param bool          $is_new         Whether this is an existing product being updated or not.
+         * @param int $wooProductId Product ID.
+         * @param LS_Product $product linksync Json product getters.
+         * @param bool $is_new Whether this is an existing product being updated or not.
          */
         do_action('ls_after_vend_to_woo_product_sync', $wooProductId, $product, $is_new);
 
@@ -370,7 +380,8 @@ class LS_Vend_Sync
     public static function importOrderToVend($order_id)
     {
         set_time_limit(0);
-        if (true == self::$orderSyncOption->isTheOrderWasSyncToVend($order_id)) {
+        $orderSyncOption = LS_Vend()->order_option();
+        if (true == $orderSyncOption->isTheOrderWasSyncToVend($order_id)) {
             //order was already synced to vend
             return;
         }
@@ -379,6 +390,7 @@ class LS_Vend_Sync
         $json_order = new LS_Order_Json_Factory();
         $wooOrder = wc_get_order($order_id);
         $wooOrderHelper = new LS_Order_Helper($wooOrder);
+        $wooOrderMeta = new LS_Order_Meta($order_id);
 
         $orderStatus = $wooOrderHelper->getStatus();
         $orderStatusToSyncWooToVend = LS_Vend()->getSelectedOrderStatusToTriggerWooToVendSync();
@@ -421,15 +433,15 @@ class LS_Vend_Sync
                 $product_id = $orderLineItem->get_product_id();
             }
 
-            $wooProduct = wc_get_product($product_id);
-            $product_meta = new LS_Product_Meta($wooProduct);
+            $wooProduct = new LS_Woo_Product($product_id);
+            $product_meta = new LS_Product_Meta($product_id);
             $wooProductTaxStatus = $product_meta->get_tax_status();
             $vendTaxDetails = array(
                 'taxName' => null,
                 'taxId' => null,
                 'taxRate' => null
             );
-            if('taxable' == $wooProductTaxStatus){
+            if ('taxable' == $wooProductTaxStatus) {
 
                 $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
                     $orderTaxLabel,
@@ -439,7 +451,7 @@ class LS_Vend_Sync
             }
 
 
-            $product_amount = $wooProduct->get_price();
+            $product_amount = $product_meta->get_price();
             $lineQuantity = $orderLineItem->get_quantity();
             $discount = $orderLineItem->get_discount_amount();
 
@@ -501,10 +513,23 @@ class LS_Vend_Sync
             );
         }
 
+        $orderTotalRefund = $wooOrder->get_total_refunded();
+        /**
+         * Refund handling
+         */
+        if (!empty($orderTotalRefund)) {
+            //Multiply negative one to make total refund negative value
+            $orderTotalRefund = -1 * $orderTotalRefund;
+            $products[] = array(
+                "price" => $orderTotalRefund,
+                "sku" => "refund"
+            );
+        }
+
         $orderTransactionId = $wooOrder->get_transaction_id();
         $orderPaymentMethod = $wooOrderHelper->getPaymentMethod();
         if (!empty($orderPaymentMethod)) {
-            $vendPaymentDetails = self::$orderSyncOption->getMappedVendPaymentId($orderPaymentMethod);
+            $vendPaymentDetails = $orderSyncOption->getMappedVendPaymentId($orderPaymentMethod);
             $payment = array(
                 "retailer_payment_type_id" => !empty($vendPaymentDetails[1]) ? $vendPaymentDetails[1] : null,
                 "method" => !empty($vendPaymentDetails[0]) ? $vendPaymentDetails[0] : null,
@@ -604,7 +629,7 @@ class LS_Vend_Sync
         $delivery_address = !empty($delivery_address) ? $delivery_address : null;
         $comments = "WooCommerce " . $order_id;
 
-        $selectedVendUser = self::$orderSyncOption->getSelectedVendUser();
+        $selectedVendUser = $orderSyncOption->getSelectedVendUser();
 
         $json_order->set_uid($selectedVendUser['vend_uid']);
         $json_order->set_user_name($selectedVendUser['vend_username']);
@@ -635,10 +660,13 @@ class LS_Vend_Sync
         ));
 
         if (!empty($post_order['id'])) {
-            self::$orderSyncOption->setFlagOrderWasSyncToVend($order_id, $post_order['orderId']);
+            $orderSyncOption->setFlagOrderWasSyncToVend($order_id, $post_order['orderId']);
+            $wooOrderMeta->update_vend_order_id(get_vend_id($post_order['id']));
+            $wooOrderMeta->update_vend_receipt_number($post_order['orderId']);
+
             $note = sprintf(__('This Order was exported to Vend with the Receipt Number %s', 'woocommerce'), $post_order['orderId']);
             $wooOrder->add_order_note($note);
-            LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_id, LS_ApiController::get_current_laid());
+            LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_id, LS_Vend()->laid()->get_current_laid());
 
             LSC_Log::add_dev_success('LS_Vend_Sync::importOrderToVend', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
         } else {
@@ -651,7 +679,7 @@ class LS_Vend_Sync
          *
          * @since 2.4.21
          *
-         * @param int           $order_id   Order ID.
+         * @param int $order_id Order ID.
          */
         do_action('ls_after_woo_to_vend_order_sync', $order_id);
 
@@ -660,11 +688,11 @@ class LS_Vend_Sync
     public static function deleteVendProduct($product_id)
     {
         set_time_limit(0);
-        $pro_object = wc_get_product($product_id);
-        $productHelper = new LS_Product_Helper($pro_object);
+        $productHelper = new LS_Product_Helper($product_id);
 
         if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($productHelper->getType())) {
-            $product_sku = $productHelper->getSku();
+            $product_meta = new LS_Product_Meta($product_id);
+            $product_sku = $product_meta->get_sku();
             if (!empty($product_sku)) {
                 $delete_response = LS_Vend()->api()->product()->delete_product($product_sku);
 
@@ -673,7 +701,7 @@ class LS_Vend_Sync
                  *
                  * @since 2.4.21
                  *
-                 * @param String           $delete_response   Json response from linksync after sending delete request for product.
+                 * @param String $delete_response Json response from linksync after sending delete request for product.
                  */
                 do_action('ls_after_vend_product_deletion', $delete_response);
             }
@@ -749,7 +777,7 @@ class LS_Vend_Sync
         $productSyncOption = LS_Vend()->product_option();
         $product_sync_type = $productSyncOption->sync_type();
 
-        $urlParams ='';
+        $urlParams = '';
 
         $importByTag = $productSyncOption->import_by_tag();
         if ('on' == $importByTag) {
@@ -783,12 +811,111 @@ class LS_Vend_Sync
         }
 
         if (null != $last_product_sync) {
-            $urlParams.='since=' . urlencode($last_product_sync).'&';
+            $urlParams .= 'since=' . urlencode($last_product_sync) . '&';
         }
 
-        $urlParams .= 'page='.urlencode($page);
+        $urlParams .= 'page=' . urlencode($page);
 
         return $urlParams;
+    }
+
+    public static function from_vend_to_woo_quantity_update($page = 1)
+    {
+        $productSyncOption = LS_Vend()->product_option();
+        $product_sync_type = $productSyncOption->sync_type();
+        $product_quantity_option = $productSyncOption->quantity();
+
+        if (
+            !empty($product_sync_type) &&
+            'wc_to_vend' == $product_sync_type &&
+            'on' == $product_quantity_option
+        ) {
+            $laid_info = LS_Vend()->laid()->get_current_laid();
+
+            $result_time = date("Y-m-d H:i:s", $laid_info['time']);
+            $url = '';
+            if (!empty($result_time)) {
+                $url = 'since=' . urlencode($result_time);
+            }
+
+            $product_last_update = ls_last_product_updated_at();
+            if (false != $product_last_update) {
+                $url = 'since=' . urlencode($product_last_update);
+            }
+
+            $total_pages = 0;
+            $url .= '&page=' . $page;
+
+            $products = LS_Vend()->api()->product()->get_product($url);
+            if (!empty($products['products']) && !empty($products['pagination'])) {
+
+                $page = $products['pagination']['page'];
+                $total_pages = $products['pagination']['pages'];
+
+                foreach ($products['products'] as $product) {
+                    if (!empty($product['variants'])) {
+
+                        foreach ($product['variants'] as $pro_variant) {
+
+                            if (!empty($pro_variant['sku'])) {
+                                $product_id = LS_Product_Helper::getProductIdBySku($pro_variant['sku']);
+                                if (!empty($product_id)) {
+                                    $product_meta = new LS_Product_Meta($product_id);
+                                    ls_last_product_updated_at($pro_variant['update_at']);
+                                    $quantity = 0;
+                                    if (!empty($pro_variant['outlets'])) {
+                                        foreach ($pro_variant['outlets'] as $outlet) {
+                                            if (!empty($outlet['quantity'])) {
+                                                $quantity += (int)$outlet['quantity'];
+                                            }
+                                        }
+                                    }
+
+                                    $product_meta->update_stock($quantity);
+                                    if ($quantity <= 0) {
+                                        $product_meta->update_stock_status('outofstock');
+                                    } else {
+                                        $product_meta->update_stock_status('instock');
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        if (!empty($product['sku'])) {
+                            $product_id = LS_Product_Helper::getProductIdBySku($product['sku']);
+                            if (!empty($product_id)) {
+                                $product_meta = new LS_Product_Meta($product_id);
+                                ls_last_product_updated_at($product['update_at']);
+                                $quantity = 0;
+
+                                if (!empty($product['outlets'])) {
+                                    foreach ($product['outlets'] as $outlet) {
+                                        if (!empty($outlet['quantity'])) {
+                                            $quantity += (int)$outlet['quantity'];
+                                        }
+                                    }
+                                }
+
+                                $product_meta->update_stock($quantity);
+                                if ($quantity <= 0) {
+                                    $product_meta->update_stock_status('outofstock');
+                                } else {
+                                    $product_meta->update_stock_status('instock');
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $next_page = $page + 1;
+
+                if ($next_page <= $total_pages) {
+                    self::from_vend_to_woo_quantity_update($next_page);
+                }
+
+            }
+
+        }
     }
 }
 

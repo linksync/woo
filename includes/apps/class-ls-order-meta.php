@@ -5,10 +5,79 @@ class LS_Order_Meta
 
     private $orderId = null;
 
-    public  function __construct($orderId)
+    public function __construct($orderId)
     {
         $this->orderId = $orderId;
     }
+
+    public function set_vend_order_id()
+    {
+
+    }
+
+    public function get_customer_id()
+    {
+        return $this->get_meta('_customer_user');
+    }
+
+    public function update_costumer_id($customer_id)
+    {
+        return $this->update_meta('_customer_user', $customer_id);
+    }
+
+
+    public function get_billing_first_name()
+    {
+        return $this->get_meta('_billing_first_name');
+    }
+
+    public function update_billing_first_name($first_name)
+    {
+        return $this->update_meta('_billing_first_name', $first_name);
+    }
+
+
+    public function get_billing_last_name()
+    {
+        return $this->get_meta('_billing_last_name');
+    }
+
+    public function update_billing_last_name($last_name)
+    {
+        return $this->update_meta('_billing_last_name', $last_name);
+    }
+
+
+    public function get_billing_email()
+    {
+        return $this->get_meta('_billing_email');
+    }
+
+    public function update_billing_email($email)
+    {
+        return $this->update_meta('_billing_email', $email);
+    }
+
+    public function get_vend_order_id()
+    {
+        return $this->get_meta('_ls_vend_oid');
+    }
+
+    public function update_vend_order_id($meta_value)
+    {
+        return $this->update_meta('_ls_vend_oid', $meta_value);
+    }
+
+    public function get_vend_receipt_number()
+    {
+        return $this->get_meta('_ls_vend_receipt_number');
+    }
+
+    public function update_vend_receipt_number($receipt_number)
+    {
+        return $this->update_meta('_ls_vend_receipt_number', $receipt_number);
+    }
+
 
     public function getOrderJsonFromWooToVend()
     {

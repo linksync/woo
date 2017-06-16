@@ -2,14 +2,18 @@
 
 class LS_User_Helper
 {
-    public function __construct()
+    public static function update_button()
     {
-        add_action('admin_notices', array($this, 'setUpLaidInfoMessage'));
+        $update_button = '<a  href="https://my.linksync.com/index.php?m=dashboard" 
+                              target="_blank" 
+                              class="button button-primary" style="margin-top: -4px;">Click here to upgrade now</a>';
+
+        return $update_button;
     }
 
     public static function setUpLaidInfoMessage()
     {
-        $message = LS_ApiController::get_current_laid_info();
+        $message = LS_Vend()->laid()->get_current_laid_info();
         $isFreeTrial = false;
         $service_status = '';
         $message_data = '';
@@ -115,5 +119,3 @@ class LS_User_Helper
     }
 
 }
-
-new LS_User_Helper();

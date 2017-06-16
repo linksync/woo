@@ -60,6 +60,7 @@
     float: left;
 }
 
+
 .btn-no{
     color: red !important;
     width: 90px;
@@ -185,6 +186,13 @@ label {
 
 .open{
     display: block;
+}
+
+.ls-modal-close-container{
+    width: 100%;
+}
+.ls-modal-close-container > div{
+    float: right;
 }
 
 .ls-sync-modal .ui-progressbar,

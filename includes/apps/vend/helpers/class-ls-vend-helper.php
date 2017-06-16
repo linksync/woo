@@ -128,7 +128,7 @@ class LS_Vend_Helper
         $vendOptionWooToVendOutletDetail = $arrayOfParams['vend_option_woo_to_vend_outlet_detail'];
         $parent_id = $arrayOfParams['parent_id'];
 
-        $var_product = wc_get_product($varId);
+        $var_product = new LS_Woo_Product($varId);
         $var_product_meta = new LS_Product_Meta($varId);
         $var_json_product = new LS_Json_Product_Factory();
 
@@ -202,8 +202,8 @@ class LS_Vend_Helper
                 }
             }
 
-            for($i = $option_key; $i <= $vend_options_count; $i++){
-                if(isset($vend_options[$i])){
+            for ($i = $option_key; $i <= $vend_options_count; $i++) {
+                if (isset($vend_options[$i])) {
                     $var_json_product->set($vend_options[$i] . $option_name_str, "NULL");
                     $var_json_product->set($vend_options[$i] . $option_value_str, "NULL");
                 }
@@ -271,6 +271,23 @@ class LS_Vend_Helper
         }
 
         return $excluding_tax;
+    }
+
+    public static function save_woocommerce_version()
+    {
+        $plugin_file = WP_PLUGIN_DIR . '/woocommerce/woocommerce.php';
+        $data = get_plugin_data($plugin_file, $markup = true, $translate = true);
+
+        if (!empty($data['Version'])) {
+            LS_Vend()->option()->save_woocommerce_version($data['Version']);
+            $check = '2.2';
+            if ($data['Version'] <= $check) {
+                update_option('linksync_wooVersion', 'on');
+            } else {
+                update_option('linksync_wooVersion', 'off');
+            }
+        }
+
     }
 
 }

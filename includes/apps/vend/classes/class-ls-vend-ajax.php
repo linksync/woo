@@ -3,6 +3,9 @@
 class LS_Vend_Ajax
 {
 
+    /**
+     * Initialize needed ajax hooks for linksync vend plugin
+     */
     public static function init_hook()
     {
         add_action('wp_ajax_vend_get_products', array('LS_Vend_Ajax', 'get_products'));
@@ -14,14 +17,16 @@ class LS_Vend_Ajax
         add_action('wp_ajax_vend_since_last_sync', array('LS_Vend_Ajax', 'get_products_since_last_update'));
 
         $wh_code = get_option('webhook_url_code');
-        add_action('wp_ajax_vend_' . $wh_code, array('LS_Vend_Ajax', 'sync_triggered_by_lws'));
-        add_action('wp_ajax_nopriv_vend_' . $wh_code, array('LS_Vend_Ajax', 'sync_triggered_by_lws'));
+        add_action('wp_ajax_ls_vend_' . $wh_code, array('LS_Vend_Ajax', 'sync_triggered_by_lws'));
+        add_action('wp_ajax_nopriv_ls_vend_' . $wh_code, array('LS_Vend_Ajax', 'sync_triggered_by_lws'));
+
     }
 
     public static function get_products()
     {
         $page = isset($_POST['page']) ? $_POST['page'] : 1;
         $productUrlParams = LS_Vend_Sync::prepare_url_params_for_get_product($page);
+        LSC_Log::add_dev_success('LS_Vend_Ajax::get_products', ' get_product_args => ' . $productUrlParams);
         $products = LS_Vend()->api()->product()->get_product($productUrlParams);
         wp_send_json($products);
     }
@@ -29,10 +34,12 @@ class LS_Vend_Ajax
     public static function import_product_to_woo()
     {
         if (!empty($_POST['product'])) {
-            $deleted_product = (isset($_POST['deleted_product']) && is_numeric($_POST['deleted_product'])) ? $_POST['deleted_product']: 0;
-            $total_product = (isset($_POST['product_total_count']) && is_numeric($_POST['product_total_count'])) ? $_POST['product_total_count']: 0;
 
-            $product_total_count = (int)$total_product - (int)$deleted_product;
+            $deleted_product = (isset($_POST['deleted_product']) && is_numeric($_POST['deleted_product'])) ? $_POST['deleted_product'] : 0;
+            $total_product = (isset($_POST['product_total_count']) && is_numeric($_POST['product_total_count'])) ? $_POST['product_total_count'] : 0;
+
+            $product_total_count = (int)$total_product;
+            $product_results_count = (isset($_POST['product_result_count']) && is_numeric($_POST['product_result_count'])) ? $_POST['product_result_count'] : 0;
 
             $product = new LS_Product($_POST['product']);
             LS_Vend_Sync::importProductToWoo($product);
@@ -45,7 +52,9 @@ class LS_Vend_Ajax
 
             $response = array(
                 'msg' => $msg,
-                'percentage' => $progressValue
+                'percentage' => $progressValue,
+                'product_number' => $product_number,
+                'product_results_count' => $product_results_count
             );
             wp_send_json($response);
         }
@@ -69,7 +78,8 @@ class LS_Vend_Ajax
 
             $response = array(
                 'msg' => $msg,
-                'percentage' => $progressValue
+                'percentage' => $progressValue,
+                'product_number' => $product_number,
             );
             wp_send_json($response);
         }
@@ -88,6 +98,7 @@ class LS_Vend_Ajax
 
 
         $get_product_args = LS_Vend_Sync::prepare_url_params_for_get_product($page, $last_sync);
+        LSC_Log::add_dev_success('LS_Vend_Ajax::get_products_since_last_update', ' get_product_args => ' . $get_product_args);
         $products = LS_Vend()->api()->product()->get_product($get_product_args);
 
         wp_send_json($products);
@@ -98,18 +109,34 @@ class LS_Vend_Ajax
      */
     public static function sync_triggered_by_lws()
     {
-        $last_product_sync = LS_Vend()->option()->lastProductUpdate();
-        if(empty($last_product_sync)){
-            set_time_limit(0);
-            LS_Vend_Sync::all_product_to_woo();
-        } else {
-            set_time_limit(0);
-            LS_Vend_Sync::all_product_to_woo_since_last_update();
+        if (!isset($_REQUEST['check'])) {
+
+            $last_product_sync = LS_Vend()->option()->lastProductUpdate();
+            $productSyncOption = LS_Vend()->product_option();
+            if (
+                'two_way' == $productSyncOption->sync_type() ||
+                'vend_to_wc-way' == $productSyncOption->sync_type()
+            ) {
+                if (empty($last_product_sync)) {
+                    $currentLaidInfo = LS_Vend()->laid()->get_current_laid_info();
+                    if (!empty($currentLaidInfo['time'])) {
+                        $last_product_sync = $currentLaidInfo['time'];
+                        LS_Vend()->option()->lastProductUpdate($last_product_sync);
+                    }
+                }
+
+                set_time_limit(0);
+                LS_Vend_Sync::all_product_to_woo_since_last_update();
+            }
+
+            require_once LS_PLUGIN_DIR . 'update.php';
+            LS_Vend_Sync::from_vend_to_woo_quantity_update();
+
         }
 
+        wp_send_json(array('success' => 'Sync trigger success'));
+
     }
-
-
 
 
 }

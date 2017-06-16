@@ -30,6 +30,7 @@
             this.$modalContent = this.$mainContainer.find('.ls-vend-sync-modal-content');
             this.$modalBackDrop = this.$mainContainer.find('.ls-modal-backdrop');
             this.$modalClose = this.$mainContainer.find('.ls-modal-close');
+            this.$modalCloseContainer = this.$mainContainer.find('.ls-modal-close-container');
             this.$btnShowPopUpForWooToVend = this.$mainContainer.find('.btn-sync-woo-to-vend');
             this.$btnShowPopUpForVendToWoo = this.$mainContainer.find('.btn-sync-vend-to-woo');
             this.$btnShopPopUpForVendToWooSinceLastUpdate = this.$mainContainer.find('.vend_to_woo_since_last_update');
@@ -38,6 +39,8 @@
             this.$syncToWooButtons = this.$mainContainer.find('.sync-to-woo-buttons');
             this.$syncToVendButtons = this.$mainContainer.find('.sync-to-vend-buttons');
             this.$syncToWooButtonsSinceLastSync = this.$mainContainer.find('.sync-to-woo-buttons-since-last-update');
+
+            this.$tabMenu = this.$mainContainer.find('.ls-tab-menu');
         },
 
         bindEvents: function () {
@@ -48,6 +51,8 @@
                         no_products_to_import_woo: "No products were imported to WooCommerce since last sync",
                         action: 'vend_since_last_sync'
                     });
+                    lsVendSyncModal.$progressBar.progressbar("value", 0);
+                    lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
                     lsVendSyncModal.syncProductsFromVend();
                 });
             });
@@ -55,26 +60,30 @@
             this.$btnVendToWoo.on('click', function () {
                 lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
                     lsVendSyncModal.setOptions({
-                        first_message_label: "Getting products from Vend.",
+                        first_message_label: "Sync is starting!",
                         no_products_to_import_woo: "No products were imported to WooCommerce",
                         action: 'vend_get_products'
                     });
+                    lsVendSyncModal.$progressBar.progressbar("value", 0);
+                    lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
                     lsVendSyncModal.syncProductsFromVend();
                 });
             });
-            
+
             this.$btnWooToVend.on('click', function () {
 
                 lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
+                    lsVendSyncModal.$progressBar.progressbar("value", 0);
+                    lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
                     lsVendSyncModal.syncProductsToVend();
-                })
+                });
             });
 
             this.$btnShowPopUpForVendToWoo.on('click', function () {
 
                 lsVendSyncModal.open({
-                    buttonGroup : 'vend_to_woo',
-                    htmlMessage : 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
+                    buttonGroup: 'vend_to_woo',
+                    htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
                 });
 
             });
@@ -82,16 +91,16 @@
             this.$btnShowPopUpForWooToVend.on('click', function () {
 
                 lsVendSyncModal.open({
-                    buttonGroup : 'woo_to_vend',
-                    htmlMessage : 'Your WooCommerce products will be exported to Vend.<br/>Do you wish to continue?'
+                    buttonGroup: 'woo_to_vend',
+                    htmlMessage: 'Your WooCommerce products will be exported to Vend.<br/>Do you wish to continue?'
                 });
             });
 
             this.$btnShopPopUpForVendToWooSinceLastUpdate.on('click', function () {
 
                 lsVendSyncModal.open({
-                    buttonGroup : 'vend_to_woo_since_last_sync',
-                    htmlMessage : 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
+                    buttonGroup: 'vend_to_woo_since_last_sync',
+                    htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
                 });
 
             });
@@ -104,47 +113,172 @@
 
         },
 
+        syncProductToVend: function (woocommerce_products, product_index) {
+            if (typeof product_index == 'undefined') {
+                product_index = 0;
+            } else if (product_index <= 0) {
+                //Make sure we always start to index 1
+                product_index = 0;
+            }
+            var product_total_count = woocommerce_products.length;
+            if (product_total_count > 0) {
+
+                if (typeof woocommerce_products[product_index] != 'undefined') {
+
+                    var product_number = product_index + 1;
+                    var data = {
+                        action: 'vend_import_to_vend',
+                        p_id: woocommerce_products[product_index].ID,
+                        product_number: product_number,
+                        total_count: product_total_count,
+                    };
+                    lsVendSyncModal.$modalCloseContainer.hide();
+                    lsAjax.post(data).done(function (product_sync_response) {
+                        console.log('Successful AJAX Call! Return Data: =>');
+                        console.log(product_sync_response);
+
+
+                        lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.msg + " to Vend (" + product_sync_response.percentage + "%)");
+                        progressVal = lsVendSyncModal.$progressBar.progressbar("value");
+
+                        if (product_sync_response.product_number == product_total_count) {
+                            lsVendSyncModal.$progressBar.progressbar("value", 100);
+                            lsVendSyncModal.syncCompleted();
+                        } else {
+
+                            if (progressVal < product_sync_response.percentage) {
+                                lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                            }
+
+                        }
+
+                        var temp_product_index = product_index + 1;
+                        lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
+
+                    }).fail(function (data) {
+
+                        console.log('Failed AJAX Call of syncProductToVend :( Return Data: => ');
+                        console.log(data);
+
+                        //If failed, retry to sync with the same product index
+                        lsVendSyncModal.syncProductToVend(woocommerce_products, product_index);
+
+                    });
+
+                } else if (typeof woocommerce_products[product_index] == 'undefined') {
+
+                }
+
+
+            } else {
+
+                //No Woocommerce products to sync
+                lsVendSyncModal.$progressBar.progressbar("value", 100);
+                lsVendSyncModal.$progressBarLabel.html("No products from WooCommerce to export in Vend");
+
+            }
+
+        },
+
         syncProductsToVend: function () {
-            var product_number = 0;
-            lsVendSyncModal.$progressBar.progressbar("value", 1);
-            lsAjax.post({action: 'vend_woo_get_products'}, function (woo_products) {
+
+
+            lsAjax.post({action: 'vend_woo_get_products'}).done(function (woo_products) {
+
                 lsVendSyncModal.$progressBarLabel.html("Getting WooCommerce products to be exported in Vend.");
-                lsVendSyncModal.$progressBar.progressbar("value", 2);
                 console.log(woo_products);
 
                 if (!$.isEmptyObject(woo_products)) {
-                    var product_total_count = woo_products.length;
 
-                    if (product_total_count > 0) {
-                        for (var i = 0; i < product_total_count; i++) {
-
-                            product_number = i + 1;
-                            var data = {
-                                action: 'vend_import_to_vend',
-                                p_id: woo_products[i].ID,
-                                product_number: product_number,
-                                total_count: product_total_count,
-                            };
-                            lsAjax.post(data, function (p_res) {
-                                progressVal = lsVendSyncModal.$progressBar.progressbar("value");
-                                if (progressVal < p_res.percentage) {
-                                    lsVendSyncModal.$progressBar.progressbar("value", p_res.percentage);
-                                    lsVendSyncModal.$progressBarLabel.html("Exported " + p_res.msg + " to Vend (" + p_res.percentage + "%)");
-                                }
-                                console.log(p_res);
-
-                            });
-                        }
-                    } else {
-                        lsVendSyncModal.$progressBar.progressbar("value", 100);
-                        lsVendSyncModal.$progressBarLabel.html("No products from WooCommerce to export in Vend");
-                    }
+                    lsVendSyncModal.syncProductToVend(woo_products, 0);
 
                 } else {
                     lsVendSyncModal.$progressBar.progressbar("value", 100);
                     lsVendSyncModal.$progressBarLabel.html("No products from WooCommerce to export in Vend");
                 }
-            })
+
+            }).fail(function (data) {
+
+                console.log('Failed AJAX Call of syncProductsToVend :( Return Data: => ');
+                console.log(data);
+                lsVendSyncModal.syncProductToVend();
+
+            });
+        },
+
+        syncProductFromVend: function (linksync, product_number) {
+
+            if (typeof product_number == 'undefined') {
+                product_number = 0;
+            } else if (product_number <= 0) {
+                //Make sure we always start to page 1
+                product_number = 0;
+            }
+
+            json_linksync_products = linksync.products[product_number];
+            if (typeof json_linksync_products != 'undefined') {
+                console.log('json_linksync_products =>');
+                console.log(json_linksync_products);
+
+                var product_count = product_number + 1;
+                if (linksync.pagination.page > 1) {
+                    product_count = product_count + (50 * (linksync.pagination.page - 1));
+                }
+
+                var p_data = {
+                    action: 'vend_import_to_woo',
+                    page: linksync.pagination.page,
+                    product_total_count: linksync.pagination.results,
+                    product: json_linksync_products,
+                    product_number: product_count,
+                    product_result_count: linksync.pagination.results,
+                    deleted_product: linksync.pagination.deleted_product
+                };
+
+                console.log('post data =>');
+                console.log(p_data);
+                lsVendSyncModal.$modalCloseContainer.hide();
+                lsAjax.post(p_data).done(function (product_sync_response) {
+
+                    console.log('Successful AJAX Call! Return Data: =>');
+                    console.log(product_sync_response);
+
+                    lsVendSyncModal.$progressBarLabel.html("Imported " + product_sync_response.msg + " in WooCommerce (" + product_sync_response.percentage + "%)");
+                    progressVal = lsVendSyncModal.$progressBar.progressbar("value");
+
+                    if (product_sync_response.product_number == linksync.pagination.results) {
+                        lsVendSyncModal.$progressBar.progressbar("value", 100);
+                        lsVendSyncModal.syncCompleted();
+                    } else {
+
+                        if (progressVal < product_sync_response.percentage) {
+                            lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                        }
+
+                    }
+
+
+                    var product_index = product_number + 1;
+                    lsVendSyncModal.syncProductFromVend(linksync, product_index);
+
+                }).fail(function (data) {
+
+                    console.log('Failed AJAX Call of syncProductFromVend :( Return Data: ');
+                    console.log(data);
+                    //If ajax failed retry with the same product_number
+                    lsVendSyncModal.syncProductFromVend(linksync, product_number);
+                });
+
+            } else if (typeof json_linksync_products == 'undefined') {
+                console.log('No product index page => ' + linksync.pagination.page + ' pages => ' + linksync.pagination.pages);
+                var page = linksync.pagination.page + 1;
+                if (linksync.pagination.pages >= page) {
+                    lsVendSyncModal.syncProductsFromVend(page);
+                }
+
+            }
+
+
         },
 
         syncProductsFromVend: function (page) {
@@ -156,18 +290,9 @@
                 //Make sure we always start to page 1
                 page = 1;
             }
-            var product_number = 0;
-
-            if(lsVendSyncModal.options.first_message_label == null){
-                lsVendSyncModal.$progressBarLabel.html("Getting products from Vend.");
-            } else {
-                lsVendSyncModal.$progressBarLabel.html(lsVendSyncModal.options.first_message_label);
-            }
-
-            lsVendSyncModal.$progressBar.progressbar("value", 1);
 
             var action = 'vend_get_products';
-            if(lsVendSyncModal.options.action != null){
+            if (lsVendSyncModal.options.action != null) {
                 action = lsVendSyncModal.options.action;
             }
 
@@ -175,59 +300,36 @@
                 action: action,
                 page: page
             };
+            console.log('data_to_request => ');
             console.log(data_to_request);
-            lsAjax.post(data_to_request, function (res) {
-                lsVendSyncModal.$progressBar.progressbar("value", 2);
 
-                var product_count = res.products.length;
-                var totalProductCount = res.pagination.results;
-                console.log("total product result " + totalProductCount);
-                console.log(res);
+            lsAjax.post(data_to_request).done(function (linksync_response) {
 
+                lsVendSyncModal.$modalClose.hide();
+                lsVendSyncModal.$progressBarLabel.html("Syncing products from Vend to WooCommerce.");
+                console.log('Ajax Call Done of syncProductsFromVend :) Returned Data =>');
+                console.log(linksync_response);
+
+                var product_count = linksync_response.products.length;
                 if (product_count > 0) {
 
-                    for (var i = 0; i < product_count; i++) {
-                        product = res.products[i];
-                        if (product.deleted_at == null) {
-                            product_number = i + 1;
-                        }
+                   lsVendSyncModal.syncProductFromVend(linksync_response, 0);
 
-                        if (res.pagination.page > 1) {
-                            product_number += 50;
-                        }
-
-
-                        var p_data = {
-                            action: 'vend_import_to_woo',
-                            page: res.pagination.page,
-                            product_total_count: res.pagination.results,
-                            product: product,
-                            product_number: product_number,
-                            deleted_product: res.pagination.deleted_product
-                        };
-
-                        lsAjax.post(p_data, function (p_res) {
-
-                            progressVal = lsVendSyncModal.$progressBar.progressbar("value");
-                            if (progressVal < p_res.percentage) {
-                                lsVendSyncModal.$progressBar.progressbar("value", p_res.percentage);
-                                lsVendSyncModal.$progressBarLabel.html("Imported " + p_res.msg + " in WooCommerce (" + p_res.percentage + "%)");
-                            }
-                            console.log(p_res);
-                            console.log("progress => " + p_res.percentage);
-                        });
-                    }
                 } else if (product_count <= 1) {
                     lsVendSyncModal.$progressBar.progressbar("value", 100);
-
-                    if(lsVendSyncModal.options.no_products_to_import_woo == null){
+                    lsVendSyncModal.syncCompleted();
+                    if (lsVendSyncModal.options.no_products_to_import_woo == null) {
                         lsVendSyncModal.$progressBarLabel.html("No products were imported to WooCommerce");
                     } else {
                         lsVendSyncModal.$progressBarLabel.html(lsVendSyncModal.options.no_products_to_import_woo);
                     }
                 }
 
-            })
+            }).fail(function (data) {
+                console.log('Failed AJAX Call of syncProductsFromVend :( Return Data: ' + data);
+                //Failed then retry with the same page
+                lsVendSyncModal.syncProductsFromVend(page);
+            });
         },
 
         hideSyncButtonsAndShowProgress: function (callback) {
@@ -262,6 +364,19 @@
 
         },
 
+        syncCompleted: function (delay) {
+            if (typeof delay == 'undefined') {
+                delay = 4000;
+            }
+            setTimeout(function () {
+
+                lsVendSyncModal.$tabMenu.before('<div class="notice notice-success  sync-completed" > <p>Sync Completed!</p> </div>');
+                lsVendSyncModal.$mainContainer.find('.sync-completed').delay(delay).fadeOut('fast');
+
+            }, delay);
+
+        },
+
         close: function (delay) {
             if (typeof delay == 'undefined') {
                 delay = 4000;
@@ -273,17 +388,17 @@
                 lsVendSyncModal.$modalMessage.show();
                 lsVendSyncModal.$syncProgressContainer.hide();
                 lsVendSyncModal.$popUpButtons.show();
-
+                lsVendSyncModal.$modalCloseContainer.hide();
                 lsVendSyncModal.$modalContent.fadeOut();
-
             });
         },
 
         open: function (option) {
 
             console.log(option);
-
+            lsVendSyncModal.$modalClose.show();
             lsVendSyncModal.$syncButtonsContainer.hide();
+            lsVendSyncModal.$modalCloseContainer.show();
             var message = 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?';
             if (null != option.htmlMessage) {
                 message = option.htmlMessage;
@@ -295,7 +410,7 @@
                 lsVendSyncModal.$syncToVendButtons.show();
             } else if ('vend_to_woo' == option.buttonGroup) {
                 lsVendSyncModal.$syncToWooButtons.show();
-            } else if('vend_to_woo_since_last_sync' == option.buttonGroup){
+            } else if ('vend_to_woo_since_last_sync' == option.buttonGroup) {
                 lsVendSyncModal.$syncToWooButtonsSinceLastSync.show();
             }
 

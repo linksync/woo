@@ -2,12 +2,8 @@
 
 class LS_Support_Helper
 {
-    public function __construct()
-    {
-        add_action('wp_ajax_linksync_new_ticket_support', array($this, 'send_new_ticket'));
-    }
 
-    public function send_new_ticket()
+    public static function send_new_ticket()
     {
 
         $to = 'support@linksync.com';
@@ -135,6 +131,34 @@ class LS_Support_Helper
         </script>
         <?php
     }
+
+    public static function vend_screen_help_tab()
+    {
+        $screen = get_current_screen();
+        // Add my_help_tab if current screen is My Admin Page
+
+        $content = '<br>
+                    <p>' . __('Thank you for using linksync for WooCommerce. Should you need help configuring and using the plugin, please review our documentation.') . '</p>
+                    <p>
+                        <a target="_blank" 
+                        href="https://www.linksync.com/help/vend-woocommerce" 
+                        class="button button-primary">Linsync WooCommerce Documentation</a>
+                    </p>
+                    <p>
+                        Watch the 3-minute "getting started guide" for linksync for WooCommerce.<br><br>
+                        <a href="//fast.wistia.net/embed/iframe/mfwv2hb8wx?popover=true" 
+                        class="wistia-popover[height=576,playerColor=5aaddd,width=1024]">
+                            <img src="https://embed-ssl.wistia.com/deliveries/92d5bedfb2638333806b598616d315640b701a95.jpg?image_play_button=true&image_play_button_color=5aaddde0&image_crop_resized=200x113" alt="" />
+                        </a>
+                        <script charset="ISO-8859-1" src="//fast.wistia.com/assets/external/popover-v1.js"></script>
+                    </p>';
+
+        $screen->add_help_tab(array(
+            'id' => 'linksync_help_tab',
+            'title' => __(' Documentation '),
+            'content' => $content
+        ));
+    }
+
 }
 
-new LS_Support_Helper();

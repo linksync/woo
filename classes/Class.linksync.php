@@ -1920,6 +1920,7 @@ class linksync_class {
                             LSC_Log::add_dev_failed('linksync_class->importOrderToWoocommerce', 'Order('.$order['id'].') creation from vend to woocommerce failed <br/> '.json_encode($order_id));
                         } else {
 
+                            $orderMeta = new LS_Order_Meta($order_id);
                             $devLogMessage = 'Order '.$order_id.' was created from vend to woocommerce <br/> <b>Json data being used from vend:</b><br/>';
                             $devLogMessage .= '<textarea>'.json_encode($order).'</textarea>';
                             LSC_Log::add_dev_success('linksync_class->importOrderToWoocommerce', $devLogMessage);
@@ -1928,6 +1929,8 @@ class linksync_class {
                              * Linksync order id
                              */
                             update_post_meta( $order_id, 'ls_oid', $order['id'] );
+                            $orderMeta->update_vend_order_id($order['id']);
+                            $orderMeta->update_vend_receipt_number($order['orderId']);
 
                             if (isset($order['payment']['transactionNumber']) && !empty($order['payment']['transactionNumber'])) {
                                 add_post_meta($order_id, 'transaction_id', $order['payment']['transactionNumber'], true);
@@ -2052,7 +2055,7 @@ class linksync_class {
                             foreach ($order['products'] as $products) {
                                 $product_id = $this->isReferenceExists_order($products['sku']);
                                 if ($product_id['result'] == 'success' && !empty($product_id['data'])) {
-                                    $product = wc_get_product($product_id['data']);
+                                    $product = new LS_Woo_Product($product_id['data']);
                                     $product_id = $product_id['data'];
                                     $productHelper = new LS_Product_Helper($product);
 

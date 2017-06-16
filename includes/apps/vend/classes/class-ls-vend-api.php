@@ -59,5 +59,17 @@ class LS_Vend_Api
         return $this->api->get('vend/config');
     }
 
+    public function sendLog($data)
+    {
+        return $this->api->post('laid/sendLog', $data);
+    }
+
+    public function save_users_settings( $user_settings )
+    {
+        $savedUserSettings = $this->api->post('config', $user_settings);
+
+        return $savedUserSettings;
+    }
+
 
 }

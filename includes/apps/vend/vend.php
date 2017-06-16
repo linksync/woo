@@ -1,9 +1,6 @@
 <?php if (!defined('ABSPATH')) exit('Access is Denied');
 
-/**
- * Check if WooCommerce is active
- */
-if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+if (!class_exists('LS_Vend')) {
 
     /**
      * This file will serve as the entry point of vend app
@@ -19,45 +16,30 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public static $api = null;
         private static $laid = null;
 
+        public static $slug = 'linksync-vend';
+
+        /**
+         * Cloning is forbidden.
+         */
+        public function __clone()
+        {
+            wp_die('Cheatin&#8217; huh?', 'woocommerce');
+        }
+
+        /**
+         * Unserializing instances of this class is forbidden.
+         */
+        public function __wakeup()
+        {
+            wp_die('Cheatin&#8217; huh?', 'woocommerce');
+        }
+
         public function __construct()
         {
             $this->includes();
-            $this->load_hooks();
-
             do_action('ls_vend_loaded');
         }
 
-        public function load_hooks()
-        {
-            /**
-             * Add Styles and Javascript files to wp-admin area
-             */
-            add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_and_styles'));
-        }
-
-        public function enqueue_scripts_and_styles()
-        {
-            //Check for linksync plugin page before adding the styles and scripts to wp-admin
-            if (isset($_GET['page']) && $_GET['page'] == 'linksync') {
-
-                if (isset($_GET['setting'])) {
-                    if ($_GET['setting'] == 'product_config') {
-                        wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'));
-                        wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'));
-                        wp_enqueue_script('ls-product-syncing-settings', LS_ASSETS_URL . 'js/vend/ls-product-syncing-settings.js', array('jquery'));
-
-                        wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
-                    }
-                } else {
-                    wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'));
-                    wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'));
-                    wp_enqueue_script('ls-configuration', LS_ASSETS_URL . 'js/vend/ls-configuration.js', array('jquery'));
-
-                    wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
-                }
-
-            }
-        }
 
         /**
          * LS_Vend get self instance
@@ -73,8 +55,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
         public function api()
         {
-            if(is_null(self::$api)){
-                self::$api = new LS_Vend_Api(LS_ApiController::get_api());
+            if (is_null(self::$api)) {
+                self::$api = new LS_Vend_Api(LS_Vend()->laid()->get_api());
             }
 
             return self::$api;
@@ -87,6 +69,35 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             }
 
             return self::$laid;
+        }
+
+        /**
+         * This method is intended to run linksync vend plugin after including files
+         * to avoid code execution on including php files
+         */
+        public function run()
+        {
+            //$duplicate_products = LS_Product_Helper::get_woo_duplicate_sku();
+            //$empty_product_skus = LS_Product_Helper::get_woo_empty_sku();
+
+            $linksync_vend_laid = LS_Vend()->laid()->get_current_laid();
+            if (!empty($linksync_vend_laid)) {
+                $vend_config = LS_Vend()->api()->getVendConfig();
+                LS_Vend_Config::update_vend_config($vend_config);
+
+
+                $updatedWebHookPointer = get_option('_ls_vend_new_ajax_update_url', '');
+                if (empty($updatedWebHookPointer)) {
+                    $pluginUpdateUrl = Linksync_Vend::getWebHookUrl();
+                    update_option('_ls_vend_new_ajax_update_url', $pluginUpdateUrl);
+                    LS_Vend()->updateWebhookConnection();
+                }
+
+            }
+
+            LS_Vend_Hook::init();
+
+            do_action('ls_vend_init');
         }
 
 
@@ -105,7 +116,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
 
             include_once LS_INC_DIR . 'api/ls-api.php';
-            include_once LS_INC_DIR . 'api/ls-api-controller.php';
             include_once LS_INC_DIR . 'apps/class-ls-product-api.php';
             include_once LS_INC_DIR . 'apps/class-ls-order-api.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-api.php';
@@ -119,6 +129,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/classes/class-ls-order.php';
             include_once LS_INC_DIR . 'apps/classes/class-ls-product.php';
             include_once LS_INC_DIR . 'apps/classes/class-ls-product-variant.php';
+            include_once LS_INC_DIR . 'apps/classes/class-ls-woo-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-variant-product.php';
@@ -135,6 +146,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/helpers/class-ls-user-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-support-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-message-builder.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-product-helper.php';
             include_once LS_INC_DIR . 'apps/helpers/class-ls-order-helper.php';
             include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-helper.php';
@@ -142,12 +154,36 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-order-helper.php';
             include_once LS_INC_DIR . 'apps/vend/helpers/class-ls-vend-image-helper.php';
 
-            if (is_vend()) {
-                include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-notice.php';
-                include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-ajax.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-menu.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-laid.php';
+
+            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-notice.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-ajax.php';
+
+            if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+                /**
+                 * Initialize syncing class that is hooking to
+                 *  save_post - to create product in vend
+                 *  woocommerce_process_shop_order_meta -> to sync woocommerce order to vend
+                 *  woocommerce_order_status_{woo_order_status} -> to sync woocommerce order to vend
+                 *  before_delete_post - to delete vend product if delete option is enable
+                 */
                 include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-sync.php';
-                require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-laid.php';
             }
+
+
+            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-install.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-wizard.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-scripts.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-hooks.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-config.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-url.php';
+
+            require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-order-list.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-product-list.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-duplicate-sku-list.php';
+
 
         }
 
@@ -156,31 +192,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
          */
         public function view()
         {
-            if (isset($_GET['setting'], $_GET['page']) && $_GET['page'] == 'linksync') {
-
-                if ($_GET['setting'] == 'logs') {
-
-                    include_once LS_INC_DIR . 'view/ls-plugins-tab-logs.php';
-
-                } elseif ($_GET['setting'] == 'product_config') {
-
-                    include_once LS_INC_DIR . 'view/vend/ls-plugins-tab-product-config.php';
-
-                } elseif ($_GET['setting'] == 'order_config') {
-
-                    require_once LS_INC_DIR . 'view/vend/ls-plugins-tab-order-config.php';
-
-                } elseif ($_GET['setting'] == 'support') {
-
-                    LS_Support_Helper::renderFormForSupportTab();
-
-                } else {
-                    include_once LS_INC_DIR . 'view/ls-plugins-tab-configuration.php';
-                }
-            } else {
-                include_once LS_INC_DIR . 'view/ls-plugins-tab-configuration.php';
-            }
-
+            return new LS_Vend_View();
         }
 
         public function option()
@@ -215,40 +227,45 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
         public function updateWebhookConnection()
         {
-            $laid = LS_ApiController::get_current_laid();
+            $laid = LS_Vend()->laid()->get_current_laid();
+            if (!empty($laid)) {
+                $webHookData['laid_key'] = $laid;
+                $webHookData['url'] = Linksync_Vend::getWebHookUrl();
+                $webHookData['version'] = Linksync_Vend::$version;
 
-            $webHookData['url'] = linksync::getWebHookUrl();
-            $webHookData['version'] = linksync::$version;
+                $orderSyncType = LS_Vend()->order_option()->sync_type();
+                $orderImport = 'no';
+                if ('vend_to_wc-way' == $orderSyncType) {
+                    $orderImport = 'yes';
+                }
+                $webHookData['order_import'] = $orderImport;
 
-            $orderSyncType = LS_Vend()->order_option()->sync_type();
-            $orderImport = 'no';
-            if('vend_to_wc-way' == $orderSyncType){
-                $orderImport = 'yes';
+                $prodyctSyncType = LS_Vend()->product_option()->sync_type();
+                $productImport = 'no';
+                if ('two_way' == $prodyctSyncType || 'vend_to_wc-way' == $prodyctSyncType || 'wc_to_vend' == $prodyctSyncType) {
+                    $productImport = 'yes';
+                }
+
+                $webHookData['product_import'] = $productImport;
+                $webHook = LS_Vend()->laid()->update_webhook_connection($webHookData);
+                $pluginUrl = plugins_url();
+                $webhookUrlCode = get_option('webhook_url_code');
+
+                if (!empty($webHook['result']) && $webHook['result'] == 'success') {
+                    LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode, $laid);
+                    update_option('linksync_addedfile', '<a href="' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode . '">' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode . '</a>');
+
+                } else {
+                    LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode, $laid);
+                }
+
+                return $webHook;
             }
-            $webHookData['order_import'] = $orderImport;
 
-            $prodyctSyncType = LS_Vend()->product_option()->sync_type();
-            $productImport = 'no';
-            if('two_way' == $prodyctSyncType || 'vend_to_wc-way' == $prodyctSyncType){
-                $productImport = 'yes';
-            }
+            return null;
 
-            $webHookData['product_import'] = $productImport;
-
-
-            $webHook = LS_ApiController::update_webhook_connection($webHookData);
-            $pluginUrl = plugins_url();
-            $webhookUrlCode = get_option('webhook_url_code');
-
-            if(!empty($webHook['result']) && $webHook['result'] == 'success'){
-                LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode, $laid);
-                update_option('linksync_addedfile', '<a href="' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode . '">' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode . '</a>');
-
-            } else {
-                LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . $pluginUrl . '/linksync/update.php?c=' . $webhookUrlCode, $laid);
-            }
-            return $webHook;
         }
+
 
         /**
          * @return null|string The hook name to use on triggering order syncing to vend
@@ -256,9 +273,9 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function orderSyncToVendHookName()
         {
             $orderHookName = get_option('order_status_wc_to_vend');
-            if(!empty($orderHookName)){
-                $name = substr( $orderHookName, 3 );
-                $orderHook = 'woocommerce_order_status_'.$name;
+            if (!empty($orderHookName)) {
+                $name = substr($orderHookName, 3);
+                $orderHook = 'woocommerce_order_status_' . $name;
 
                 return $orderHook;
             }
@@ -268,13 +285,13 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function getSelectedOrderStatusToTriggerWooToVendSync()
         {
             $orderHookName = get_option('order_status_wc_to_vend');
-            if(!empty($orderHookName)){
+            if (!empty($orderHookName)) {
                 if (LS_Helper::isWooVersionLessThan_2_4_15()) {
                     return $orderHookName;
                 }
 
                 $wc_prefix = substr($orderHookName, 0, 3);
-                if('wc-' == $wc_prefix){
+                if ('wc-' == $wc_prefix) {
                     return str_replace($wc_prefix, '', $orderHookName);
                 }
 
@@ -283,15 +300,37 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             return null;
         }
 
+        /**
+         * Save users settins to linksync database
+         * @return array
+         */
+        public function save_user_settings_to_linksync()
+        {
+            $product_options = LS_Vend()->product_option();
+            $order_options = LS_Vend()->order_option();
+
+            $vendApi = LS_Vend()->api();
+            $productOptions = $product_options->get_syncing_options();
+            $orderOptions = $order_options->get_syncing_options();
+
+
+            $userSettings['product_settings'] = $productOptions;
+            $userSettings['order_settings'] = $orderOptions;
+            $userSettings = json_encode($userSettings);
+            return $vendApi->save_users_settings($userSettings);
+        }
+
+
     }
+
+}
+
+if (!function_exists('LS_Vend')) {
 
     function LS_Vend()
     {
         return LS_Vend::instance();
     }
 
-    // Global for backwards compatibility.
-    $GLOBALS['ls_vend'] = LS_Vend();
-
-
 }
+

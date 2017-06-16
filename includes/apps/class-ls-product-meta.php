@@ -161,6 +161,21 @@ class LS_Product_Meta
     }
 
 
+    public function set_vend_product_id($meta_value)
+    {
+        $this->metas['_ls_vend_pid'] = $meta_value;
+    }
+
+    public function get_vend_product_id()
+    {
+        return $this->get_meta('_ls_vend_pid');
+    }
+
+    public function update_vend_product_id($meta_value)
+    {
+        return $this->update_meta('_ls_vend_pid', $meta_value);
+    }
+
     public function set_product_id($meta_value)
     {
         $this->metas['_ls_pid'] = $meta_value;
