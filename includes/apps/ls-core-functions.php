@@ -436,7 +436,7 @@ function ls_last_update_at( $type, $utc_date_time = null ){
 
 			$last_time = strtotime($last_updated_at);
 			$time_arg = strtotime($utc_date_time);
-			if( $last_time < $time_arg ){
+			if( $last_time <= $time_arg ){
 				$lt_plus_one_second = date( "Y-m-d H:i:s", $time_arg + 1 );
 				update_option( $option_name, $lt_plus_one_second );
 				return $lt_plus_one_second;

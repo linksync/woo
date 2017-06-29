@@ -20,6 +20,143 @@ class LS_Vend_Ajax
         add_action('wp_ajax_ls_vend_' . $wh_code, array('LS_Vend_Ajax', 'sync_triggered_by_lws'));
         add_action('wp_ajax_nopriv_ls_vend_' . $wh_code, array('LS_Vend_Ajax', 'sync_triggered_by_lws'));
 
+        add_action('wp_ajax_vend_load_configuration_tab', array('LS_Vend_Ajax', 'load_configuration_tab'));
+        add_action('wp_ajax_vend_load_product_tab', array('LS_Vend_Ajax', 'load_product_tab'));
+        add_action('wp_ajax_vend_load_order_tab', array('LS_Vend_Ajax', 'load_order_tab'));
+        add_action('wp_ajax_vend_load_support_tab', array('LS_Vend_Ajax', 'load_support_tab'));
+        add_action('wp_ajax_vend_load_logs_tab', array('LS_Vend_Ajax', 'load_logs_tab'));
+
+        add_action('wp_ajax_vend_load_connected_order', array('LS_Vend_Ajax', 'load_connected_order'));
+        add_action('wp_ajax_vend_load_connected_product', array('LS_Vend_Ajax', 'load_connected_product'));
+        add_action('wp_ajax_vend_load_duplicate_sku', array('LS_Vend_Ajax', 'load_duplicate_sku'));
+
+        add_action('wp_ajax_vend_save_product_syncing_settings', array('LS_Vend_Product_Option', 'save_product_syncing_settings'));
+        add_action('wp_ajax_vend_save_order_syncing_settings', array('LS_Vend_Order_Option', 'save_order_syncing_settings'));
+        add_action('wp_ajax_vend_reset_syncing_settings', array('LS_Vend_Ajax', 'reset_syncing_options'));
+
+        add_action('wp_ajax_vend_save_api_key', array('LS_Vend_Laid', 'save_api_key'));
+
+        add_action('wp_ajax_vend_send_log_to_linksync', array('LS_Vend_Ajax', 'send_log_to_linksync'));
+        add_action('wp_ajax_vend_clear_logs', array('LS_Vend_Ajax', 'clear_logs'));
+
+    }
+
+    public static function clear_logs()
+    {
+        $response = '';
+        $error = '';
+        if (isset($_POST['action']) && 'vend_clear_logs' == $_POST['action']) {
+            $empty = LSC_Log::instance()->truncate_table();
+            if ($empty) {
+                $response = "Logs Clear successfully!";
+            } else {
+                $response = "Error:Unable to Clear Logs Details";
+                $error = $response;
+            }
+        }
+        wp_send_json(array(
+            'message' => $response,
+            'error' => $error,
+            'action' => 'vend_clear_logs'
+        ));
+    }
+
+    public static function send_log_to_linksync()
+    {
+        $response = '';
+        $error = '';
+        if (isset($_POST['action']) && 'vend_send_log_to_linksync' == $_POST['action']) {
+            $fileName = LS_PLUGIN_DIR . '/classes/raw-log.txt';
+            $data = file_get_contents($fileName);
+            $encoded_data = base64_encode($data);
+            $result = array(
+                "attachment" => $encoded_data
+            );
+            $json = json_encode($result);
+            $apicall_result = LS_Vend()->api()->sendLog($json);
+
+            if (isset($apicall_result['result']) && $apicall_result['result'] == 'success') {
+                $response = 'Logs Sent Successfully !';
+            } else {
+                $response = "Error:Unable to Send Logs Details";
+                $error = $response;
+            }
+        }
+
+        wp_send_json(array(
+            'message' => $response,
+            'error' => $error,
+            'action' => 'send_log_to_linksync'
+        ));
+    }
+
+    public static function reset_syncing_options()
+    {
+        $response = '';
+        if (isset($_POST['reset'])) {
+            LS_Vend()->option()->reset_options();
+            LSC_Log::add('Reset Option', 'success', "Reset Product and Order Syncing Setting", '-');
+            $response = 'Successfully! Reset Syncing Setting.';
+        }
+        wp_send_json(array(
+            'message' => $response
+        ));
+    }
+
+    public static function load_configuration_tab()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_configuration_tab();
+        die();
+    }
+
+    public static function load_product_tab()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_product_configuration_tab();
+        die();
+    }
+
+    public static function load_order_tab()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_order_configuration_tab();
+        die();
+    }
+
+    public static function load_support_tab()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_support_tab();
+        die();
+    }
+
+    public static function load_logs_tab()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_logs_tab();
+        die();
+    }
+
+    public static function load_connected_order()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_connected_order_page();
+        die();
+    }
+
+    public static function load_connected_product()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_connected_product_page();
+        die();
+    }
+
+    public static function load_duplicate_sku()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_duplicate_sku_page();
+        die();
     }
 
     public static function get_products()
@@ -91,8 +228,7 @@ class LS_Vend_Ajax
         $page = isset($_POST['page']) ? $_POST['page'] : 1;
         $last_sync = LS_Vend()->option()->lastProductUpdate();
         if (empty($last_sync)) {
-            $laid_info = LS_Vend()->laid()->get_laid_info();
-            $last_sync = $laid_info['time'];
+            $last_sync =  LS_Vend_Config::get_current_linksync_time();
             LS_Vend()->option()->lastProductUpdate($last_sync);
         }
 
@@ -118,10 +254,9 @@ class LS_Vend_Ajax
                 'vend_to_wc-way' == $productSyncOption->sync_type()
             ) {
                 if (empty($last_product_sync)) {
-                    $currentLaidInfo = LS_Vend()->laid()->get_current_laid_info();
-                    if (!empty($currentLaidInfo['time'])) {
-                        $last_product_sync = $currentLaidInfo['time'];
-                        LS_Vend()->option()->lastProductUpdate($last_product_sync);
+                    $linksync_current_time = LS_Vend_Config::get_current_linksync_time();
+                    if (!empty($linksync_current_time)) {
+                        LS_Vend()->option()->lastProductUpdate($linksync_current_time);
                     }
                 }
 

@@ -3,14 +3,16 @@
  * This File will be triggered by the Webhook Callback
  * 
  */
+include_once(dirname(__FILE__) . '/linksync.php');
 $current_date_time_string = strtotime(date("Y-m-d H:i:s"));
-
-include_once(dirname(__FILE__) . '/classes/Class.linksync.php'); # Class file having API Call functions
-
 
 set_time_limit(0);
 
 $order_last_update_at = ls_last_order_update_at();
+$orderSinceLastUpdate = LS_Vend()->option()->lasOrderUpdate();
+if (empty($orderSinceLastUpdate)) {
+    LS_Vend()->option()->lasOrderUpdate($order_last_update_at);
+}
 $p_last_updated_at = ls_last_product_updated_at();
 
 if (!isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {

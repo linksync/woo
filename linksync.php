@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.2
+  Version: 2.5.3
  */
 
 if (!class_exists('Linksync_Vend')) {
@@ -16,7 +16,7 @@ if (!class_exists('Linksync_Vend')) {
         /**
          * @var string
          */
-        public static $version = '2.5.2';
+        public static $version = '2.5.3';
         protected static $_instance = null;
 
         /**
@@ -81,7 +81,7 @@ if (!class_exists('Linksync_Vend')) {
         public function init_hooks()
         {
             add_action('plugins_loaded', array(__CLASS__, 'pluginUpdateChecker'), 0);
-            register_activation_hook(__FILE__, array('LS_Vend_Install', 'plugin_activate'));
+            register_activation_hook(LS_PLUGIN_PHP_FILE, array('LS_Vend_Install', 'plugin_activate'));
         }
 
         /**
@@ -101,11 +101,12 @@ if (!class_exists('Linksync_Vend')) {
          */
         public function define_constants()
         {
-            $pluginBaseName = plugin_basename(__FILE__);
+            $this->define('LS_PLUGIN_PHP_FILE', __FILE__);
+            $pluginBaseName = plugin_basename(LS_PLUGIN_PHP_FILE);
             $this->define('LS_PLUGIN_BASE_NAME', $pluginBaseName);
-            $this->define('LS_PLUGIN_DIR', plugin_dir_path(__FILE__));
+            $this->define('LS_PLUGIN_DIR', plugin_dir_path(LS_PLUGIN_PHP_FILE));
             $this->define('LS_INC_DIR', LS_PLUGIN_DIR . 'includes/');
-            $this->define('LS_PLUGIN_URL', plugin_dir_url(__FILE__));
+            $this->define('LS_PLUGIN_URL', plugin_dir_url(LS_PLUGIN_PHP_FILE));
             $this->define('LS_ASSETS_URL', LS_PLUGIN_URL . 'assets/');
 
         }

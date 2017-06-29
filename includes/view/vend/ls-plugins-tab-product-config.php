@@ -1,313 +1,8 @@
 <?php
 $saving_sync_type = null;
-$laid_key = LS_Vend()->laid()->get_current_laid();
-
-if (isset($_POST['save_product_sync_setting'])) {
-    if (isset($_POST['product_sync_type']) && !empty($_POST['product_sync_type'])) {
-        update_option('product_sync_type', $_POST['product_sync_type']);
-        if ($_POST['product_sync_type'] == 'vend_to_wc-way') {
-            if (isset($_POST['ps_quantity'])) {
-                if ($_POST['ps_quantity'] == 'on') {
-                    if (empty($_POST['outlet'])) {
-                        $message['result'] = 'error';
-                        $message['message'] = 'You didn\'t select any outlet !';
-                    } else {
-                        $message['result'] = 'success';
-                    }
-                } else {
-                    $message['result'] = 'success';
-                }
-            } else {
-                $message['result'] = 'success';
-            }
-        } elseif ($_POST['product_sync_type'] == 'wc_to_vend' || $_POST['product_sync_type'] == 'two_way') {
-            $message['result'] = 'success';
-        } else {
-            $message['result'] = 'success';
-        }
-    }
-
-    if (isset($message['result']) && $message['result'] == 'success') {
-        update_option('prod_update_suc', NULL);
-        update_option('prod_last_page', NULL);
-        update_option('product_detail', NULL);
-        if (isset($_POST['ps_name_title'])) {
-            if ($_POST['ps_name_title'] == 'on') {
-                update_option('ps_name_title', $_POST['ps_name_title']);
-            } else {
-                update_option('ps_name_title', 'off');
-            }
-        } else {
-            update_option('ps_name_title', 'off');
-        }
-        if (isset($_POST['ps_description'])) {
-            if ($_POST['ps_description'] == 'on') {
-                update_option('ps_description', $_POST['ps_description']);
-            } else {
-                update_option('ps_description', 'off');
-            }
-        } else {
-            update_option('ps_description', 'off');
-        }
-        if (isset($_POST['ps_desc_copy'])) {
-            if ($_POST['ps_desc_copy'] == 'on') {
-                update_option('ps_desc_copy', 'on');
-            } else {
-                update_option('ps_desc_copy', 'off');
-            }
-        } else {
-            update_option('ps_desc_copy', 'off');
-        }
-        //Pending
-        if (isset($_POST['ps_pending'])) {
-            if ($_POST['ps_pending'] == 'on') {
-                update_option('ps_pending', $_POST['ps_pending']);
-            } else {
-                update_option('ps_pending', 'off');
-            }
-        } else {
-            update_option('ps_pending', 'off');
-        }
-        if ($_POST['product_sync_type'] == 'vend_to_wc-way') {
-            if (isset($_POST['ps_attribute'])) {
-                if ($_POST['ps_attribute'] == 'on') {
-                    update_option('ps_attribute', $_POST['ps_attribute']);
-                } else {
-                    update_option('ps_attribute', 'off');
-                }
-            } else {
-                update_option('ps_attribute', 'off');
-            }
-            if (isset($_POST['linksync_visiable_attr'])) {
-                if ($_POST['linksync_visiable_attr'] == '1') {
-                    update_option('linksync_visiable_attr', $_POST['linksync_visiable_attr']);
-                } else {
-                    update_option('linksync_visiable_attr', '0');
-                }
-            } else {
-                update_option('linksync_visiable_attr', '0');
-            }
-        } else {
-            update_option('linksync_visiable_attr', '0');
-            update_option('ps_attribute', 'on');
-        }
-        // Price
-        if (isset($_POST['ps_price'])) {
-            if ($_POST['ps_price'] == 'on') {
-                update_option('ps_price', $_POST['ps_price']);
-                if (isset($_POST['linksync_woocommerce_tax_option'])) {
-                    if ($_POST['linksync_woocommerce_tax_option'] == 'on') {
-                        update_option('linksync_woocommerce_tax_option', $_POST['linksync_woocommerce_tax_option']);
-                    } else {
-                        update_option('linksync_woocommerce_tax_option', 'off');
-                    }
-                } else {
-                    update_option('linksync_woocommerce_tax_option', 'off');
-                }
-                if (isset($_POST['excluding_tax'])) {
-                    if ($_POST['excluding_tax'] == 'on') {
-                        update_option('excluding_tax', 'on');
-                    } else {
-                        update_option('excluding_tax', 'off');
-                    }
-                } else {
-                    update_option('excluding_tax', 'off');
-                }
-                if (isset($_POST['price_field'])) {
-                    update_option('price_field', $_POST['price_field']);
-                }
-                if (isset($_POST['tax_class']) && !empty($_POST['tax_class'])) {
-                    if (array_filter($_POST['tax_class'])) {
-                        $all_taxes = implode(',', $_POST['tax_class']);
-                        update_option('tax_class', $all_taxes);
-                    } else {
-                        update_option('tax_class', '');
-                    }
-                } else {
-                    update_option('tax_class', '');
-                }
-# Hiddne on clint demand
-//            if (isset($_POST['price_book'])) {
-//                if ($_POST['price_book'] == 'on') {
-//                    update_option('price_book', 'on');
-//                    if ($_POST['product_sync_type'] == 'vend_to_wc-way') {
-//                        if (isset($_POST['price_book_identifier']) && !empty($_POST['price_book_identifier'])) {
-//                            update_option('price_book_identifier', trim($_POST['price_book_identifier']));
-//                        } else {
-//                            $result = array('result' => 'error', 'message' => 'Price Book Identfier is required');
-//                        }
-//                    }
-//                } else {
-//                    update_option('price_book', 'off');
-//                }
-//            } else {
-//                update_option('price_book', 'off');
-//            }
-            } else {
-                update_option('ps_price', 'off');
-                update_option('excluding_tax', 'off');
-                update_option('tax_mapping', 'off');
-                //  update_option('price_book', 'off');
-            }
-        } else {
-            update_option('ps_price', 'off');
-            update_option('excluding_tax', 'off');
-            update_option('tax_mapping', 'off');
-            // update_option('price_book', 'off');
-            update_option('tax_class', 'off');
-        }
-        // Quantity
-        if (isset($_POST['ps_quantity'])) {
-            if ($_POST['ps_quantity'] == 'on') {
-                update_option('ps_quantity', 'on');
-                if (!empty($_POST['outlet'])) {
-                    $oulets = implode('|', $_POST['outlet']);
-                    update_option('ps_outlet', 'on');
-                    update_option('ps_outlet_details', $oulets);
-                } else {
-                    update_option('ps_outlet', 'off');
-                    update_option('ps_outlet_details', 'off');
-                }
-
-                if (isset($_POST['ps_unpublish'])) {
-                    if ($_POST['ps_unpublish'] == 'on') {
-                        update_option('ps_unpublish', 'on');
-                    } else {
-                        update_option('ps_unpublish', 'off');
-                    }
-                } else {
-                    update_option('ps_unpublish', 'off');
-                }
-            } else {
-                update_option('ps_quantity', 'off');
-                update_option('ps_unpublish', 'off');
-            }
-        } else {
-            update_option('ps_quantity', 'off');
-            update_option('ps_unpublish', 'off');
-        }
-
-        if (@$_POST['ps_brand'] == 'on') {
-            update_option('ps_brand', 'on');
-        } else {
-            update_option('ps_brand', 'off');
-        }
-
-        if (isset($_POST['ps_tags'])) {
-            if ($_POST['ps_tags'] == 'on') {
-                update_option('ps_tags', 'on');
-            } else {
-                update_option('ps_tags', 'off');
-            }
-        } else {
-            update_option('ps_tags', 'off');
-        }
-        if (isset($_POST['ps_categories']) && !empty($_POST['ps_categories'])) {
-            if (isset($_POST['cat_radio'])) {
-                update_option('cat_radio', $_POST['cat_radio']);
-            }
-            update_option('ps_categories', 'on');
-        } else {
-            update_option('ps_categories', 'off');
-        }
-
-        if (isset($_POST['wc_to_vend_outlet_detail'])) {
-            update_option('wc_to_vend_outlet_detail', $_POST['wc_to_vend_outlet_detail']);
-            update_option('ps_wc_to_vend_outlet', 'on');
-        }
-
-
-
-        if (isset($_POST['ps_imp_by_tag'])) {
-            if ($_POST['ps_imp_by_tag'] == 'on') {
-                if (isset($_POST['import_by_tags_list']) && !empty($_POST['import_by_tags_list'])) {
-                    $selected_tags = array();
-                    foreach( $_POST['import_by_tags_list'] as $key => $selected_tab ){
-                        $selected_tags[] = remove_escaping_str($selected_tab);
-                    }
-                    $tags = implode( '|', $selected_tags );
-
-                    $import_by_tags_list_serialize = serialize($tags);
-                    update_option('import_by_tags_list', $import_by_tags_list_serialize);
-                    update_option('ps_imp_by_tag', 'on');
-                } else {
-                    update_option('import_by_tags_list', '');
-                    update_option('ps_imp_by_tag', 'off');
-                }
-            } else {
-                update_option('ps_imp_by_tag', 'off');
-
-                update_option('import_by_tags_list', '');
-            }
-        } else {
-            update_option('ps_imp_by_tag', 'off');
-
-            update_option('import_by_tags_list', '');
-        }
-        if (isset($_POST['ps_images']) && !empty($_POST['ps_images'])) {
-            if (isset($_POST['ps_import_image_radio'])) {
-                update_option('ps_import_image_radio', $_POST['ps_import_image_radio']);
-            }
-            update_option('ps_images', 'on');
-        } else {
-            update_option('ps_images', 'off');
-        }
-        if (isset($_POST['ps_create_new'])) {
-            if ($_POST['ps_create_new'] == 'on') {
-                update_option('ps_create_new', 'on');
-            } else {
-                update_option('ps_create_new', 'off');
-            }
-        } else {
-            update_option('ps_create_new', 'off');
-        }
-        if (isset($_POST['ps_delete'])) {
-            if ($_POST['ps_delete'] == 'on') {
-                update_option('ps_delete', 'on');
-            } else {
-                update_option('ps_delete', 'off');
-            }
-        } else {
-            update_option('ps_delete', 'off');
-        }
-
-        /**
-         * Set $saving_sync_type to have the currently selected syncing type
-         */
-        $saving_sync_type = $_POST['product_sync_type'];
-        if ($_POST['product_sync_type'] != 'disabled_sync') {
-            if ($_POST['product_sync_type'] == 'vend_to_wc-way') {
-                $enable = 'Vend to Woo';
-            } elseif ($_POST['product_sync_type'] == 'two_way') {
-                $enable = 'Two way';
-            } else {
-                $enable = 'Woo to Vend';
-            }
-            $setting_message = $enable . '  enable';
-        } else {
-            $setting_message = 'Sync Setting Disabled';
-        }
-        LSC_Log::add('Product Sync Setting', 'success', $setting_message, $laid_key);
-    }
-    update_option('image_process', 'complete');
-    if (is_vend()) {
-        LS_Vend()->updateWebhookConnection();
-        LS_Vend()->save_user_settings_to_linksync();
-    }
-}
-
-?>    <h3>Product Syncing Configuration</h3>
-<?php
-if (isset($message) && !empty($message)) {
-    if ($message['result'] == 'error') {
-        ?><script>
-            jQuery('#response').removeClass('updated').addClass('error').html("<?php echo $message['message']; ?>").fadeIn(500).delay(3000).fadeOut(4000);
-
-        </script><?php
-    }
-}
 ?>
-<form method="post" name="options">
+<h3>Product Syncing Configuration</h3>
+<form method="post" id="frmProductSyncingSettings" name="options">
     <fieldset>
         <legend>Product Syncing Type</legend>
         <p>
@@ -347,12 +42,12 @@ if (isset($message) && !empty($message)) {
     ?>"  id="product_sync_settig">
 
         <p>
-            <input type="button" name="sync_reset_btn" title="Selecting the Sync Reset button resets linksync to update all WooCommerce products with data from Vend, based on your existing Product Sync Settings."  value="Sync Reset" id="sync_reset_btn_id" class="button button-primary btn-sync-vend-to-woo" style="display:<?php
+            <input type="button" name="sync_reset_btn" title="Selecting the Sync Reset button resets linksync to update all WooCommerce products with data from Vend, based on your existing Product Sync Settings."  value="Sync all products from Vend" id="sync_reset_btn_id" class="button button-primary btn-sync-vend-to-woo" style="display:<?php
             if ($product_sync_type == 'wc_to_vend') {
                 echo "none";
             }
             ?>" name="sync_reset"/>
-            <input id="sync_reset_all_btn_id" type="button" title="Selecting this option will sync your entire WooCommerce product catalogue to Vend, based on your existing Product Sync Settings. It takes 3-5 seconds to sync each product, depending on the performance of your server, and your geographic location." value="Sync all product to Vend" style="display:<?php
+            <input id="sync_reset_all_btn_id" type="button" title="Selecting this option will sync your entire WooCommerce product catalogue to Vend, based on your existing Product Sync Settings. It takes 3-5 seconds to sync each product, depending on the performance of your server, and your geographic location." value="Sync all products to Vend" style="display:<?php
             if ($product_sync_type == 'vend_to_wc-way') {
                 echo "none";
             }
@@ -508,7 +203,10 @@ if (isset($message) && !empty($message)) {
                             $getoutlets = get_option('ps_outlet_details');
                             $wc_to_vend_dboutlet = get_option('wc_to_vend_outlet_detail');
                             for ($count_outlets = 1; $count_outlets <= 3; $count_outlets++) {
-                                $outlets = LS_Vend()->api()->getOutlets();
+                                /**
+                                 * Get the previously saved vend outlets information on LS_Vend_Laid class in the method check_api_key
+                                 */
+                                $outlets = LS_Vend()->option()->get_vend_outlets();
                                 if (isset($outlets) && !empty($outlets)) {
                                     break;
                                 }
@@ -802,28 +500,16 @@ if (isset($message) && !empty($message)) {
     <p style="text-align: center;"><input  class="button button-primary button-large save_changes" type="submit"  name="save_product_sync_setting" value="Save Changes" /></p>
 </form>
 
-<?php
-$display_modal = ($saving_sync_type != null && in_array($saving_sync_type, array('two_way', 'vend_to_wc-way'))) ?  '': 'display: none;';
-$modal_message = '';
-
-if ('two_way' == $saving_sync_type) {
-    $modal_message = 'Your changes will require a full re-sync of product data. <br/>Do you want to re-sync now?<br/>';
-} else if ('vend_to_wc-way' == $saving_sync_type) {
-    $modal_message = 'Your changes will require a full re-sync of product data from Vend.<br/>Do you want to re-sync now?';
-}
-
-?>
-
 <div class="ls-vend-sync-modal">
     <div class="ls-vend-sync-modal-content"
-         style="width: 500px !important; top: 24% !important; <?php echo $display_modal; ?>   z-index: 9999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 34%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
+         style="display: none; width: 500px !important; top: 24% !important;   z-index: 9999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 34%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
 
         <div class="ls-modal-close-container" style="<?php echo ('two_way' == $saving_sync_type) ? '': 'display: none;'; ?>">
             <div class="ui-icon ui-icon-close ls-modal-close btn-no" style="width: 16px;height: 17px;float: right;"></div>
         </div>
 
         <center>
-            <h4 id="sync_start_export_all" class="sync-modal-message"><?php echo $modal_message; ?> </h4>
+            <h4 id="sync_start_export_all" class="sync-modal-message">Your changes will require a full re-sync of product data. <br/>Do you want to re-sync now?<br/> </h4>
         </center>
 
         <div id="sync_progress_container" style="display: none;">
@@ -855,7 +541,7 @@ if ('two_way' == $saving_sync_type) {
 
         <div id="pop_button">
 
-            <div class="sync-buttons two-way-sync-vend-buttons"  style="width: 330px; <?php echo ('two_way' == $saving_sync_type) ? '': 'display: none;'; ?>"  >
+            <div class="sync-buttons two-way-sync-vend-buttons"  style="width: 330px;"  >
 
                 <input type="button"
                        title="This option will update product in your WooCommerce store with Product data from Vend. "
@@ -1124,4 +810,40 @@ if ('two_way' == $saving_sync_type) {
 
     });
 
+    (function ($) {
+
+        $(document).ready(function () {
+
+            var $mainContainer = $('#ls-main-wrapper');
+
+            $mainContainer.on('submit', '#frmProductSyncingSettings', function (e) {
+                var $tabMenu = $('.ls-tab-menu');
+                var $frm = $('#frmProductSyncingSettings');
+
+
+                $tabMenu.before('<div class="ls-loading open"></div>');
+
+                var data = {
+                    action: 'vend_save_product_syncing_settings',
+                    post_array: $frm.serialize()
+                };
+
+                lsVendSyncModal.close(1);
+                lsAjax.post(data).done(function (response) {
+                    $mainContainer.find('.ls-loading').fadeOut('fast');
+                    console.log(response);
+                    if (response.sync_type == 'two_way') {
+                        lsVendSyncModal.openTwoWaySyncModal();
+                    } else if (response.sync_type == 'vend_to_wc-way') {
+                        lsVendSyncModal.openVendToWooSyncModal();
+                    } else if (response.sync_type == 'wc_to_vend') {
+                        lsVendSyncModal.openWooToVendSyncModal();
+                    }
+
+                });
+                e.preventDefault();
+            });
+        });
+
+    })(jQuery);
 </script>

@@ -163,7 +163,11 @@ class LS_Vend_Sync
                 if (empty($sku)) {
                     $sku = 'sku_' . $product_id;
                     $product_meta->update_sku($sku);
-                    if (!LS_Helper::isWooVersionLessThan_2_4_15()) {
+                    $wooVersion = LS_Vend()->option()->get_woocommerce_version();
+                    if (
+                        !LS_Helper::isWooVersionLessThan_2_4_15($wooVersion) &&
+                        version_compare($wooVersion, '3.0.8', '<')
+                    ) {
                         return; //sku is empty
                     }
                 }
@@ -284,6 +288,11 @@ class LS_Vend_Sync
 
                 if (!empty($j_product)) {
                     $result = LS_Vend()->api()->product()->save_product($j_product);
+                    $product_meta->updateToLinkSyncJson(array(
+                        'json_being_sent' => $j_product,
+                        'response' => $result
+                    ));
+
                     if (!empty($result['id'])) {
                         LS_Vend_Product_Helper::update_vend_ids($result);
                         LSC_Log::add_dev_success('LS_Vend_Sync::importProductToVend', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
@@ -329,8 +338,10 @@ class LS_Vend_Sync
         $wooProductId = LS_Product_Helper::getProductIdBySku($product->get_sku());
         $productDeletedAt = $product->get_deleted_at();
 
-        if (!empty($productDeletedAt) && !empty($wooProductId)) {
-            LS_Vend_Product_Helper::deleteWooProducts($wooProductId);
+        if (!empty($productDeletedAt)) {
+            if(!empty($wooProductId)){
+                LS_Vend_Product_Helper::deleteWooProducts($wooProductId);
+            }
             //set last sync to the current update_at key
             LS_Vend()->option()->lastProductUpdate($product->get_update_at());
             //Do not continue the rest of the code since product is already deleted
@@ -465,6 +476,7 @@ class LS_Vend_Sync
             $product_total_amount = LS_Vend_Order_Helper::prepareProductPriceForSyncingOrderToVend($product_total_amount, $taxValue);
 
             $productArgs = array(
+                'woo_id' => $product_id,
                 'sku' => $wooProduct->get_sku(),
                 'title' => $orderLineItem->get_name(),
                 'price' => $product_total_amount,
@@ -669,6 +681,24 @@ class LS_Vend_Sync
             LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_id, LS_Vend()->laid()->get_current_laid());
 
             LSC_Log::add_dev_success('LS_Vend_Sync::importOrderToVend', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
+
+            /**
+             * Update vend product if sync type is two way or woocommerce to vend and quantity option is enabled
+             */
+            $productOption = LS_Vend()->product_option();
+            $productOptionSyncType = $productOption->sync_type();
+            if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
+                if ('on' == $productOption->quantity()) {
+                    $productsBeingOrdered = $json_order->get_products();
+                    foreach ($productsBeingOrdered as $productBeingOrdered) {
+                        if (!empty($productBeingOrdered['woo_id']) && is_numeric($productBeingOrdered['woo_id'])) {
+                            self::importProductToVend($productBeingOrdered['woo_id']);
+                        }
+                    }
+                }
+
+            }
+
         } else {
             update_post_meta($order_id, '_ls_json_order_error', $post_order);
             LSC_Log::add_dev_failed('LS_Vend_Sync::importOrderToVend', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
@@ -688,22 +718,25 @@ class LS_Vend_Sync
     public static function deleteVendProduct($product_id)
     {
         set_time_limit(0);
-        $productHelper = new LS_Product_Helper($product_id);
+        if (is_numeric($product_id)) {
+            $product = new LS_Woo_Product($product_id);
+            $productHelper = new LS_Product_Helper($product);
 
-        if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($productHelper->getType())) {
-            $product_meta = new LS_Product_Meta($product_id);
-            $product_sku = $product_meta->get_sku();
-            if (!empty($product_sku)) {
-                $delete_response = LS_Vend()->api()->product()->delete_product($product_sku);
+            if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($productHelper->getType())) {
+                $product_meta = new LS_Product_Meta($product_id);
+                $product_sku = $product_meta->get_sku();
+                if (!empty($product_sku)) {
+                    $delete_response = LS_Vend()->api()->product()->delete_product($product_sku);
 
-                /**
-                 * Fires once the product in vend was deleted.
-                 *
-                 * @since 2.4.21
-                 *
-                 * @param String $delete_response Json response from linksync after sending delete request for product.
-                 */
-                do_action('ls_after_vend_product_deletion', $delete_response);
+                    /**
+                     * Fires once the product in vend was deleted.
+                     *
+                     * @since 2.4.21
+                     *
+                     * @param String $delete_response Json response from linksync after sending delete request for product.
+                     */
+                    do_action('ls_after_vend_product_deletion', $delete_response);
+                }
             }
         }
     }

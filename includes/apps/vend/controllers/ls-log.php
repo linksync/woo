@@ -68,10 +68,9 @@ class LSC_Log{
      * @param int $last
      */
 	public static function getLogs($last = 10) {
-
 		$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid !=\'developer\' ';
-		if(!empty($_GET['logtype']) && 'developer' == $_GET['logtype']){
-			$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid =\''.$_GET['logtype'].'\' ';
+		if(!empty($_REQUEST['logtype']) && 'developer' == $_REQUEST['logtype']){
+			$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid =\''.$_REQUEST['logtype'].'\' ';
 		}
         $query = 'SELECT * FROM  `' . $GLOBALS['wpdb']->prefix . 'linksync_log` '.$log_type.' ORDER BY `id_linksync_log` DESC LIMIT 0 , ' . $last;
         $logs = self::instance()->select_by_query($query);
@@ -107,11 +106,12 @@ class LSC_Log{
      * Get and display all logs
      * @return string $html
      */
-    public static function printallLogs() {
-        global $wpdb;
+    public static function printallLogs( $vend_log_type = null) {
+        global $wpdb, $linksync_vend_logs;
 		$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid !=\'developer\' ';
-		if(!empty($_GET['logtype']) && 'developer' == $_GET['logtype']){
-			$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid =\''.$_GET['logtype'].'\' ';
+
+		if(!empty($vend_log_type) && 'developer' == $vend_log_type){
+			$log_type = ' WHERE '.$GLOBALS['wpdb']->prefix.'linksync_log.laid =\''.$vend_log_type.'\' ';
 		}
 
         $query = 'SELECT * FROM  `'. $GLOBALS['wpdb']->prefix . 'linksync_log` '.$log_type.' ORDER BY `id_linksync_log` DESC';

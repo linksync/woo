@@ -31,19 +31,26 @@ class LS_Product
         return isset($this->product[$key]) ? $this->product[$key] : null;
     }
 
+    public function set_data($key, $value)
+    {
+        $this->product[$key] = $value;
+    }
+
+    public function unset_data($key)
+    {
+        if (isset($this->product[$key])) {
+            unset($this->product[$key]);
+        }
+    }
+
     public function get_purchasing_information()
     {
         return $this->getData('purchase_description');
     }
 
-    public function has_variant()
+    public function set_purchase_description($value)
     {
-        return count($this->getData('variants')) > 0 ? true : false;
-    }
-
-    public function has_outlets()
-    {
-        return count($this->get_outlets()) > 0 ? true : false;
+        $this->set_data('purchase_description', $value);
     }
 
     public function get_id()
@@ -51,9 +58,28 @@ class LS_Product
         return $this->getData('id');
     }
 
+    public function set_id($value)
+    {
+        $this->set_data('id', $value);
+    }
+
+    public function remove_id()
+    {
+        $this->unset_data('id');
+    }
+
     public function get_name()
     {
         return $this->getData('name');
+    }
+
+    public function set_name($value)
+    {
+        $this->set_data('name', $value);
+    }
+    public function remove_name()
+    {
+        $this->unset_data('name');
     }
 
     public function getTitle()
@@ -61,9 +87,24 @@ class LS_Product
         return $this->getData('title');
     }
 
+    public function set_tittle($value)
+    {
+        $this->set_data('title', $value);
+    }
+
     public function get_description()
     {
         return $this->getData('description');
+    }
+
+    public function set_description($value)
+    {
+        $this->set_data('description', $value);
+    }
+
+    public function remove_description()
+    {
+        $this->unset_data('description');
     }
 
     public function get_sku()
@@ -71,9 +112,19 @@ class LS_Product
         return $this->getData('sku');
     }
 
+    public function set_sku($value)
+    {
+        $this->set_data('sku', $value);
+    }
+
     public function is_active()
     {
         return $this->getData('active');
+    }
+
+    public function set_active($value)
+    {
+        $this->set_data('active', $value);
     }
 
     public function getPrice()
@@ -81,9 +132,24 @@ class LS_Product
         return $this->getData('price');
     }
 
+    public function set_price($value)
+    {
+        $this->set_data('price', $value);
+    }
+
     public function get_cost_price()
     {
         return $this->getData('cost_price');
+    }
+
+    public function remove_cost_price()
+    {
+        $this->unset_data('cost_price');
+    }
+
+    public function set_cost_price($value)
+    {
+        $this->set_data('cost_price', $value);
     }
 
     public function get_list_price()
@@ -91,9 +157,29 @@ class LS_Product
         return $this->getData('list_price');
     }
 
+    public function set_list_price($value)
+    {
+        $this->set_data('list_price', $value);
+    }
+
+    public function remove_list_price()
+    {
+        $this->unset_data('list_price');
+    }
+
     public function get_sell_price()
     {
         return $this->getData('sell_price');
+    }
+
+    public function set_sell_price($value)
+    {
+        $this->set_data('sell_price', $value);
+    }
+
+    public function remove_sell_price()
+    {
+        $this->unset_data('sell_price');
     }
 
     public function get_taxable()
@@ -101,9 +187,19 @@ class LS_Product
         return $this->getData('taxable');
     }
 
+    public function set_taxable($value)
+    {
+        $this->set_data('taxable', $value);
+    }
+
     public function get_tax_value()
     {
         return $this->getData('tax_value');
+    }
+
+    public function set_tax_value($value)
+    {
+        $this->set_data('tax_value', $value);
     }
 
     public function getTaxValue()
@@ -111,9 +207,19 @@ class LS_Product
         return $this->getData('taxValue');
     }
 
+    public function set_taxValue($value)
+    {
+        $this->set_data('taxValue', $value);
+    }
+
     public function get_tax_name()
     {
         return $this->getData('tax_name');
+    }
+
+    public function set_tax_name($value)
+    {
+        $this->set_data('tax_name', $value);
     }
 
     public function get_tax_rate()
@@ -121,14 +227,29 @@ class LS_Product
         return $this->getData('tax_rate');
     }
 
+    public function set_tax_rate($value)
+    {
+        $this->set_data('tax_rate', $value);
+    }
+
     public function get_tax_id()
     {
         return $this->getData('tax_id');
     }
 
+    public function set_tax_id($value)
+    {
+        $this->set_data('tax_id', $value);
+    }
+
     public function getTaxId()
     {
         return $this->getData('taxId');
+    }
+
+    public function set_taxId($value)
+    {
+        $this->set_data('taxId', $value);
     }
 
 
@@ -137,9 +258,24 @@ class LS_Product
         return $this->getData('includes_tax');
     }
 
+    public function set_includes_tax($value)
+    {
+        $this->set_data('includes_tax', $value);
+    }
+
     public function get_quantity()
     {
         return $this->getData('quantity');
+    }
+
+    public function remove_quantity()
+    {
+        $this->unset_data('quantity');
+    }
+
+    public function set_quantity($value)
+    {
+        $this->set_data('quantity', $value);
     }
 
     public function get_product_type()
@@ -147,9 +283,19 @@ class LS_Product
         return $this->getData('product_type');
     }
 
+    public function set_product_type($value)
+    {
+        $this->set_data('product_type', $value);
+    }
+
     public function get_income_account_id()
     {
         return $this->getData('income_account_id');
+    }
+
+    public function set_income_account_id($value)
+    {
+        $this->set_data('income_account_id', $value);
     }
 
     public function get_expense_account_id()
@@ -157,9 +303,19 @@ class LS_Product
         return $this->getData('expense_account_id');
     }
 
+    public function set_expense_account_id($value)
+    {
+        $this->set_data('expense_account_id', $value);
+    }
+
     public function get_asset_account_id()
     {
         return $this->getData('asset_account_id');
+    }
+
+    public function set_asset_account_id($value)
+    {
+        $this->set_data('asset_account_id', $value);
     }
 
     public function get_update_at()
@@ -229,10 +385,21 @@ class LS_Product
         return $images;
     }
 
+    public function has_variant()
+    {
+        return count($this->getData('variants')) > 0 ? true : false;
+    }
+
     public function get_variants()
     {
         return $this->getData('variants');
     }
+
+    public function set_variants($value)
+    {
+        $this->set_data('variants', $value);
+    }
+
 
     public function getAllVariantSku()
     {
@@ -252,9 +419,24 @@ class LS_Product
         return $this->getData('tags');
     }
 
+    public function set_tags($value)
+    {
+        $this->set_data('tags', $value);
+    }
+
+    public function has_outlets()
+    {
+        return count($this->get_outlets()) > 0 ? true : false;
+    }
+
     public function get_outlets()
     {
         return $this->getData('outlets');
+    }
+
+    public function set_outlets($value)
+    {
+        $this->set_data('outlets', $value);
     }
 
     public function get_price_books()
@@ -262,14 +444,29 @@ class LS_Product
         return $this->getData('price_books');
     }
 
+    public function set_price_books($value)
+    {
+        $this->set_data('price_books', $value);
+    }
+
     public function get_brands()
     {
         return $this->getData('brands');
     }
 
+    public function set_brands($value)
+    {
+        $this->set_data('brands', $value);
+    }
+
     public function get_categories()
     {
         return $this->getData('category');
+    }
+
+    public function set_category($value)
+    {
+        $this->set_data('category', $value);
     }
 
     public function getTotalVariantsQuantity()
@@ -295,6 +492,20 @@ class LS_Product
 
         }
         return $quantity;
+    }
+
+    public function get_product_array()
+    {
+        return $this->product;
+    }
+
+    public function get_product_json()
+    {
+        if(empty($this->product)){
+            return null;
+        }
+
+        return json_encode($this->get_product_array());
     }
 
     public function getJsonProduct()

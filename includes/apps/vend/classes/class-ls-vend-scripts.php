@@ -10,6 +10,16 @@ class LS_Vend_Script
         $currentScreen = get_current_screen();
         $currentScreenId = $currentScreen->id;
 
+        $isSettingsPage = LS_Vend_Menu::is_settings_linksync_page();
+        $activeTab = LS_Vend_Menu::get_active_tab();
+        $pluginVersion = Linksync_Vend::$version;
+
+        ?>
+        <script>
+            var connected_products_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('connected_products')); ?>';
+            var connected_orders_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('connected_orders')); ?>';
+        </script>
+        <?php
         if ($linkSyncVendMenuId == $currentScreenId) {
 
             wp_enqueue_style('ls-styles', LS_ASSETS_URL . 'css/style.css');
@@ -17,29 +27,29 @@ class LS_Vend_Script
             //settings tab styles and scripts
             wp_enqueue_style('ls-settings-tab', LS_ASSETS_URL . 'css/admin-tabs/ls-plugins-setting.css');
             wp_enqueue_style('ls-reveal-style', LS_ASSETS_URL . 'css/admin-tabs/ls-reveal.css');
-            wp_enqueue_script('ls-tiptip-plugin', LS_ASSETS_URL . 'js/jquery-tiptip/jquery.tipTip.min.js', array('jquery'));
-            wp_enqueue_script('ls-reveal-script', LS_ASSETS_URL . 'js/jquery-tiptip/jquery.reveal.js', array('jquery'));
-            wp_enqueue_script('ls-jquery-ui-plugin', LS_ASSETS_URL . 'js/jquery-tiptip/jquery-ui.js', array('jquery'));
-            wp_enqueue_script('ls-custom-scripts', LS_ASSETS_URL . 'js/ls-custom.js', array('jquery'));
+            wp_enqueue_script('ls-tiptip-plugin', LS_ASSETS_URL . 'js/jquery-tiptip/jquery.tipTip.min.js', array('jquery'), $pluginVersion, true);
+            wp_enqueue_script('ls-reveal-script', LS_ASSETS_URL . 'js/jquery-tiptip/jquery.reveal.js', array('jquery'), $pluginVersion, true);
+            wp_enqueue_script('ls-jquery-ui-plugin', LS_ASSETS_URL . 'js/jquery-tiptip/jquery-ui.js', array('jquery'), $pluginVersion, true);
+            wp_enqueue_script('ls-custom-scripts', LS_ASSETS_URL . 'js/ls-custom.js', array('jquery'), $pluginVersion, true);
 
             //ls-plugins-tab-configuration styles and scripts
             wp_enqueue_style('ls-jquery-ui', LS_ASSETS_URL . 'css/jquery-ui/jquery-ui.css');
             wp_enqueue_style('ls-tab-configuration-style', LS_ASSETS_URL . 'css/admin-tabs/ls-plugins-tab-configuration.css');
 
-            $isSettingsPage = LS_Vend_Menu::is_settings_linksync_page();
-            $activeTab = LS_Vend_Menu::get_active_tab();
+            self::javascript_page_loader($isSettingsPage, $activeTab);
+
             if ($isSettingsPage && 'product_config' == $activeTab) {
 
-                wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'));
-                wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'));
-                wp_enqueue_script('ls-product-syncing-settings', LS_ASSETS_URL . 'js/vend/ls-product-syncing-settings.js', array('jquery'));
+                wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'), $pluginVersion, true);
+                wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'), $pluginVersion, true);
+                wp_enqueue_script('ls-product-syncing-settings', LS_ASSETS_URL . 'js/vend/ls-product-syncing-settings.js', array('jquery'), $pluginVersion, true);
 
                 wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
 
             } else {
-                wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'));
-                wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'));
-                wp_enqueue_script('ls-configuration', LS_ASSETS_URL . 'js/vend/ls-configuration.js', array('jquery'));
+                wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/vend/ls-ajax.js', array('jquery'), $pluginVersion, true);
+                wp_enqueue_script('ls-vend-sync-modal', LS_ASSETS_URL . 'js/vend/ls-vend-sync-modal.js', array('jquery'), $pluginVersion, true);
+                wp_enqueue_script('ls-configuration', LS_ASSETS_URL . 'js/vend/ls-configuration.js', array('jquery'), $pluginVersion, true);
 
                 wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
             }
@@ -54,9 +64,36 @@ class LS_Vend_Script
 
 
         if ('shop_order' == $currentScreenId) {
-            wp_enqueue_script('ls-shop-order-scripts', LS_ASSETS_URL . 'js/ls-shop-order.js', array('jquery'));
+            wp_enqueue_script('ls-shop-order-scripts', LS_ASSETS_URL . 'js/ls-shop-order.js', array('jquery'), $pluginVersion, true);
+        }
+    }
+
+    public static function javascript_page_loader($isSettingsPage, $activeTab)
+    {
+        $jsToLoad = 'configuration';
+        if ($isSettingsPage) {
+
+            if ('product_config' == $activeTab) {
+                $jsToLoad = 'product';
+            } else if ('order_config' == $activeTab) {
+                $jsToLoad = 'order';
+            } else if ('support' == $activeTab) {
+                $jsToLoad = 'support';
+            } else if ('logs' == $activeTab) {
+                $jsToLoad = 'logs';
+            }
+        } else {
+
+            if (LS_Vend_Menu::is_linksync_page('connected_products')) {
+                $jsToLoad = 'connected-product';
+            } else if (LS_Vend_Menu::is_linksync_page('connected_orders')) {
+                $jsToLoad = 'connected-order';
+            } else if (LS_Vend_Menu::is_linksync_page('duplicate_sku')) {
+                $jsToLoad = 'duplicate-sku';
+            }
         }
 
+        wp_enqueue_script('ls-vend-' . $jsToLoad . '-load', LS_ASSETS_URL . 'js/vend/ls-vend-settings-' . $jsToLoad . '-load.js', array('jquery'), Linksync_Vend::$version, true);
     }
 
 }

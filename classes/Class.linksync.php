@@ -1900,6 +1900,7 @@ class linksync_class {
                 if (isset($order['id']) && !empty($order['id'])) {
 
                     ls_last_order_update_at($order['updated_at']);
+                    LS_Vend()->option()->lasOrderUpdate($order['updated_at']);
 					$ls_oid = ls_order_exist( $order['id'] );
 					if( false == $ls_oid ){
 
@@ -1924,6 +1925,7 @@ class linksync_class {
                             $devLogMessage = 'Order '.$order_id.' was created from vend to woocommerce <br/> <b>Json data being used from vend:</b><br/>';
                             $devLogMessage .= '<textarea>'.json_encode($order).'</textarea>';
                             LSC_Log::add_dev_success('linksync_class->importOrderToWoocommerce', $devLogMessage);
+                            $orderMeta->updateOrderJsonFromVendToWoo($order);
 
                             /**
                              * Linksync order id
@@ -1933,7 +1935,7 @@ class linksync_class {
                             $orderMeta->update_vend_receipt_number($order['orderId']);
 
                             if (isset($order['payment']['transactionNumber']) && !empty($order['payment']['transactionNumber'])) {
-                                add_post_meta($order_id, 'transaction_id', $order['payment']['transactionNumber'], true);
+                                update_post_meta($order_id, 'transaction_id', $order['payment']['transactionNumber'], true);
                             }
                             /* ---------------------------------------Payment Mapping --------------------------------- */
                             if (isset($order['payment']['retailer_payment_type_id']) && !empty($order['payment']['retailer_payment_type_id'])) {
@@ -1948,8 +1950,8 @@ class linksync_class {
                                             $wocoomercepayment = $payment_method[1];
                                             foreach ($payment as $payment_method_id => $payment_method_title) {
                                                 if ($payment_method_title->title == $wocoomercepayment) {
-                                                    add_post_meta($order_id, '_payment_method_title', $wocoomercepayment, true);
-                                                    add_post_meta($order_id, '_payment_method', $payment_method_id, true);
+                                                    update_post_meta($order_id, '_payment_method_title', $wocoomercepayment, true);
+                                                    update_post_meta($order_id, '_payment_method', $payment_method_id, true);
                                                 }
                                             }
                                         }
@@ -1959,27 +1961,27 @@ class linksync_class {
                             $customer_import = get_option('vend_to_wc_customer');
                             if (isset($customer_import) && $customer_import == 'customer_data') {
                                 if (isset($order['billingAddress'])) {
-                                    add_post_meta($order_id, '_billing_first_name', isset($order['billingAddress']['firstName']) ? $order['billingAddress']['firstName'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_last_name', isset($order['billingAddress']['lastName']) ? $order['billingAddress']['lastName'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_company', isset($order['billingAddress']['company']) ? $order['billingAddress']['company'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_address_1', isset($order['billingAddress']['street1']) ? $order['billingAddress']['street1'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_address_2', isset($order['billingAddress']['street2']) ? $order['billingAddress']['street2'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_city', isset($order['billingAddress']['city']) ? $order['billingAddress']['city'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_postcode', isset($order['billingAddress']['postalCode']) ? $order['billingAddress']['postalCode'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_country', isset($order['billingAddress']['country']) ? $order['billingAddress']['country'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_state', isset($order['billingAddress']['state']) ? $order['billingAddress']['state'] : NULL, true);
-                                    add_post_meta($order_id, '_billing_phone', isset($order['billingAddress']['phone']) ? $order['billingAddress']['phone'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_first_name', isset($order['billingAddress']['firstName']) ? $order['billingAddress']['firstName'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_last_name', isset($order['billingAddress']['lastName']) ? $order['billingAddress']['lastName'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_company', isset($order['billingAddress']['company']) ? $order['billingAddress']['company'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_address_1', isset($order['billingAddress']['street1']) ? $order['billingAddress']['street1'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_address_2', isset($order['billingAddress']['street2']) ? $order['billingAddress']['street2'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_city', isset($order['billingAddress']['city']) ? $order['billingAddress']['city'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_postcode', isset($order['billingAddress']['postalCode']) ? $order['billingAddress']['postalCode'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_country', isset($order['billingAddress']['country']) ? $order['billingAddress']['country'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_state', isset($order['billingAddress']['state']) ? $order['billingAddress']['state'] : NULL, true);
+                                    update_post_meta($order_id, '_billing_phone', isset($order['billingAddress']['phone']) ? $order['billingAddress']['phone'] : NULL, true);
                                 }
                                 if (isset($order['deliveryAddress'])) {
-                                    add_post_meta($order_id, '_shipping_first_name', isset($order['deliveryAddress']['firstName']) ? $order['deliveryAddress']['firstName'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_last_name', isset($order['deliveryAddress']['lastName']) ? $order['deliveryAddress']['lastName'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_company', isset($order['deliveryAddress']['company']) ? $order['deliveryAddress']['company'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_address_1', isset($order['deliveryAddress']['street1']) ? $order['deliveryAddress']['street1'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_address_2', isset($order['deliveryAddress']['street2']) ? $order['deliveryAddress']['street2'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_city', isset($order['deliveryAddress']['city']) ? $order['deliveryAddress']['city'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_postcode', isset($order['deliveryAddress']['postalCode']) ? $order['deliveryAddress']['postalCode'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_country', isset($order['deliveryAddress']['country']) ? $order['deliveryAddress']['country'] : NULL, true);
-                                    add_post_meta($order_id, '_shipping_state', isset($order['deliveryAddress']['state']) ? $order['deliveryAddress']['state'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_first_name', isset($order['deliveryAddress']['firstName']) ? $order['deliveryAddress']['firstName'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_last_name', isset($order['deliveryAddress']['lastName']) ? $order['deliveryAddress']['lastName'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_company', isset($order['deliveryAddress']['company']) ? $order['deliveryAddress']['company'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_address_1', isset($order['deliveryAddress']['street1']) ? $order['deliveryAddress']['street1'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_address_2', isset($order['deliveryAddress']['street2']) ? $order['deliveryAddress']['street2'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_city', isset($order['deliveryAddress']['city']) ? $order['deliveryAddress']['city'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_postcode', isset($order['deliveryAddress']['postalCode']) ? $order['deliveryAddress']['postalCode'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_country', isset($order['deliveryAddress']['country']) ? $order['deliveryAddress']['country'] : NULL, true);
+                                    update_post_meta($order_id, '_shipping_state', isset($order['deliveryAddress']['state']) ? $order['deliveryAddress']['state'] : NULL, true);
                                 }
                                 if (isset($order['primary_email'])) {
                                     require_once(ABSPATH . 'wp-includes/user.php');
@@ -1989,67 +1991,70 @@ class linksync_class {
                                     $user_id = email_exists($user_email);
                                     $email_password = false;
                                     if (!$user_id) {
+                                        $user_id = username_exists($user_name);
                                         $user_password = wp_generate_password(12, false);
-                                        $user_id = wp_create_user($user_name, $user_password, $user_email);
+                                        if (false == $user_id) {
+                                            $user_id = wp_create_user($user_name, $user_password, $user_email);
+                                        }
                                         update_user_option($user_id, 'default_password_nag', true, true);
                                         $email_password = true;
                                         $message = " Username: $user_name\n Password: $user_password\n " . wp_login_url();
                                         if (isset($order['billingAddress'])) {
-                                            add_user_meta($user_id, 'billing_first_name', isset($order['billingAddress']['firstName']) ? $order['billingAddress']['firstName'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_last_name', isset($order['billingAddress']['lastName']) ? $order['billingAddress']['lastName'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_company', isset($order['billingAddress']['company']) ? $order['billingAddress']['company'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_address_1', isset($order['billingAddress']['street1']) ? $order['billingAddress']['street1'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_address_2', isset($order['billingAddress']['street2']) ? $order['billingAddress']['street2'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_city', isset($order['billingAddress']['city']) ? $order['billingAddress']['city'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_postcode', isset($order['billingAddress']['postalCode']) ? $order['billingAddress']['postalCode'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_country', isset($order['billingAddress']['country']) ? $order['billingAddress']['country'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_state', isset($order['billingAddress']['state']) ? $order['billingAddress']['state'] : NULL, true);
-                                            add_user_meta($user_id, 'billing_phone', isset($order['billingAddress']['phone']) ? $order['billingAddress']['phone'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_first_name', isset($order['billingAddress']['firstName']) ? $order['billingAddress']['firstName'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_last_name', isset($order['billingAddress']['lastName']) ? $order['billingAddress']['lastName'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_company', isset($order['billingAddress']['company']) ? $order['billingAddress']['company'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_address_1', isset($order['billingAddress']['street1']) ? $order['billingAddress']['street1'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_address_2', isset($order['billingAddress']['street2']) ? $order['billingAddress']['street2'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_city', isset($order['billingAddress']['city']) ? $order['billingAddress']['city'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_postcode', isset($order['billingAddress']['postalCode']) ? $order['billingAddress']['postalCode'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_country', isset($order['billingAddress']['country']) ? $order['billingAddress']['country'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_state', isset($order['billingAddress']['state']) ? $order['billingAddress']['state'] : NULL, true);
+                                            update_user_meta($user_id, 'billing_phone', isset($order['billingAddress']['phone']) ? $order['billingAddress']['phone'] : NULL, true);
                                         }
                                         if (isset($order['deliveryAddress'])) {
-                                            add_user_meta($user_id, 'shipping_first_name', isset($order['deliveryAddress']['firstName']) ? $order['deliveryAddress']['firstName'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_last_name', isset($order['deliveryAddress']['lastName']) ? $order['deliveryAddress']['lastName'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_company', isset($order['deliveryAddress']['company']) ? $order['deliveryAddress']['company'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_address_1', isset($order['deliveryAddress']['street1']) ? $order['deliveryAddress']['street1'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_address_2', isset($order['deliveryAddress']['street2']) ? $order['deliveryAddress']['street2'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_city', isset($order['deliveryAddress']['city']) ? $order['deliveryAddress']['city'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_postcode', isset($order['deliveryAddress']['postalCode']) ? $order['deliveryAddress']['postalCode'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_country', isset($order['deliveryAddress']['country']) ? $order['deliveryAddress']['country'] : NULL, true);
-                                            add_user_meta($user_id, 'shipping_state', isset($order['deliveryAddress']['state']) ? $order['deliveryAddress']['state'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_first_name', isset($order['deliveryAddress']['firstName']) ? $order['deliveryAddress']['firstName'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_last_name', isset($order['deliveryAddress']['lastName']) ? $order['deliveryAddress']['lastName'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_company', isset($order['deliveryAddress']['company']) ? $order['deliveryAddress']['company'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_address_1', isset($order['deliveryAddress']['street1']) ? $order['deliveryAddress']['street1'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_address_2', isset($order['deliveryAddress']['street2']) ? $order['deliveryAddress']['street2'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_city', isset($order['deliveryAddress']['city']) ? $order['deliveryAddress']['city'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_postcode', isset($order['deliveryAddress']['postalCode']) ? $order['deliveryAddress']['postalCode'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_country', isset($order['deliveryAddress']['country']) ? $order['deliveryAddress']['country'] : NULL, true);
+                                            update_user_meta($user_id, 'shipping_state', isset($order['deliveryAddress']['state']) ? $order['deliveryAddress']['state'] : NULL, true);
                                         }
                                         wp_mail($user_email, 'Your username and password', $message);
                                         $user = new WP_User($user_id);
                                         $user->set_role('customer');
                                     }
-                                    add_post_meta($order_id, '_customer_user', $user_id);
+                                    update_post_meta($order_id, '_customer_user', $user_id);
                                 }
                             }
                             if (isset($order['total']) && !empty($order['total'])) {
                                 if (isset($order['total_tax'])) {
                                     $order['total'] = $order['total_tax'] + $order['total'];
                                 }
-                                add_post_meta($order_id, '_order_total', $order['total'], true);
+                                update_post_meta($order_id, '_order_total', $order['total'], true);
                             }
 
                             if (isset($order['taxes_included']) && $order['taxes_included'] == true) {
-                                add_post_meta($order_id, '_order_tax', $order['total_tax'], true);
+                                update_post_meta($order_id, '_order_tax', $order['total_tax'], true);
                             }
 
                             if (isset($order['updated_at']) && !empty($order['updated_at'])) {
-                                add_post_meta($order_id, '_completed_date', $order['updated_at'], true);
+                                update_post_meta($order_id, '_completed_date', $order['updated_at'], true);
                             }
 
                             if (isset($order['id']) && !empty($order['id'])) {
-                                add_post_meta($order_id, '_vend_orderid', $order['id'], true);
+                                update_post_meta($order_id, '_vend_orderid', $order['id'], true);
                             }
                             if (isset($order['currency']) && !empty($order['currency'])) {
-                                add_post_meta($order_id, '_order_currency', $order['currency'], true);
+                                update_post_meta($order_id, '_order_currency', $order['currency'], true);
                             }
 
 // billing info
 
                             if (isset($order['user_name']) && !empty($order['user_name'])) {
-                                add_post_meta($order_id, '_billing_email', $order['user_name'], true);
+                                update_post_meta($order_id, '_billing_email', $order['user_name'], true);
                             }
                             $i = 0;
                             foreach ($order['products'] as $products) {
@@ -2141,14 +2146,14 @@ class linksync_class {
                                         wc_add_order_item_meta($shipping_id, 'cost', $products['price']);
                                         wc_add_order_item_meta($shipping_id, 'method_id', '');
                                         wc_add_order_item_meta($shipping_id, 'taxes', '');
-                                        add_post_meta($order_id, '_order_shipping', $products['price']);
-                                        add_post_meta($order_id, '_order_shipping_tax', $products['taxValue']);
+                                        update_post_meta($order_id, '_order_shipping', $products['price']);
+                                        update_post_meta($order_id, '_order_shipping_tax', $products['taxValue']);
                                         $shippping_tax_amount = $products['taxValue'];
                                         $taxes[1] = $products['taxValue'];
                                         wc_add_order_item_meta($shipping_id, 'taxes', $taxes);
                                     }
                                 } elseif ($products['sku'] == 'vend-discount') {
-                                    add_post_meta($order_id, '_cart_discount', $products['price']);
+                                    update_post_meta($order_id, '_cart_discount', $products['price']);
                                 }
                                 /* ---------------------------------------Tax Mapping --------------------------------- */
                                 if ($products['sku'] != 'shipping' || $products['sku'] != 'vend-discount') {

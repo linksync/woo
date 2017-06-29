@@ -23,124 +23,10 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
         break;
     }
 }
-if (isset($_POST['save_order_sync_setting'])) {
-    //Woocommers To VEND
-    if (isset($_POST['order_sync_type']) && !empty($_POST['order_sync_type'])) {
-        update_option('order_sync_type', $_POST['order_sync_type']);
-    }
-    if (isset($_POST['order_status_wc_to_vend'])) {
-        update_option('order_status_wc_to_vend', isset($_POST['order_status_wc_to_vend']) ? $_POST['order_status_wc_to_vend'] : 'off' );
-    } else {
-        update_option('order_status_wc_to_vend', 'off');
-    }
 
-    if (isset($_POST['wc_to_vend_outlet'])) {
-        $register = 'wc_to_vend_register|' . $_POST['wc_to_vend_outlet'];
-        if (isset($_POST[$register])) {
-            update_option('wc_to_vend_register', isset($_POST[$register]) ? $_POST[$register] : 'off');
-        } else {
-            update_option('wc_to_vend_register', 'off');
-        }
-        $user = 'wc_to_vend_user|' . $_POST['wc_to_vend_outlet'];
-        if (isset($user)) {
-            update_option('wc_to_vend_user', isset($_POST[$user]) ? $_POST[$user] : 'off');
-        } else {
-            update_option('wc_to_vend_user', 'off');
-        }
-        update_option('wc_to_vend_outlet', isset($_POST['wc_to_vend_outlet']) ? $_POST['wc_to_vend_outlet'] : 'off');
-    } else {
-        update_option('wc_to_vend_outlet', 'off');
-    }
-
-    if (isset($_POST['wc_to_vend_tax']) && !empty($_POST['wc_to_vend_tax'])) {
-        $all_taxes = implode(',', $_POST['wc_to_vend_tax']);
-        update_option('wc_to_vend_tax', $all_taxes);
-    } else {
-        update_option('wc_to_vend_tax', 'off');
-    }
-    if (isset($_POST['wc_to_vend_payment']) && !empty($_POST['wc_to_vend_payment'])) {
-        $all_payment = implode(',', $_POST['wc_to_vend_payment']);
-        update_option('wc_to_vend_payment', $all_payment);
-    } else {
-        update_option('wc_to_vend_payment', 'off');
-    }
-    if ($_POST['wc_to_vend_export']) {
-        update_option('wc_to_vend_export', isset($_POST['wc_to_vend_export']) ? $_POST['wc_to_vend_export'] : 'off');
-        $orderOption = LS_Vend()->order_option();
-
-        $useBillingToBePhysicalOption = (isset($_POST['usebillingtobephysical']) && 'yes' == $_POST['usebillingtobephysical']) ? 'yes' : 'no';
-        $orderOption->setBillingAddressToBePhysicalAddress($useBillingToBePhysicalOption);
-
-        $useShippingToBePostalOption = (isset($_POST['useshippingtobepostal']) && 'yes' == $_POST['useshippingtobepostal']) ? 'yes' : 'no';
-        $orderOption->setShippingAddressToBePostalAddress($useShippingToBePostalOption);
-
-    } else {
-        update_option('wc_to_vend_export', 'off');
-    }
-    //From VEND To Woocommers
-    if (isset($_POST['order_vend_to_wc'])) {
-        update_option('order_vend_to_wc', isset($_POST['order_vend_to_wc']) ? $_POST['order_vend_to_wc'] : 'off');
-    } else {
-        update_option('order_vend_to_wc', 'off');
-    }
-
-
-    if (isset($_POST['vend_to_wc_tax']) && !empty($_POST['vend_to_wc_tax'])) {
-        $all_taxes = implode(',', $_POST['vend_to_wc_tax']);
-        update_option('vend_to_wc_tax', $all_taxes);
-    } else {
-        update_option('vend_to_wc_tax', 'off');
-    }
-
-
-    if (isset($_POST['vend_to_wc_payments']) && !empty($_POST['vend_to_wc_payments'])) {
-        $payment_vend = implode(',', $_POST['vend_to_wc_payments']);
-
-        update_option('vend_to_wc_payments', $payment_vend);
-    } else {
-        update_option('vend_to_wc_payments', 'off');
-    }
-
-    if (isset($_POST['vend_to_wc_customer'])) {
-        update_option('vend_to_wc_customer', isset($_POST['vend_to_wc_customer']) ? $_POST['vend_to_wc_customer'] : 'off');
-    } else {
-        update_option('vend_to_wc_customer', 'off');
-    }
-
-    if (isset($_POST['order_sync_type']) && $_POST['order_sync_type'] == 'vend_to_wc-way') {
-        // Update "since"
-        $current_date_time_string = strtotime(date("Y-m-d H:i:s"));
-        $time_offset = get_option('linksync_time_offset');
-        if (isset($time_offset) && !empty($time_offset)) {
-            $time = $current_date_time_string + $time_offset;
-        } else {
-            $time = $current_date_time_string; # UTC
-        }
-        $result_time = date("Y-m-d H:i:s", $time);
-        #order update  Request time
-        update_option('order_time_suc', $result_time);
-    }
-
-    if ($_POST['order_sync_type'] != 'disabled') {
-        if ($_POST['order_sync_type'] == 'vend_to_wc-way') {
-            $enable = 'Vend to Woo';
-        } else {
-            $enable = 'Woo to Vend';
-        }
-        $setting_message = $enable . ' is enable';
-    } else {
-        $setting_message = 'Sync Setting Disabled';
-    }
-
-    if (is_vend()) {
-        $webhook = LS_Vend()->updateWebhookConnection();
-        LS_Vend()->save_user_settings_to_linksync();
-    }
-    LSC_Log::add('Order Sync Setting', 'success', $setting_message, $LAIDKey);
-}
 ?>
 <h3>Order Syncing Configuration</h3>
-<form name="save_order_sync_setting" method="post">
+<form id="frmOrderSyncingSettings" name="save_order_sync_setting" method="post">
     <fieldset>
         <legend>Order Syncing Type</legend>
         <div>
@@ -199,7 +85,10 @@ if (isset($_POST['save_order_sync_setting'])) {
                     <?php
                     # Get Outlets
                     for ($count_outlets = 1; $count_outlets <= 3; $count_outlets++) {
-                        $linksync_outlets = LS_Vend()->api()->getOutlets();
+                        /**
+                         * Get the previously saved vend outlets information on LS_Vend_Laid class in the method check_api_key
+                         */
+                        $linksync_outlets = LS_Vend()->option()->get_vend_outlets();
                         if (isset($linksync_outlets) && !empty($linksync_outlets)) {
                             break;
                         }
@@ -723,4 +612,32 @@ if (isset($_POST['save_order_sync_setting'])) {
         });
 
     });
+
+    (function ($) {
+
+        $(document).ready(function () {
+
+            var $mainContainer = $('#ls-main-wrapper');
+
+            $mainContainer.on('submit', '#frmOrderSyncingSettings', function (e) {
+                var $tabMenu = $('.ls-tab-menu');
+                var $frm = $('#frmOrderSyncingSettings');
+
+
+                $tabMenu.before('<div class="ls-loading open"></div>');
+
+                var data = {
+                    action: 'vend_save_order_syncing_settings',
+                    post_array: $frm.serialize()
+                };
+
+                lsAjax.post(data).done(function (response) {
+                    $mainContainer.find('.ls-loading').fadeOut('fast');
+                    console.log(response);
+                });
+                e.preventDefault();
+            });
+        });
+
+    })(jQuery);
 </script>

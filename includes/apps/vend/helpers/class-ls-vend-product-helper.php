@@ -28,7 +28,7 @@ class LS_Vend_Product_Helper
             $var_ids = LS_Product_Helper::getVariantIds($product_id);
             if (!empty($var_ids)) {
                 foreach ($var_ids as $var_id) {
-                    wp_delete_post($var_id['ID'], $force_delete);
+                    wp_delete_post($var_id, $force_delete);
                 }
             }
             $deleted = wp_delete_post($product_id, $force_delete);
@@ -172,11 +172,13 @@ class LS_Vend_Product_Helper
 
             if (!empty($variants)) {
                 $productAttributes = array();
-
+                $sortedIndex = 0;
+                asort($variants);
                 foreach ($variants as $variant) {
                     $variant = new LS_Product_Variant($products_meta, $variant);
-                    $res = self::createUpdateVariantProduct($variant);
+                    $res = self::createUpdateVariantProduct($variant, $sortedIndex);
                     $productAttributes = array_merge((array)$productAttributes, isset($res['_product_attributes']) ? (array)$res['_product_attributes'] : array());
+                    $sortedIndex++;
                 }
                 $products_meta->update_product_attributes($productAttributes);
             }
@@ -548,7 +550,7 @@ class LS_Vend_Product_Helper
         return array('tax_name' => $attribute_name);
     }
 
-    public static function createUpdateVariantProduct(LS_Product_Variant $variant)
+    public static function createUpdateVariantProduct(LS_Product_Variant $variant, $sortedIndex = 0)
     {
         $returnDataSet = array();
         $productSyncOption = LS_Vend()->product_option();
@@ -560,6 +562,7 @@ class LS_Vend_Product_Helper
             $variantParentId = $variant->getParentMeta()->getWooProductId();
             $varProductId = LS_Product_Helper::getProductIdBySku($variantSku);
             $product_name = $variant->get_name();
+            $button_order = $variant->get_button_order();
             $status = 'publish';
 
             if (!empty($varProductId)) {
@@ -569,6 +572,7 @@ class LS_Vend_Product_Helper
             $post_var_args['post_status'] = $status;
             $post_var_args['post_type'] = 'product_variation';
             $post_var_args['post_parent'] = $variantParentId;
+            $post_var_args['menu_order'] = empty($button_order) ? $sortedIndex : $button_order;
 
             $returnDataSet['post_data'] = $post_var_args;
             $varProductId = LS_Product_Helper::create($post_var_args, true);

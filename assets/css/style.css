@@ -153,7 +153,8 @@
 
 .no-js #loader { display: none;  }
 .js #loader { display: block; position: absolute; left: 100px; top: 0; }
-.se-pre-con {
+.se-pre-con,
+.ls-loading{
     position: fixed;
     left: 0px;
     top: 0px;

@@ -15,9 +15,13 @@
 
         cacheDom: function () {
             this.$mainContainer = $('#ls-main-wrapper');
-            this.$btnVendToWoo = this.$mainContainer.find('.product_sync_to_woo');
-            this.$btnWooToVend = this.$mainContainer.find('.product_sync_to_vend');
-            this.btnVendToWooSinceLastSync = this.$mainContainer.find('.product_sync_to_woo_since_last_sync');
+            this.$btnClassVendToWoo = '.product_sync_to_woo';
+            this.$btnClassWooToVend = '.product_sync_to_vend';
+            this.$btnClassVendToWooSinceLastSync = '.product_sync_to_woo_since_last_sync';
+            this.btnClassShowPopUpForWooToVend = '.btn-sync-woo-to-vend';
+            this.btnClassShowPopUpForVendToWoo = '.btn-sync-vend-to-woo';
+            this.btnClassShopPopUpForVendToWooSinceLastUpdate = '.vend_to_woo_since_last_update';
+
 
             this.$modalMessage = this.$mainContainer.find('.sync-modal-message');
             this.$popUpButtons = this.$mainContainer.find('#pop_button');
@@ -31,20 +35,64 @@
             this.$modalBackDrop = this.$mainContainer.find('.ls-modal-backdrop');
             this.$modalClose = this.$mainContainer.find('.ls-modal-close');
             this.$modalCloseContainer = this.$mainContainer.find('.ls-modal-close-container');
-            this.$btnShowPopUpForWooToVend = this.$mainContainer.find('.btn-sync-woo-to-vend');
-            this.$btnShowPopUpForVendToWoo = this.$mainContainer.find('.btn-sync-vend-to-woo');
-            this.$btnShopPopUpForVendToWooSinceLastUpdate = this.$mainContainer.find('.vend_to_woo_since_last_update');
             this.$syncButtonsContainer = this.$mainContainer.find('.sync-buttons');
 
             this.$syncToWooButtons = this.$mainContainer.find('.sync-to-woo-buttons');
             this.$syncToVendButtons = this.$mainContainer.find('.sync-to-vend-buttons');
             this.$syncToWooButtonsSinceLastSync = this.$mainContainer.find('.sync-to-woo-buttons-since-last-update');
+            this.$syncTwoWayButtons = this.$mainContainer.find('.two-way-sync-vend-buttons');
 
             this.$tabMenu = this.$mainContainer.find('.ls-tab-menu');
         },
 
+        on: function (event, childOrCallback, callback) {
+            if (typeof callback == 'undefined') {
+                this.$mainContainer.on(event, childOrCallback);
+            } else {
+                this.$mainContainer.on(event, childOrCallback, callback);
+            }
+        },
+
+        click: function (child, callback) {
+            this.on('click', child, callback);
+        },
+
+        openTwoWaySyncModal: function () {
+            lsVendSyncModal.cacheDom();
+            lsVendSyncModal.open({
+                buttonGroup: 'two_way',
+                htmlMessage: 'Your changes will require a full re-sync of product data. <br/>Do you want to re-sync now?<br/>'
+            });
+        },
+
+        openWooToVendSyncModal: function () {
+            lsVendSyncModal.cacheDom();
+            lsVendSyncModal.open({
+                buttonGroup: 'woo_to_vend',
+                htmlMessage: 'Your WooCommerce products will be exported to Vend.<br/>Do you wish to continue?'
+            });
+        },
+
+        openVendToWooSyncModal: function () {
+            lsVendSyncModal.cacheDom();
+            lsVendSyncModal.open({
+                buttonGroup: 'vend_to_woo',
+                htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
+            });
+        },
+
+        openVendToWooSinceLastSyncModal: function () {
+            lsVendSyncModal.cacheDom();
+            lsVendSyncModal.open({
+                buttonGroup: 'vend_to_woo_since_last_sync',
+                htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
+            });
+        },
+
         bindEvents: function () {
-            this.btnVendToWooSinceLastSync.on('click', function () {
+
+            this.click(this.$btnClassVendToWooSinceLastSync, function () {
+                lsVendSyncModal.cacheDom();
                 lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
                     lsVendSyncModal.setOptions({
                         first_message_label: "Getting products from Vend since last update.",
@@ -57,7 +105,8 @@
                 });
             });
 
-            this.$btnVendToWoo.on('click', function () {
+            this.click(this.$btnClassVendToWoo, function () {
+                lsVendSyncModal.cacheDom();
                 lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
                     lsVendSyncModal.setOptions({
                         first_message_label: "Sync is starting!",
@@ -70,8 +119,8 @@
                 });
             });
 
-            this.$btnWooToVend.on('click', function () {
-
+            this.click(this.$btnClassWooToVend, function () {
+                lsVendSyncModal.cacheDom();
                 lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
                     lsVendSyncModal.$progressBar.progressbar("value", 0);
                     lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
@@ -79,34 +128,22 @@
                 });
             });
 
-            this.$btnShowPopUpForVendToWoo.on('click', function () {
-
-                lsVendSyncModal.open({
-                    buttonGroup: 'vend_to_woo',
-                    htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
-                });
-
-            });
-
-            this.$btnShowPopUpForWooToVend.on('click', function () {
-
-                lsVendSyncModal.open({
-                    buttonGroup: 'woo_to_vend',
-                    htmlMessage: 'Your WooCommerce products will be exported to Vend.<br/>Do you wish to continue?'
-                });
-            });
-
-            this.$btnShopPopUpForVendToWooSinceLastUpdate.on('click', function () {
-
-                lsVendSyncModal.open({
-                    buttonGroup: 'vend_to_woo_since_last_sync',
-                    htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
-                });
-
-            });
-
-            this.$modalClose.on('click', function () {
+            this.click('.ls-modal-close', function () {
+                lsVendSyncModal.cacheDom();
                 lsVendSyncModal.close(1);
+            });
+
+
+            this.click(this.btnClassShowPopUpForVendToWoo, function () {
+                lsVendSyncModal.openVendToWooSyncModal();
+            });
+
+            this.click(this.btnClassShowPopUpForWooToVend, function () {
+                lsVendSyncModal.openWooToVendSyncModal();
+            });
+
+            this.click(this.btnClassShopPopUpForVendToWooSinceLastUpdate, function () {
+                lsVendSyncModal.openVendToWooSinceLastSyncModal();
             });
 
             this.initializeSyncProgress();
@@ -313,7 +350,7 @@
                 var product_count = linksync_response.products.length;
                 if (product_count > 0) {
 
-                   lsVendSyncModal.syncProductFromVend(linksync_response, 0);
+                    lsVendSyncModal.syncProductFromVend(linksync_response, 0);
 
                 } else if (product_count <= 1) {
                     lsVendSyncModal.$progressBar.progressbar("value", 100);
@@ -353,6 +390,7 @@
 
         initializeSyncProgress: function () {
 
+            lsVendSyncModal.cacheDom();
             lsVendSyncModal.$progressBar.progressbar({
                 value: true,
                 complete: function () {
@@ -412,6 +450,8 @@
                 lsVendSyncModal.$syncToWooButtons.show();
             } else if ('vend_to_woo_since_last_sync' == option.buttonGroup) {
                 lsVendSyncModal.$syncToWooButtonsSinceLastSync.show();
+            } else if ('two_way' == option.buttonGroup) {
+                lsVendSyncModal.$syncTwoWayButtons.show();
             }
 
             lsVendSyncModal.$syncModalContainer.fadeIn();

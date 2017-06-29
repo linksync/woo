@@ -39,4 +39,9 @@ class LS_Product_Variant extends LS_Product
     public function  get_option_three_value(){
         return $this->getData('option_three_value');
     }
+
+    public function get_button_order()
+    {
+        return $this->getData('button_order');
+    }
 }

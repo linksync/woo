@@ -30,44 +30,45 @@ class LS_Vend_Helper
                 $price = $priceBaseOnSettings;
             }
 
-            /**
-             *  No effect on price
-             *  https://www.evernote.com/shard/s144/sh/e63f527b-903f-4002-8f00-313ff0652290/d9c1e0ce5a95800a
-             */
-            $reg_sale_price = (float)$priceBaseOnSettings;
+            $priceBaseOnSettings = (float)$priceBaseOnSettings;
             $tax_rate = 0;
-            if ('on' == $excluding_tax && true == $taxsetup && !empty($priceBaseOnSettings)) {
+            if ('on' == $excluding_tax) {
                 /**
-                 * For excluding tax (both Woo Tax Excluding and Vend Tax Excluding)
-                 * display_retail_price_tax_inclusive 1, sell_price = Woo Final price + tax
-                 * For display_retail_price_tax_inclusive 0, sell_price = Woo Final price
+                 *  No effect on price
+                 *  https://www.evernote.com/shard/s144/sh/e63f527b-903f-4002-8f00-313ff0652290/d9c1e0ce5a95800a
                  */
-                $tax_value = (float)($reg_sale_price * $tax_rate);
+                if (true == $taxsetup && !empty($priceBaseOnSettings)) {
 
-                //Initialize $price variable
-                $price = 0;
-                if ('1' == $display_retail_price_tax_inclusive) {
-                    $price = $reg_sale_price + $tax_value;
-                } elseif ('0' == $display_retail_price_tax_inclusive) {
-                    $price = $reg_sale_price;
+                    $tax_value = (float)($priceBaseOnSettings * $tax_rate);
+
+                    /**
+                     * For excluding tax (both Woo Tax Excluding and Vend Tax Excluding)
+                     * display_retail_price_tax_inclusive 1, sell_price = Woo Final price + tax
+                     * For display_retail_price_tax_inclusive 0, sell_price = Woo Final price
+                     */
+                    if ('1' == $display_retail_price_tax_inclusive) {
+                        $price = $priceBaseOnSettings + $tax_value;
+                    } else if ('0' == $display_retail_price_tax_inclusive) {
+                        $price = $priceBaseOnSettings;
+                    }
+
                 }
+            } else {
 
-            } else if (true == $taxsetup && !empty($priceBaseOnSettings)) {
-                /**
-                 * For including tax (both Woo Tax Including and Vend Tax Including)
-                 * display_retail_price_tax_inclusive 1, sell_price = Woo Final price
-                 * For display_retail_price_tax_inclusive 0, sell_price = Woo Final price - tax
-                 */
-                $tax_value = ($reg_sale_price - ($reg_sale_price / (1 + $tax_rate)));
+                if (true == $taxsetup && !empty($priceBaseOnSettings)) {
 
-                //Initialize $price variable
-                $price = 0;
-                if ('1' == $display_retail_price_tax_inclusive) {
-                    $price = $reg_sale_price;
-                } elseif ('0' == $display_retail_price_tax_inclusive) {
-                    $price = $reg_sale_price - $tax_value;
+                    $tax_value = ($priceBaseOnSettings - ($priceBaseOnSettings / (1 + $tax_rate)));
+                    /**
+                     * For including tax (both Woo Tax Including and Vend Tax Including)
+                     * display_retail_price_tax_inclusive 1, sell_price = Woo Final price
+                     * For display_retail_price_tax_inclusive 0, sell_price = Woo Final price - tax
+                     */
+                    if ('1' == $display_retail_price_tax_inclusive) {
+                        $price = $priceBaseOnSettings;
+                    } elseif ('0' == $display_retail_price_tax_inclusive) {
+                        $price = $priceBaseOnSettings - $tax_value;
+                    }
                 }
-
             }
 
             if (isset($price)) {

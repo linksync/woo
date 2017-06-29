@@ -16,7 +16,7 @@ class LS_Vend_Laid
         /**
          * Get the configuration or the selection of api config.
          */
-        $config = require(LS_PLUGIN_DIR . 'ls-api-config.php');
+        $config = require(LS_PLUGIN_DIR . 'environment.php');
 
         /**
          * Check if test mode is set to true
@@ -169,7 +169,8 @@ class LS_Vend_Laid
             return 'Empty Api key';
         }
 
-        $current_laid_key_info = $this->get_laid_info($laid_key);
+        $current_laid_key_info = $this->get_current_laid_info();
+
         if (!empty($current_laid_key_info)) {
 
             if (!empty($current_laid_key_info['errorCode'])) {
@@ -182,6 +183,7 @@ class LS_Vend_Laid
 
                 $this->update_laid_key_options($laid_key_options);
 
+                $laid_key_options['laid'] = $laid_key;
                 $laid_key_options['errorCode'] = $current_laid_key_info['errorCode'];
                 $laid_key_options['error_message'] = $current_laid_key_info['userMessage'];
                 $laid_key_options['lws_laid_key_info'] = $current_laid_key_info;
@@ -191,7 +193,7 @@ class LS_Vend_Laid
             } else {
                 $connected_to = $this->get_connected_app($current_laid_key_info['connected_app']);
                 $connected_with = $this->get_connected_app($current_laid_key_info['app']);
-
+                $laid_connection['laid'] = $laid_key;
                 if (
                     ('Vend' == $connected_to || 'Vend' == $connected_with) &&
                     ('WooCommerce' == $connected_to || 'WooCommerce' == $connected_with)
@@ -318,6 +320,7 @@ class LS_Vend_Laid
             );
 
             $this->update_laid_key_options($laid_key_options);
+            $laid_connection['laid'] = $laid_key;
             $laid_connection['error'] = "The supplied API Key is not valid for use with linksync for WooCommerce.";
             $laid_connection['error_message'] = "The supplied API Key is not valid for use with linksync for WooCommerce.";
             return $laid_connection;
@@ -347,6 +350,51 @@ class LS_Vend_Laid
             $randomString .= $characters[rand(0, strlen($characters) - 1)];
         }
         return $randomString;
+    }
+
+    public static function save_api_key()
+    {
+        $posted_data = array();
+        $message = 'invalid';
+        $response = null;
+        if (!empty($_POST['post_data'])) {
+            if (!is_array($_POST['post_data'])) {
+                parse_str($_POST['post_data'], $posted_data);
+            }
+
+            if (!empty($posted_data['apikey'])) {
+                $laid = trim($posted_data['apikey']);
+                $ls_api = LS_Vend()->laid()->get_laid_info($laid);
+                if (!empty($ls_api)) {
+                    LS_Vend()->laid()->update_current_laid_info($ls_api);
+                }
+
+                if (isset($ls_api['errorCode'])) {
+                    $message = 'invalid_apikey';
+                    $response = $ls_api;
+                } else {
+                    $response = LS_Vend()->laid()->check_api_key($laid);
+
+                    if (isset($response['success'])) {
+                        LSC_Log::add('Manage API Keys', 'success', 'API key Updated Successfully', $laid);
+                        $message = 'api_key_updated';
+                        if (isset($_POST['add_api_key'])) {
+                            $message = 'api_key_added';
+                        }
+                    } else {
+                        $message = 'invalid';
+                    }
+                }
+
+            } else {
+                $message = 'empty_api_key';
+            }
+        }
+
+        wp_send_json(array(
+            'message' => $message,
+            'response' => $response
+        ));
     }
 
 }

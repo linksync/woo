@@ -83,4 +83,29 @@ class LS_Vend_Config
         return get_option('_ls_vend_config', '');
     }
 
+    public static function get_current_linksync_time()
+    {
+        $config_array = self::get_vend_config();
+        if (isset($config_array['time'])) {
+            return $config_array['time'];
+        }
+        return null;
+    }
+
+    public static function maybe_save_vend_config()
+    {
+        global $linksync_vend_laid;
+        if (!empty($linksync_vend_laid)) {
+            $vend_config = LS_Vend()->api()->getVendConfig();
+            LS_Vend_Config::update_vend_config($vend_config);
+
+            $updatedWebHookPointer = get_option('_ls_vend_new_ajax_update_url', '');
+            if (empty($updatedWebHookPointer)) {
+                $pluginUpdateUrl = Linksync_Vend::getWebHookUrl();
+                update_option('_ls_vend_new_ajax_update_url', $pluginUpdateUrl);
+                LS_Vend()->updateWebhookConnection();
+            }
+
+        }
+    }
 }

@@ -71,6 +71,18 @@ if (!class_exists('LS_Vend')) {
             return self::$laid;
         }
 
+        public function initialize_data()
+        {
+            global $linksync_vend_laid;
+
+            $laidData = null;
+            if (!empty($linksync_vend_laid)) {
+                LS_Vend_Config::maybe_save_vend_config();
+                $laidData = LS_Vend()->laid()->check_api_key($linksync_vend_laid);
+            }
+            $GLOBALS['laidData'] = $laidData;
+        }
+
         /**
          * This method is intended to run linksync vend plugin after including files
          * to avoid code execution on including php files
@@ -81,19 +93,7 @@ if (!class_exists('LS_Vend')) {
             //$empty_product_skus = LS_Product_Helper::get_woo_empty_sku();
 
             $linksync_vend_laid = LS_Vend()->laid()->get_current_laid();
-            if (!empty($linksync_vend_laid)) {
-                $vend_config = LS_Vend()->api()->getVendConfig();
-                LS_Vend_Config::update_vend_config($vend_config);
-
-
-                $updatedWebHookPointer = get_option('_ls_vend_new_ajax_update_url', '');
-                if (empty($updatedWebHookPointer)) {
-                    $pluginUpdateUrl = Linksync_Vend::getWebHookUrl();
-                    update_option('_ls_vend_new_ajax_update_url', $pluginUpdateUrl);
-                    LS_Vend()->updateWebhookConnection();
-                }
-
-            }
+            $GLOBALS['linksync_vend_laid'] = $linksync_vend_laid;
 
             LS_Vend_Hook::init();
 
@@ -104,7 +104,7 @@ if (!class_exists('LS_Vend')) {
         /**
          * Vend Includes
          */
-        public static function includes()
+        public function includes()
         {
             include_once LS_INC_DIR . 'apps/ls-core-functions.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-tax.php';

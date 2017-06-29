@@ -45,7 +45,7 @@ class LS_Vend_Menu
 
     public static function is_linksync_page($page_slug)
     {
-        if(!empty($page_slug) && self::get_active_linksync_page() == $page_slug){
+        if (!empty($page_slug) && self::get_active_linksync_page() == $page_slug) {
             return true;
         }
 
@@ -55,7 +55,7 @@ class LS_Vend_Menu
     public static function is_page($page)
     {
         $activate_page = self::get_active_page();
-        if($activate_page == $page){
+        if ($activate_page == $page) {
             return true;
         }
 
@@ -84,7 +84,7 @@ class LS_Vend_Menu
 
     public static function get_active_section()
     {
-        if(isset($_REQUEST['section'])){
+        if (isset($_REQUEST['section'])) {
             return $_REQUEST['section'];
         }
 
@@ -112,7 +112,7 @@ class LS_Vend_Menu
 
     public static function page_menu_url($page, $tab = null, $section = null)
     {
-        $url = self::menu_url().'&linksync_page='.$page;
+        $url = self::menu_url() . '&linksync_page=' . $page;
         if (null != $tab) {
             $url .= '&tab=' . $tab;
 
@@ -141,10 +141,10 @@ class LS_Vend_Menu
 
     public static function wizard_admin_url($additional_endpoint = null)
     {
-        $url = 'admin.php?page='.LS_Vend_Wizard::$slug;
+        $url = 'admin.php?page=' . LS_Vend_Wizard::$slug;
 
-        if(null != $additional_endpoint){
-            $url .= '&'.$additional_endpoint;
+        if (null != $additional_endpoint) {
+            $url .= '&' . $additional_endpoint;
         }
         return self::admin_url($url);
     }
@@ -154,12 +154,8 @@ class LS_Vend_Menu
         return admin_url($url);
     }
 
-    public static function output_menu_tabs()
+    public static function output_menu_tabs($active_tab = 'config')
     {
-        $active_tab = self::get_active_tab();
-        if(empty($active_tab)){
-            $active_tab = 'config';
-        }
         ?>
         <h2 class="nav-tab-wrapper woo-nav-tab-wrapper ls-tab-menu">
 
@@ -230,7 +226,7 @@ class LS_Vend_Menu
             __('linksync Order Settings', $menu_slug),
             __('Order Settings', 'manage_options'),
             'manage_options',
-            self::settings_page_menu_url('order_config'),
+            self::settings_page_menu_url('order_config&orderby=id&order=asc'),
             null
         );
 
@@ -239,7 +235,7 @@ class LS_Vend_Menu
             __('linksync Connected Products', $menu_slug),
             __('Connected Products', $menu_slug),
             'manage_options',
-            self::page_menu_url('connected_products'),
+            self::page_menu_url('connected_products&orderby=name&order=asc'),
             null
         );
 

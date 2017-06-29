@@ -10,8 +10,26 @@ class LS_Vend_Notice
         if ('shop_order' == $current_screen->id) {
             if (isset($_GET['post'])) {
 
-                if (isset($_GET['ls_dev_log']) && 'woo_to_vend' == $_GET['ls_dev_log']) {
-                    $this->showWooToVendDevOrderNotice($_GET['post']);
+                if (isset($_GET['ls_dev_log'])) {
+                    if ('woo_to_vend' == $_GET['ls_dev_log']) {
+                        $this->showWooToVendDevOrderNotice($_GET['post']);
+                    } else if ('vend_to_woo' == $_GET['ls_dev_log']) {
+                        $this->showVendToWooDevOrderNotice($_GET['post']);
+                    }
+
+                }
+
+            }
+        } else if ('product' == $current_screen->id) {
+            if (isset($_GET['post'])) {
+
+                if (isset($_GET['ls_dev_log'])) {
+                    if ('woo_to_vend' == $_GET['ls_dev_log']) {
+                        $this->showWooToVendDevProductNotice($_GET['post']);
+                    } else if ('vend_to_woo' == $_GET['ls_dev_log']) {
+                        $this->showVendToWooDevProductNotice($_GET['post']);
+                    }
+
                 }
 
             }
@@ -20,6 +38,30 @@ class LS_Vend_Notice
         $this->linksync_video_message();
         $this->linksync_update_plugin_notice();
 
+    }
+
+    public function showVendToWooDevProductNotice($product_id)
+    {
+        $productMeta = new LS_Product_Meta($product_id);
+        echo '<div>';
+        ls_print_r($productMeta->fromLinkSyncJson());
+        echo '</div>';
+    }
+
+    public function showWooToVendDevProductNotice($product_id)
+    {
+        $productMeta = new LS_Product_Meta($product_id);
+        echo '<div>';
+        ls_print_r($productMeta->toLinkSyncJson());
+        echo '</div>';
+    }
+
+    public function showVendToWooDevOrderNotice($orderId)
+    {
+        $orderMeta = new LS_Order_Meta($orderId);
+        echo '<div>';
+        ls_print_r($orderMeta->getOrderJsonFromVendToWoo());
+        echo '</div>';
     }
 
     public function showWooToVendDevOrderNotice($orderId)
@@ -37,12 +79,16 @@ class LS_Vend_Notice
      */
     public function linksync_update_plugin_notice()
     {
+        global $linksync_vend_laid;
         $running_version = Linksync_Vend::$version;
 
-        $laid_key = LS_Vend()->laid()->get_current_laid();
-        if (!empty($laid_key)) {
+        if (!empty($linksync_vend_laid)) {
 
-            $laid_info = LS_Vend()->laid()->get_laid_info($laid_key);
+            $laid_info = LS_Vend()->laid()->get_laid_info($linksync_vend_laid);
+            if (!empty($laid_info)) {
+                LS_Vend()->laid()->update_current_laid_info($laid_info);
+            }
+
             if (!empty($laid_info) && !isset($laid_info['errorCode'])) {
 
                 if ($laid_info['connected_app'] == '13') {
