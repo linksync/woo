@@ -226,7 +226,7 @@ class LS_Vend_Menu
             __('linksync Order Settings', $menu_slug),
             __('Order Settings', 'manage_options'),
             'manage_options',
-            self::settings_page_menu_url('order_config&orderby=id&order=asc'),
+            self::settings_page_menu_url('order_config'),
             null
         );
 
@@ -235,7 +235,7 @@ class LS_Vend_Menu
             __('linksync Connected Products', $menu_slug),
             __('Connected Products', $menu_slug),
             'manage_options',
-            self::page_menu_url('connected_products&orderby=name&order=asc'),
+            self::page_menu_url('connected_products'),
             null
         );
 

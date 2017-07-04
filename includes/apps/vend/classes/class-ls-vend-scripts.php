@@ -71,6 +71,7 @@ class LS_Vend_Script
     public static function javascript_page_loader($isSettingsPage, $activeTab)
     {
         $jsToLoad = 'configuration';
+
         if ($isSettingsPage) {
 
             if ('product_config' == $activeTab) {
@@ -82,18 +83,14 @@ class LS_Vend_Script
             } else if ('logs' == $activeTab) {
                 $jsToLoad = 'logs';
             }
-        } else {
 
-            if (LS_Vend_Menu::is_linksync_page('connected_products')) {
-                $jsToLoad = 'connected-product';
-            } else if (LS_Vend_Menu::is_linksync_page('connected_orders')) {
-                $jsToLoad = 'connected-order';
-            } else if (LS_Vend_Menu::is_linksync_page('duplicate_sku')) {
-                $jsToLoad = 'duplicate-sku';
-            }
         }
 
-        wp_enqueue_script('ls-vend-' . $jsToLoad . '-load', LS_ASSETS_URL . 'js/vend/ls-vend-settings-' . $jsToLoad . '-load.js', array('jquery'), Linksync_Vend::$version, true);
+        $activatePage = LS_Vend_Menu::get_active_linksync_page();
+        if($isSettingsPage || empty($activatePage)){
+            wp_enqueue_script('ls-vend-' . $jsToLoad . '-load', LS_ASSETS_URL . 'js/vend/ls-vend-settings-' . $jsToLoad . '-load.js', array('jquery'), Linksync_Vend::$version, true);
+        }
+
     }
 
 }

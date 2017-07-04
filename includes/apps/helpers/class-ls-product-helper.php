@@ -293,7 +293,8 @@ class LS_Product_Helper
 						wposts.post_title AS product_name,
 						wposts.post_status AS product_status,
 						wpmeta.meta_key,
-						wpmeta.meta_value
+						wpmeta.meta_value, 
+						wposts.post_type
 				FROM $wpdb->postmeta AS wpmeta
 				JOIN (
 						SELECT

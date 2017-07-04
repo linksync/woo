@@ -10,6 +10,21 @@ class LS_Vend_View
         if ($linkSyncVendMenuId == $currentScreenId) {
             echo '<div class="wrap" id="ls-main-wrapper">';
             $this->display_loading_div();
+            if (!LS_Vend_Menu::is_settings_linksync_page()) {
+
+                if (LS_Vend_Menu::is_linksync_page('connected_products')) {
+                    $this->display_connected_product_page();
+
+                } else if (LS_Vend_Menu::is_linksync_page('connected_orders')) {
+
+                    $this->display_connected_order_page();
+
+                } else if(LS_Vend_Menu::is_linksync_page('duplicate_sku')){
+
+                    $this->display_duplicate_sku_page();
+
+                }
+            }
             echo '</div>';
         }
 

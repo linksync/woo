@@ -6,8 +6,7 @@ class LS_Vend_Product_Helper
     public static function isTypeSyncAbleToVend($type)
     {
         $bool = false;
-        $product_types = array('simple', 'variable', 'product');
-
+        $product_types = array('product', 'product_variation', 'simple', 'variation', 'variable');
         if (in_array($type, $product_types)) {
             $bool = true;
         }
@@ -572,7 +571,7 @@ class LS_Vend_Product_Helper
             $post_var_args['post_status'] = $status;
             $post_var_args['post_type'] = 'product_variation';
             $post_var_args['post_parent'] = $variantParentId;
-            $post_var_args['menu_order'] = empty($button_order) ? $sortedIndex : $button_order;
+            $post_var_args['menu_order'] = (!is_numeric($button_order)) ? $sortedIndex : $button_order;
 
             $returnDataSet['post_data'] = $post_var_args;
             $varProductId = LS_Product_Helper::create($post_var_args, true);

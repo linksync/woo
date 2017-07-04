@@ -139,7 +139,7 @@ class LS_Woo_Product
 
         $sql = "SELECT " . $wpdb->posts . ".ID as id
                         FROM " . $wpdb->posts . "
-                        WHERE " . $wpdb->posts . ".post_parent= %d ";
+                        WHERE " . $wpdb->posts . ".post_parent= %d AND  ". $wpdb->posts .".post_type = 'product_variation' ";
         $children = $wpdb->get_results($wpdb->prepare($sql, $id), ARRAY_A);
 
         $childrenId = array();
