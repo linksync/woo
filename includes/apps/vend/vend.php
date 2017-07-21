@@ -89,8 +89,14 @@ if (!class_exists('LS_Vend')) {
          */
         public function run()
         {
-            //$duplicate_products = LS_Product_Helper::get_woo_duplicate_sku();
-            //$empty_product_skus = LS_Product_Helper::get_woo_empty_sku();
+            $in_woo_duplicate_skus = LS_Woo_Product::get_woo_duplicate_sku();
+            $in_woo_empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
+            $in_vend_duplicate_and_empty_skus = LS_Vend()->api()->product()->get_duplicate_products();
+            LS_Vend()->option()->updateVendDuplicateProducts($in_vend_duplicate_and_empty_skus);
+
+            $GLOBALS['in_woo_duplicate_skus'] = $in_woo_duplicate_skus;
+            $GLOBALS['in_woo_empty_product_skus'] = $in_woo_empty_product_skus;
+            $GLOBALS['in_vend_duplicate_and_empty_skus'] = isset($in_vend_duplicate_and_empty_skus['products']) ? $in_vend_duplicate_and_empty_skus['products'] : array();
 
             $linksync_vend_laid = LS_Vend()->laid()->get_current_laid();
             $GLOBALS['linksync_vend_laid'] = $linksync_vend_laid;
@@ -130,6 +136,7 @@ if (!class_exists('LS_Vend')) {
             include_once LS_INC_DIR . 'apps/classes/class-ls-product.php';
             include_once LS_INC_DIR . 'apps/classes/class-ls-product-variant.php';
             include_once LS_INC_DIR . 'apps/classes/class-ls-woo-product.php';
+            include_once LS_INC_DIR . 'apps/classes/class-ls-modal.php';
             include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-variant-product.php';
@@ -156,6 +163,8 @@ if (!class_exists('LS_Vend')) {
 
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-menu.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view-config-section.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view-product-section.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-laid.php';
 
             include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-notice.php';
@@ -183,6 +192,7 @@ if (!class_exists('LS_Vend')) {
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-order-list.php';
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-product-list.php';
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-duplicate-sku-list.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-vend-duplicate-sku-list.php';
 
 
         }

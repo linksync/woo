@@ -170,8 +170,12 @@ class LS_Vend_Laid
         }
 
         $current_laid_key_info = $this->get_current_laid_info();
+        if(empty($current_laid_key_info)){
+            $current_laid_key_info = LS_Vend()->laid()->get_laid_info($laid_key);
+        }
 
         if (!empty($current_laid_key_info)) {
+            LS_Vend()->laid()->update_current_laid_info($current_laid_key_info);
 
             if (!empty($current_laid_key_info['errorCode'])) {
 
@@ -215,12 +219,6 @@ class LS_Vend_Laid
                     }
 
                     $laid_connection['connected_to'] = 'Vend';
-
-                    if ('Vend' != $connected_to || 'WooCommerce' != $connected_to) {
-                        $checkKey = 'The supplied API Key is not valid for use with linksync for WooCommerce.';
-                        update_option('linksync_connectedto', $checkKey);
-                    }
-
 
                     if (isset($result['time']) && !empty($result['time'])) {
                         LS_Vend()->option()->update_time_offset($result['time']);

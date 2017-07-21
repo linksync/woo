@@ -11,6 +11,23 @@ class LS_User_Helper
         return $update_button;
     }
 
+    public static function getUserPlan()
+    {
+        $currentLaidInfo = LS_Vend()->laid()->get_current_laid_info();
+        $message_data = array();
+        if (isset($currentLaidInfo['message'])) {
+            $message_data = explode(',', trim($currentLaidInfo['message']));
+        } elseif (isset($message['userMessage'])) {
+            $message_data = explode(',', trim($currentLaidInfo['userMessage']));
+        }
+
+        if (!empty($message_data[2])) {
+            $plainId = (int)trim($message_data[2]);
+            $message_data['user_plan'] = self::getLinksyncPlansForLaid($plainId);
+        }
+        return $message_data;
+    }
+
     public static function setUpLaidInfoMessage()
     {
         $message = LS_Vend()->laid()->get_current_laid_info();
@@ -44,17 +61,17 @@ class LS_User_Helper
             $remaining_days = self::getRemainingDaysOfTrial($registrationDate, $api_time);
 
             if ('Terminated' == $service_status) {
-                $user_message = 'Hey, sorry to say but your linksync free trial has ended! '.$update_button;
+                $user_message = 'Hey, sorry to say but your linksync free trial has ended! ' . $update_button;
             } elseif ('Suspended' == $service_status) {
-                $user_message = 'Hey, sorry to say but your linksync account was Suspended!'.$update_button;
+                $user_message = 'Hey, sorry to say but your linksync account was Suspended!' . $update_button;
             } elseif ('Cancelled' == $service_status) {
-                $user_message = 'Hey, sorry to say but your linksync account was Cancelled!'.$update_button;
+                $user_message = 'Hey, sorry to say but your linksync account was Cancelled!' . $update_button;
             } elseif ('1' == $remaining_days && 'Terminated' != $service_status) {
-                $user_message = 'Your linksync FREE  trial ends tomorrow! '.$update_button;
+                $user_message = 'Your linksync FREE  trial ends tomorrow! ' . $update_button;
             } elseif ('0' == $remaining_days && 'Terminated' != $service_status) {
-                $user_message = 'Your linksync FREE trial ends today! '.$update_button;
+                $user_message = 'Your linksync FREE trial ends today! ' . $update_button;
             } else {
-                $user_message = 'Your linksync FREE trial ends in ' . $remaining_days . ' days! '.$update_button;
+                $user_message = 'Your linksync FREE trial ends in ' . $remaining_days . ' days! ' . $update_button;
             }
 
         } else if ('Terminated' == $service_status) {
@@ -109,6 +126,7 @@ class LS_User_Helper
             4 => '14 Days Free Trial',
             5 => 'Unlimited',
         );
+
 
         if (!empty($planId) && isset($plans[$planId])) {
             return $plans[$planId];

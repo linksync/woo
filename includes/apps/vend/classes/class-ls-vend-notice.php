@@ -5,6 +5,7 @@ class LS_Vend_Notice
 
     public function vendNotice()
     {
+        remove_all_actions('admin_notices');
         $current_screen = get_current_screen();
 
         if ('shop_order' == $current_screen->id) {
@@ -35,7 +36,10 @@ class LS_Vend_Notice
             }
         }
 
-        $this->linksync_video_message();
+        /**
+         * Do not show getting started video notice
+         */
+        //$this->linksync_video_message();
         $this->linksync_update_plugin_notice();
 
     }

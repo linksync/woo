@@ -68,13 +68,16 @@ class LS_Vend_Product_Helper
                 }
             }
 
-
             if ('on' == $productSyncOption->productStatusToPending() && $is_new) {
                 $product_args['post_status'] = 'pending';
             }
 
             if ('0' == $product->is_active() || 0 == $product->is_active()) {
                 $product_args['post_status'] = 'draft';
+            }
+
+            if(!empty($product_args['post_author'])){
+                $product_args['post_author'] = 1;
             }
 
             return LS_Product_Helper::create($product_args, true);
@@ -105,6 +108,19 @@ class LS_Vend_Product_Helper
             }
         }
 
+        if (
+            'on' == $productSyncQuantityOption &&
+            'on' == $productSyncOption->allow_back_order() &&
+            false == $product->has_variant()
+        ) {
+            if ('yes' == $wooProduct->get_meta()->get_backorders()) {
+                /**
+                 * set product status to publish since allow back order is yes so that customers will be able to purchase the product
+                 */
+                $postArg['post_status'] = 'publish';
+            }
+        }
+
         if ('pending' == $wooProduct->get_status()) {
             $postArg['post_status'] = 'pending';
         }
@@ -123,6 +139,8 @@ class LS_Vend_Product_Helper
 
         if (!empty($postArg['post_status']) && !empty($postArg['ID'])) {
             $productUpdate = wp_update_post($postArg, true);
+            $product_meta = new LS_Product_Meta($postArg['ID']);
+            $product_meta->update_visibility($postArg['post_status'] == 'publish' ? 'visible' : '');
             return $productUpdate;
         }
 
@@ -140,6 +158,7 @@ class LS_Vend_Product_Helper
         $products_meta->update_tax_id($product->get_tax_id());
         $products_meta->update_sku($product->get_sku());
         $excluding_tax = LS_Vend_Helper::isExcludingTax();
+        $productSyncAttributeOption = $productSyncOption->attributes();
 
         $productQuantity = self::getProductQuantity($product);
         if (!$is_new) {
@@ -171,6 +190,14 @@ class LS_Vend_Product_Helper
 
             if (!empty($variants)) {
                 $productAttributes = array();
+                if('off' == $productSyncAttributeOption){
+                    /**
+                     * If attribute option is off means attribute should not mirror what is in vend then get current attributes as the initial value
+                     * before merging attributes on creating/update variation in the next following lines
+                     */
+                    $productAttributes = $products_meta->get_product_attributes();
+                }
+
                 $sortedIndex = 0;
                 asort($variants);
                 foreach ($variants as $variant) {
@@ -180,6 +207,7 @@ class LS_Vend_Product_Helper
                     $sortedIndex++;
                 }
                 $products_meta->update_product_attributes($productAttributes);
+
             }
 
         } else {
@@ -236,6 +264,19 @@ class LS_Vend_Product_Helper
                     $products_meta->update_manage_stock('no');
                     $products_meta->update_stock(NULL);
                     $products_meta->update_stock_status('instock');
+                }
+
+                if (
+                    'on' == $productSyncQuantityOption &&
+                    'on' == $productSyncOption->allow_back_order() &&
+                    false == $product->has_variant()
+                ) {
+                    if ('yes' == $products_meta->get_backorders()) {
+                        /**
+                         * set instock since allow back order is yes so that customers will be able to purchase the product
+                         */
+                        $products_meta->update_stock_status('instock');
+                    }
                 }
             }
 
@@ -606,16 +647,26 @@ class LS_Vend_Product_Helper
                 }
 
                 if ('on' == $productSyncOption->quantity()) {
+                    $stock_status = 'instock';
                     if ($variant->has_outlets()) {
                         $var_meta->update_manage_stock('yes');
                         $var_meta->update_stock($variantQuantity);
                         $stock_status = ($variantQuantity > 0 ? 'instock' : 'outofstock');
-                        $var_meta->update_stock_status($stock_status);
                     } else {
                         $var_meta->update_manage_stock('no');
                         $var_meta->update_stock(NULL);
-                        $var_meta->update_stock_status('instock');
                     }
+
+                    if ('on' == $productSyncOption->allow_back_order()) {
+                        if ('yes' == $var_meta->get_backorders()) {
+                            /**
+                             * set product stock to instock since allow back order is yes so that customers will be able to purchase the product
+                             */
+                            $stock_status = 'instock';
+                        }
+                    }
+
+                    $var_meta->update_stock_status($stock_status);
                 }
 
 
@@ -638,6 +689,16 @@ class LS_Vend_Product_Helper
                         $returnDataSet['_product_attributes'][$attr_data['attr']['name']] = $attr_data['attr'];
                     }
                 }
+
+                /**
+                 * Fires once a product variation has been created or updated in WooCommerce.
+                 *
+                 * @since 2.5.5
+                 *
+                 * @param int $varProductId Product variation ID.
+                 * @param LS_Product_Variant $variant linksync Json product getters.
+                 */
+                do_action('ls_after_vend_to_woo_variant_product_sync', $varProductId, $variant);
             }
 
         } else {

@@ -140,6 +140,26 @@ class LS_Vend_Option
         return update_option('ps_outlet_details', $meta_value);
     }
 
+    public function get_last_time_tested()
+    {
+        return get_option('linksync_last_test_time');
+    }
+
+    public function update_last_time_test($value)
+    {
+        update_option('linksync_last_test_time', $value);
+    }
+
+    public function linksync_current_api_url()
+    {
+        return get_option('linksync_current_api_url');
+    }
+
+    public function connection_status()
+    {
+        return get_option('linksync_status');
+    }
+
     /**
      * Save and return last product update_at key from the product get response plus one second
      *
@@ -199,6 +219,16 @@ class LS_Vend_Option
             $time = $server_response - $server_time;
             update_option('linksync_time_offset', $time);
         }
+    }
+
+    public function updateVendDuplicateProducts($values)
+    {
+        self::instance()->update_option('duplicate_products', $values);
+    }
+
+    public function getVendDuplicateProducts()
+    {
+        return self::instance()->get_option('duplicate_products', '');
     }
 
     /**

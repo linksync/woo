@@ -157,30 +157,35 @@ class LS_Vend_Menu
     public static function output_menu_tabs($active_tab = 'config')
     {
         ?>
-        <h2 class="nav-tab-wrapper woo-nav-tab-wrapper ls-tab-menu">
+        <h2 class="ls-tab-menu">
 
-            <a href="<?php echo LS_Vend_Menu::settings_page_menu_url(); ?>"
-               class="nav-tab <?php echo ('config' == $active_tab) ? 'nav-tab-active' : ''; ?>">
+            <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('config'); ?>"
+               class="ls-nav-tab <?php echo ('config' == $active_tab) ? 'ls-nav-tab-active' : ''; ?>">
                 Configuration
             </a>
 
-            <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('product_config') ?>"
-               class="nav-tab <?php echo ('product_config' == $active_tab) ? 'nav-tab-active' : ''; ?> ">
+            <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('product_config'); ?>"
+               class="ls-nav-tab <?php echo ('product_config' == $active_tab) ? 'ls-nav-tab-active ' : ''; ?> ">
                 Product Syncing Setting
             </a>
 
             <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('order_config') ?>"
-               class="nav-tab <?php echo ('order_config' == $active_tab) ? 'nav-tab-active' : ''; ?> ">
+               class="ls-nav-tab <?php echo ('order_config' == $active_tab) ? 'ls-nav-tab-active' : ''; ?> ">
                 Order Syncing Setting
             </a>
 
+            <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('advance') ?>"
+               class="ls-nav-tab <?php echo ('advance' == $active_tab) ? 'ls-nav-tab-active' : ''; ?> ">
+                Advance
+            </a>
+
             <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('support') ?>"
-               class="nav-tab <?php echo ('support' == $active_tab) ? 'nav-tab-active' : ''; ?>">
+               class="ls-nav-tab  <?php echo ('support' == $active_tab) ? 'ls-nav-tab-active' : ''; ?>">
                 Support
             </a>
 
             <a href="<?php echo LS_Vend_Menu::settings_page_menu_url('logs') ?>"
-               class="nav-tab <?php echo ('logs' == $active_tab) ? 'nav-tab-active' : ''; ?>">
+               class="ls-nav-tab <?php echo ('logs' == $active_tab) ? 'ls-nav-tab-active' : ''; ?>">
                 Logs
             </a>
 
@@ -190,6 +195,9 @@ class LS_Vend_Menu
 
     public function initialize_admin_menu()
     {
+        global $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_vend_duplicate_and_empty_skus;
+
+
         $menu_slug = LS_Vend::$slug;
         $vendView = new LS_Vend_View();
 
@@ -247,6 +255,17 @@ class LS_Vend_Menu
             self::page_menu_url('connected_orders'),
             null
         );
+
+        if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_vend_duplicate_and_empty_skus)) {
+            add_submenu_page(
+                $menu_slug,
+                __('linksync Duplicate SKU', $menu_slug),
+                __('Duplicate SKU', $menu_slug),
+                'manage_options',
+                self::page_menu_url('duplicate_sku'),
+                null
+            );
+        }
 
         add_submenu_page(
             $menu_slug,

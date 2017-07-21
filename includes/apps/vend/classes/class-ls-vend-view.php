@@ -19,7 +19,7 @@ class LS_Vend_View
 
                     $this->display_connected_order_page();
 
-                } else if(LS_Vend_Menu::is_linksync_page('duplicate_sku')){
+                } else if (LS_Vend_Menu::is_linksync_page('duplicate_sku')) {
 
                     $this->display_duplicate_sku_page();
 
@@ -93,7 +93,7 @@ class LS_Vend_View
 
     public function display_duplicate_sku_page()
     {
-        global $duplicate_products, $empty_product_skus;
+        global $duplicate_products, $empty_product_skus, $in_vend_duplicate_and_empty_skus;
 
         $duplicateSkuList = new LS_Duplicate_Sku_List();
         $active_section = LS_Vend_Menu::get_active_section();
@@ -107,13 +107,16 @@ class LS_Vend_View
         }
 
         if ('in_vend' == $active_section) {
+            $duplicateSkuList = new LS_Vend_Duplicate_Sku_List(array(
+                'duplicate_and_empty_skus' => $in_vend_duplicate_and_empty_skus,
+            ));
 
         }
 
         //Fetch, prepare, sort, and filter our data...
         $duplicateSkuList->prepare_items();
         $mainDuplicateSkuListUrl = LS_Vend_Menu::admin_url(LS_Vend_Menu::page_menu_url('duplicate_sku'));
-        if ('in_quickbooks_online' == $active_section) {
+        if ('in_vend' == $active_section) {
             ?>
             <style>
                 #frm-duplicate-skus .bulkactions {
@@ -129,16 +132,37 @@ class LS_Vend_View
 
         ?>
         <div class="wrap" id="ls-wrapper">
+            <?php
+            $html_message = '
+                                <div class="ls-modal-message">
+                                    <p style="font-weight: bold;">Please do not close or refresh the browser while linksync is updating your Vend skus.</p>
+                                </div>
+                                <div>
+                                    <div id="progressbar"></div>
+                                    <div class="progress-label">Loading...</div>
+                                </div>';
+
+            $modal = new LS_Modal(array(
+                'default_html_message' => $html_message,
+                'content_style' => array(
+                    'display' => 'none'
+                )
+            ));
+            $modal->show();
+            ?>
+
             <div id="icon-users" class="icon32"><br/></div>
             <h2>Duplicate SKU List</h2>
             <ul class="subsubsub">
-                <li><a href="<?php echo $mainDuplicateSkuListUrl . '&section=in_woocommerce'; ?>"
-                       class="<?php echo (empty($active_section) || 'in_woocommerce' == $active_section) ? 'current' : ''; ?>">In
-                        WooCommerce</a> |
-                </li>
                 <li>
+                    <a href="<?php echo $mainDuplicateSkuListUrl . '&section=in_woocommerce'; ?>"
+                       class="<?php echo (empty($active_section) || 'in_woocommerce' == $active_section) ? 'current' : ''; ?>">In
+                        WooCommerce
+                    </a> |
                     <a href="<?php echo $mainDuplicateSkuListUrl . '&section=in_vend'; ?>"
-                       class="<?php echo ('in_vend' == $active_section) ? 'current' : ''; ?>">In Vend</a> |
+                       class="<?php echo (empty($active_section) || 'in_vend' == $active_section) ? 'current' : ''; ?>">
+                        In Vend
+                    </a>
                 </li>
             </ul>
             <br/><br/>
@@ -189,21 +213,26 @@ class LS_Vend_View
     public function display_logs_tab()
     {
         $this->display_tab_menu('logs');
+        ?>
+        <div>
+            <div style="width: 140px;position: relative;top: 15px;height: 0px;">
+                <form method='POST' id='frmSendLogToLinksync' style="width: 140px;">
+                    <input type='submit' class='button'
+                           title=' Use this button to upload your log file to linksync. You should only need to do this if requested by linksync support staff.'
+                           style='color:blue' name='send_log' value='Send log to linksync'>
+                    <span class='spinner'></span>
+                </form>
+            </div>
 
-        echo "<fieldset>
-                <legend>Linksync Log</legend>
-                <div style='float: left;margin-bottom: 10px;'>
-                    <form method='POST' id='frmSendLogToLinksync'>
-                        <input type='submit' class='button' title=' Use this button to upload your log file to linksync. You should only need to do this if requested by linksync support staff.' style='color:blue'  name='send_log' value='Send log to linksync'>
-                        <span class='spinner'></span>
-                    </form>
-                </div>
-                <div style='float: right;margin-bottom: 10px;'>
-                    <form method='POST' id='frmClearLogs'>
-                        <input type='submit' class='button' style='color:red' name='clearlog' value='Clear Logs'>
-                        <span class='spinner'></span>
-                    </form>
-                </div>";
+            <div style="width: 85px;position: relative;top: 15px;left: 95%;height: 0px;">
+                <form method='POST' id='frmClearLogs' style="width: 85px;">
+                    <input type='submit' class='button' style='color:red' name='clearlog' value='Clear Logs'>
+                    <span class='spinner'></span>
+                </form>
+            </div>
+
+        </div>
+        <?php
 
         if (!empty($_REQUEST['check']) && !empty($_REQUEST['logtype']) && 'all' == $_REQUEST['check']) {
             echo LSC_Log::printallLogs($_REQUEST['logtype']);
@@ -216,7 +245,6 @@ class LS_Vend_View
             }
 
         }
-        echo "</fieldset>";
 
 
     }
@@ -271,6 +299,20 @@ class LS_Vend_View
 
     }
 
+    public function display_advance_tab()
+    {
+        $this->display_tab_menu('advance');
+        ?>
+        <div class="ls-wrap">
+            <br/>
+            <div id="ls-vend-update"
+                 class="ls-vend-section">
+                <?php LS_Vend_View_Config_Section::update_section(); ?>
+            </div>
+        </div>
+        <?php
+    }
+
     public function display_support_tab()
     {
         $this->display_tab_menu('support');
@@ -284,7 +326,23 @@ class LS_Vend_View
 
     public function settings_header()
     {
-        ?><h2>Linksync (Version: <?php echo Linksync_Vend::$version; ?>)</h2><?php
+        $currentLaidInfo = LS_User_Helper::getUserPlan();
+        ?>
+        <div style="height: 40px;">
+            <img style="height: 40px;" src="<?php echo LS_ASSETS_URL . 'images/linksync/linksync-site.png'; ?>"/>
+            <h2 style="position: relative;top: -51px;left: 181px;font-size: 17px;">
+                (Version: <?php echo Linksync_Vend::$version; ?>)</h2>
+        </div>
+        <br/>
+        <?php
+            if(!empty($currentLaidInfo['user_plan'])){
+                ?>
+                <div style="font-weight: bold;color: #7d7d7d;">
+                    Your Plan : <?php echo $currentLaidInfo['user_plan']; ?>
+                </div>
+                <?php
+            }
+
     }
 
     public function response_container()
@@ -358,6 +416,21 @@ class LS_Vend_View
                 </div>
 
                 <div id="pop_button">
+
+                    <div class="sync-buttons two-way-sync-vend-buttons"  style="width: 330px;"  >
+
+                        <input type="button"
+                               title="This option will update product in your WooCommerce store with Product data from Vend. "
+                               class="button product_sync_to_woo btn-yes"
+                               style="width: 145px;"
+                               value="Product from Vend">
+
+                        <input type="button"
+                               title="This option will update product in your Vend store with the Product data from WooCommerce."
+                               class="button product_sync_to_vend btn-yes "
+                               style="width: 145px;"
+                               value='Product to Vend'/>
+                    </div>
 
                     <div class="sync-buttons sync-to-vend-buttons">
                         <input type="button" name="sync_all_product_to_vend"

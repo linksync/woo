@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Table list of duplicate sku in WooCommerce or in QuikcBooks Online
+ * Table list of duplicate or empty sku in QuikcBooks Online
  */
 if (!defined('ABSPATH')) {
     exit;
@@ -11,8 +11,7 @@ if (!class_exists('WP_List_Table')) {
     require_once(ABSPATH . 'wp-admin/includes/class-wp-list-table.php');
 }
 
-
-class LS_Duplicate_Sku_List extends WP_List_Table
+class LS_Vend_Duplicate_Sku_List extends WP_List_Table
 {
     public $empty_skus = null;
     public $duplicate_skus = null;
@@ -30,6 +29,14 @@ class LS_Duplicate_Sku_List extends WP_List_Table
             $this->empty_skus = $args['empty_product_skus'];
         }
 
+        if (!empty($args['section'])) {
+            $this->section = $args['section'];
+        }
+
+        if (!empty($args['duplicate_and_empty_skus'])) {
+            $this->duplicate_and_empty_skus = $args['duplicate_and_empty_skus'];
+        }
+
         //Set parent defaults
         parent::__construct(array(
             'singular' => 'sku',
@@ -38,12 +45,18 @@ class LS_Duplicate_Sku_List extends WP_List_Table
         ));
     }
 
+    public function get_duplicate_and_empty_skus()
+    {
+        return $this->duplicate_and_empty_skus;
+    }
+
     public function column_default($item, $column_name)
     {
+
         switch ($column_name) {
-            case 'product_name':
-            case 'meta_value':
-            case 'product_status':
+            case 'name':
+            case 'sku':
+            case 'active':
                 return $item[$column_name];
             default:
                 return print_r($item, true); //Show the whole array for troubleshooting purposes
@@ -51,43 +64,34 @@ class LS_Duplicate_Sku_List extends WP_List_Table
 
     }
 
-
-    public function column_product_name($item)
+    public function column_name($item)
     {
-
-        $product = new LS_Woo_Product($item['ID']);
-        $productHelper = new LS_Product_Helper($product);
-        $edit_product_link = get_edit_post_link($item['ID']);
-        if (empty($edit_product_link)) {
-            $edit_product_link = get_edit_post_link($productHelper->getParendId());
-        }
-        $post_status = $productHelper->getStatus();
-
-        if ('trash' == $post_status) {
-            $edit_product_link = admin_url('edit.php?post_status=trash&post_type=product&s=' . $productHelper->getSku());
-        }
-
-        $delete_link = LS_Vend_Menu::page_menu_url('duplicate_sku&action=delete_permanently&ID=' . $item['ID']);
-        //Build row actions
-        $actions = array(
-            'edit' => sprintf('<a target="_blank" href="%s">Edit</a>', $edit_product_link),
-            'delete' => sprintf('<a href="%s">Delete Permanently</a>', $delete_link),
-        );
-
-
         //Return the title contents
-        return sprintf('%1$s <span style="color:silver">(id:%2$s)</span>%3$s',
+        return sprintf('%1$s',
             /*$1%s*/
-            $item['product_name'],
-            /*$2%s*/
-            $item['ID'],
-            /*$3%s*/
-            $this->row_actions($actions)
+            $item['name']
         );
-
-
     }
 
+    public function column_active($item)
+    {
+        $status = 'Inactive';
+        if ('1' == $item['active']) {
+            $status = 'Active';
+        }
+        return sprintf('%1$s',
+            $status
+        );
+    }
+
+    public function is_section($section)
+    {
+        $active_section = LS_Vend_Menu::get_active_section();
+        if ($active_section == $section) {
+            return true;
+        }
+        return false;
+    }
 
     public function column_cb($item)
     {
@@ -96,7 +100,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
             /*$1%s*/
             'ID',  //Let's simply repurpose the table's singular label ("movie")
             /*$2%s*/
-            $item['ID']              //The value of the checkbox should be the record's id
+            $item['id']                //The value of the checkbox should be the record's id
         );
     }
 
@@ -117,9 +121,9 @@ class LS_Duplicate_Sku_List extends WP_List_Table
     {
         $columns = array(
             'cb' => '<input type="checkbox" />', //Render a checkbox instead of text
-            'product_name' => 'Product Name',
-            'meta_value' => 'Product SKU',
-            'product_status' => 'Product Status'
+            'name' => 'Product Name',
+            'sku' => 'Product SKU',
+            'active' => 'Product Status'
         );
 
         return $columns;
@@ -128,9 +132,9 @@ class LS_Duplicate_Sku_List extends WP_List_Table
     public function get_sortable_columns()
     {
         $sortable_columns = array(
-            'product_name' => array('product_name', false),     //true means it's already sorted
-            'meta_value' => array('meta_value', true),
-            'product_status' => array('product_status', false)
+            'name' => array('name', false),     //true means it's already sorted
+            'sku' => array('sku', false),
+            'active' => array('active', false)
         );
         return $sortable_columns;
     }
@@ -140,39 +144,15 @@ class LS_Duplicate_Sku_List extends WP_List_Table
         if ('top' == $which && $this->has_items()) {
             ?>
             <div>
-                <span id="ls-apply-spinner" class="spinner is-active"
+                <input id="make-qbo-skus-unique"
+                       class="button button-primary button-large "
+                       type="submit"
+                       name="makevendskuunique"
+                       value="Make Vend SKU Unique"
+                       style="float: left; margin-top: 1px;">
+
+                <span id="ls-qbo-spinner" class="spinner is-active"
                       style="float: left;display: none;"></span>
-                <?php
-                if (!empty($this->empty_skus)) {
-                    ?>
-                    <input id="set-sku-automatically"
-                           class="button button-primary button-large "
-                           type="submit"
-                           name="replaceallemptysku"
-                           value="Replace All Empty SKU"
-                           style="float: left;margin-top: 1px;">
-
-                    <span id="ls-spinner" class="spinner is-active"
-                          style="float: left;display: none;"></span>
-                    <?php
-                }
-
-                if (!empty($this->duplicate_skus)) {
-                    ?>
-
-                    <input id="append-sku-automatically"
-                           class="button button-primary button-large "
-                           type="submit"
-                           name="makewooskuunique"
-                           value="Make SKU Unique"
-                           style="float: left; margin-top: 1px;margin-left: 10px;">
-
-                    <span id="ls-spinner2" class="spinner is-active"
-                          style="float: left;display: none;"></span>
-
-                    <?php
-                }
-                ?>
                 <br/>
             </div>
 
@@ -194,12 +174,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
     {
         //Detect when a bulk action is being triggered...
         if ('delete_permanently' === $this->current_action()) {
-            if (!empty($_REQUEST['ID'])) {
-                wp_delete_post($_REQUEST['ID'], true);
-                $url = LS_Vend_Menu::page_menu_url('duplicate_sku');
-                wp_redirect($url);
-                exit();
-            }
+
         }
 
     }
@@ -240,24 +215,6 @@ class LS_Duplicate_Sku_List extends WP_List_Table
          */
         $this->process_bulk_action();
 
-        if (empty($this->duplicate_skus)) {
-            /**
-             * Get WooCommerce Duplicate SKUS if no data from duplicate_skus attribute
-             */
-            $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
-            $this->duplicate_skus = $duplicate_products;
-        }
-
-
-        if (empty($this->empty_skus)) {
-            /**
-             * Get Empty WooCommerce SKUS if no data from empty_skus attribute
-             */
-            $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
-            $this->empty_skus = $emptyProductSkus;
-        }
-
-
         /**
          * Instead of querying a database, we're going to fetch the example data
          * property we created for use in this plugin. This makes this example
@@ -267,8 +224,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
          * use sort and pagination data to build a custom query instead, as you'll
          * be able to use your precisely-queried data immediately.
          */
-        $data = array_merge($this->duplicate_skus, $this->empty_skus);
-
+        $data = $this->duplicate_and_empty_skus;
 
         /**
          * This checks for sorting input and sorts the data in our array accordingly.
@@ -280,14 +236,16 @@ class LS_Duplicate_Sku_List extends WP_List_Table
          */
         function usort_reorder($a, $b)
         {
-            $orderby = (!empty($_REQUEST['orderby'])) ? $_REQUEST['orderby'] : 'product_name'; //If no sort, default to title
+            $orderby = (!empty($_REQUEST['orderby'])) ? $_REQUEST['orderby'] : 'name'; //If no sort, default to title
             $order = (!empty($_REQUEST['order'])) ? $_REQUEST['order'] : 'asc'; //If no order, default to asc
             $result = strcmp($a[$orderby], $b[$orderby]); //Determine sort order
             return ($order === 'asc') ? $result : -$result; //Send final sort direction to usort
         }
 
+        if (!empty($data)) {
+            usort($data, 'usort_reorder');
+        }
 
-        usort($data, 'usort_reorder');
 
         /**
          * REQUIRED for pagination. Let's figure out what page the user is currently
@@ -310,7 +268,9 @@ class LS_Duplicate_Sku_List extends WP_List_Table
          * to ensure that the data is trimmed to only the current page. We can use
          * array_slice() to
          */
-        $data = array_slice($data, (($current_page - 1) * $per_page), $per_page);
+        if (!empty($data)) {
+            $data = array_slice($data, (($current_page - 1) * $per_page), $per_page);
+        }
 
 
         /**

@@ -339,7 +339,7 @@ class LS_Vend_Sync
         $productDeletedAt = $product->get_deleted_at();
 
         if (!empty($productDeletedAt)) {
-            if(!empty($wooProductId)){
+            if (!empty($wooProductId)) {
                 LS_Vend_Product_Helper::deleteWooProducts($wooProductId);
             }
             //set last sync to the current update_at key
@@ -359,8 +359,12 @@ class LS_Vend_Sync
 
             //Get the product meta object for product
             $product_meta = new LS_Product_Meta($wooProductId);
+            $post_product = new LS_Woo_Product($wooProductId);
+            $product_status = $post_product->get_status();
+
             $product_meta->updateFromLinkSyncJson($product->getJsonProduct());
             $product_meta->update_vend_product_id(get_vend_id($product->get_id()));
+            $product_meta->update_visibility($product_status == 'publish' ? 'visible' : '');
 
             //set last sync to the current update_at key
             LS_Vend()->option()->lastProductUpdate($product->get_update_at());
@@ -463,6 +467,10 @@ class LS_Vend_Sync
 
 
             $product_amount = $product_meta->get_price();
+            $order_line_product_amount = $orderLineItem->get_product_amount();
+            if (!empty($order_line_product_amount)) {
+                $product_amount = $order_line_product_amount;
+            }
             $lineQuantity = $orderLineItem->get_quantity();
             $discount = $orderLineItem->get_discount_amount();
 
@@ -473,7 +481,7 @@ class LS_Vend_Sync
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
             }
 
-            $product_total_amount = LS_Vend_Order_Helper::prepareProductPriceForSyncingOrderToVend($product_total_amount, $taxValue);
+            //$product_total_amount = LS_Vend_Order_Helper::prepareProductPriceForSyncingOrderToVend($product_total_amount, $taxValue);
 
             $productArgs = array(
                 'woo_id' => $product_id,
@@ -638,6 +646,13 @@ class LS_Vend_Sync
         $products = !empty($products) ? $products : null;
         $primaryEmail = !empty($primaryEmail) ? $primaryEmail : get_option('admin_email');
         $billing_address = !empty($billing_address) ? $billing_address : null;
+        if (empty($billing_address['firstName']) && !empty($delivery_address['firstName'])) {
+            $billing_address['firstName'] = $delivery_address['firstName'];
+        }
+
+        if (empty($billing_address['lastName']) && !empty($delivery_address['lastName'])) {
+            $billing_address['lastName'] = $delivery_address['lastName'];
+        }
         $delivery_address = !empty($delivery_address) ? $delivery_address : null;
         $comments = "WooCommerce " . $order_id;
 
@@ -687,7 +702,7 @@ class LS_Vend_Sync
              */
             $productOption = LS_Vend()->product_option();
             $productOptionSyncType = $productOption->sync_type();
-            if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
+            if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType || 'vend_to_wc-way' == $productOptionSyncType) {
                 if ('on' == $productOption->quantity()) {
                     $productsBeingOrdered = $json_order->get_products();
                     foreach ($productsBeingOrdered as $productBeingOrdered) {
@@ -850,6 +865,25 @@ class LS_Vend_Sync
         $urlParams .= 'page=' . urlencode($page);
 
         return $urlParams;
+    }
+
+    public static function get_and_sync_product_to_woo_by_sku()
+    {
+        if (!empty($_REQUEST['sku'])) {
+            $productSearchWithSku = LS_Vend()->api()->product()->get_product(array(
+                'sku' => $_REQUEST['sku']
+            ));
+
+            if (!empty($productSearchWithSku['products'])) {
+
+                foreach ($productSearchWithSku['products'] as $product) {
+
+                    $product = new LS_Product($product);
+                    LS_Vend_Sync::importProductToWoo($product);
+
+                }
+            }
+        }
     }
 
     public static function from_vend_to_woo_quantity_update($page = 1)

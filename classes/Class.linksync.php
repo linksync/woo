@@ -2080,8 +2080,12 @@ class linksync_class {
                                             $productSyncingOption = LS_Vend()->product_option();
                                             $productSyncType = $productSyncingOption->sync_type();
                                             $productQuantityOption = $productSyncingOption->quantity();
-                                            if ('wc_to_vend' == $productSyncType && 'on' == $productQuantityOption) {
-                                                $product_meta = new LS_Product_Meta($product);
+                                            if (
+                                                ('wc_to_vend' == $productSyncType || 'two_way' == $productSyncType || 'vend_to_wc-way' == $productSyncType) &&
+                                                'on' == $productQuantityOption
+                                            ) {
+                                                $wooProductId = LS_Product_Helper::getProductIdBySku($products['sku']);
+                                                $product_meta = new LS_Product_Meta($wooProductId);
                                                 $current_product_stock = $product_meta->get_stock();
                                                 $new_product_stock = $current_product_stock - $products['quantity'];
                                                 $product_meta->update_stock($new_product_stock);

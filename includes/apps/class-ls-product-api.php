@@ -123,8 +123,12 @@ class LS_Product_Api{
      * Returns duplicate product
      * @return array|null
      */
-    public function get_duplicate_products(){
-        return $this->get_product('duplicate=true');
+    public function get_duplicate_products($page = 1)
+    {
+        if ($page <= 0) {
+            $page = 1;
+        }
+        return $this->get_product('duplicate=true&page=' . $page);
     }
 
 

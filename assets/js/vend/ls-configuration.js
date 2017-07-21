@@ -14,6 +14,22 @@
             this.frmResetSyncingSettings = '#frmResetSyncingSettings';
         },
 
+        loadConfigConnectionStatusSection: function () {
+           lsAjax.post({action: 'vend_connection_status_view'}).done(function (htmlResponse) {
+               $connectionStatusContainer = $('#ls-vend-status');
+               $connectionStatusContainer.html(htmlResponse);
+           });
+        },
+
+        showHideConfigUpdateSection: function (msg) {
+            var $updateSection = $('#ls-vend-update');
+            if ('api_key_updated' == msg) {
+                $updateSection.show();
+            } else {
+                $updateSection.hide();
+            }
+        },
+
         bindEvents: function () {
 
             this.on('submit', this.frmResetSyncingSettings, function (e) {
@@ -84,6 +100,10 @@
                         $tabMenu.before('<div class="notice ' + elementClass + '  is-dismissible api-key-update" > <p>' + msg + '</p> </div>');
                         lsConfigurationPage.$mainContainer.find('.api-key-update').delay(5000).fadeOut('fast');
                         $('.reveal-modal').trigger('reveal:close');
+                        setTimeout(function () {
+                            lsConfigurationPage.loadConfigConnectionStatusSection();
+                            lsConfigurationPage.showHideConfigUpdateSection(response.message);
+                        }, 5050);
                     }).fail(function (e) {
                         console.log('failed saving api key')
                     });
@@ -133,6 +153,10 @@
                         $tabMenu.before('<div class="notice ' + elementClass + '  is-dismissible api-key-addition" > <p>' + msg + '</p> </div>');
                         lsConfigurationPage.$mainContainer.find('.api-key-addition').delay(5000).fadeOut('fast');
                         $('.reveal-modal').trigger('reveal:close');
+                        setTimeout(function () {
+                            lsConfigurationPage.loadConfigConnectionStatusSection();
+                            lsConfigurationPage.showHideConfigUpdateSection(response.message);
+                        }, 5050);
                     }).fail(function (e) {
                         console.log('failed adding api key')
                     });

@@ -323,9 +323,19 @@ class LS_Product
         return $this->getData('update_at');
     }
 
+    public function remove_update_at()
+    {
+        $this->unset_data('update_at');
+    }
+
     public function get_deleted_at()
     {
         return $this->getData('deleted_at');
+    }
+
+    public function remove_deleted_at()
+    {
+        $this->unset_data('deleted_at');
     }
 
     public function hasImages()

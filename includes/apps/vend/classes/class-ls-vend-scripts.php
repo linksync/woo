@@ -21,6 +21,7 @@ class LS_Vend_Script
         </script>
         <?php
         if ($linkSyncVendMenuId == $currentScreenId) {
+            $activePage = LS_Vend_Menu::get_active_linksync_page();
 
             wp_enqueue_style('ls-styles', LS_ASSETS_URL . 'css/style.css');
 
@@ -55,6 +56,11 @@ class LS_Vend_Script
             }
 
             LS_Support_Helper::supportScripts();
+
+
+            if('duplicate_sku' == $activePage){
+                wp_enqueue_script('ls-duplicate-list', LS_ASSETS_URL . 'js/vend/ls-duplicate-list.js', array('jquery'), $pluginVersion, true);
+            }
         }
 
         if (isset($_GET['page']) && $_GET['page'] == LS_Vend_Wizard::$slug) {
@@ -82,6 +88,8 @@ class LS_Vend_Script
                 $jsToLoad = 'support';
             } else if ('logs' == $activeTab) {
                 $jsToLoad = 'logs';
+            } else if('advance' == $activeTab){
+                $jsToLoad = 'advance';
             }
 
         }

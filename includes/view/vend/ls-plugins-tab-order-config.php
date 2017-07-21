@@ -25,18 +25,39 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
 }
 
 ?>
-<h3>Order Syncing Configuration</h3>
-<form id="frmOrderSyncingSettings" name="save_order_sync_setting" method="post">
-    <fieldset>
-        <legend>Order Syncing Type</legend>
-        <div>
-            <input type="radio" name="order_sync_type" id="wc_to_vend_sync_id"  <?php echo (get_option('order_sync_type') == 'wc_to_vend' ? 'checked' : ''); ?> value="wc_to_vend"> WooCommerce to Vend <a href="https://www.linksync.com/help/woocommerce"><img title="If you're using the Vend to WooCommerce product syncing option, then you need to enable this option so that any sales in WooCommerce are synced to Vend - this ensures that the inventory levels in Vend are updated based on any orders entered in WooCommerce. " style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
-            &nbsp;&nbsp;&nbsp;&nbsp;
-            <input type="radio" name="order_sync_type" id="vend_to_wc_sync_id"  <?php echo (get_option('order_sync_type') == 'vend_to_wc-way' ? 'checked' : ''); ?> value="vend_to_wc-way"> Vend to WooCommerce <a href="https://www.linksync.com/help/woocommerce"><img title="If you're using the WooCommerce to Vend product syncing option, then you need to enable this option so that any sales in Vend are synced to WooCommerce - this ensures that the inventory levels in WooCommerce are updated based on any orders entered in Vend."  style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
-            &nbsp;&nbsp;&nbsp;&nbsp;
-            <input type="radio" name="order_sync_type" id="disabled_sync_id"  <?php echo (get_option('order_sync_type') == 'disabled' ? 'checked' : ''); ?> value="disabled"> Disabled <a href="https://www.linksync.com/help/woocommerce"><img title="Prevent any orders syncing between Vend and WooCommerce stores." style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
-        </div>
-    </fieldset>
+
+<form id="frmOrderSyncingSettings" name="save_order_sync_setting" method="post" class="ls-wrap">
+    <br/>
+    <table class="wp-list-table widefat fixed">
+        <thead>
+        <tr>
+            <td><strong>Order Syncing Type</strong></td>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                <p>
+                    <label>
+                        <input type="radio" name="order_sync_type" id="wc_to_vend_sync_id"  <?php echo (get_option('order_sync_type') == 'wc_to_vend' ? 'checked' : ''); ?> value="wc_to_vend"> WooCommerce to Vend <a href="https://www.linksync.com/help/woocommerce"><img title="If you're using the Vend to WooCommerce product syncing option, then you need to enable this option so that any sales in WooCommerce are synced to Vend - this ensures that the inventory levels in Vend are updated based on any orders entered in WooCommerce. " style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                    </label>
+
+                    <label>
+                        <input type="radio" name="order_sync_type" id="vend_to_wc_sync_id"  <?php echo (get_option('order_sync_type') == 'vend_to_wc-way' ? 'checked' : ''); ?> value="vend_to_wc-way"> Vend to WooCommerce <a href="https://www.linksync.com/help/woocommerce"><img title="If you're using the WooCommerce to Vend product syncing option, then you need to enable this option so that any sales in Vend are synced to WooCommerce - this ensures that the inventory levels in WooCommerce are updated based on any orders entered in Vend."  style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                    </label>
+
+                    <label>
+                        <input type="radio" name="order_sync_type" id="disabled_sync_id"  <?php echo (get_option('order_sync_type') == 'disabled' ? 'checked' : ''); ?> value="disabled"> Disabled <a href="https://www.linksync.com/help/woocommerce"><img title="Prevent any orders syncing between Vend and WooCommerce stores." style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
+                    </label>
+
+                </p>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
     <div id="order_sync_setting" style="display:<?php
     if (get_option('order_sync_type') == 'disabled') {
         echo "none";
@@ -175,11 +196,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                                 $checked = '';
                                             }
                                             ?>
-                                            <div style="margin-left:20px;float: left;<?php echo $display_user; ?>"><input type="radio" style="margin-top: 2px;float: left;"  <?php
+                                            <div style="margin-left:20px;float: left;<?php echo $display_user; ?>">
+                                                <input type="radio" style="margin-top: 2px;float: left;"  <?php
                                                 if (isset($checked))
                                                     echo $checked . ' ';
                                                 echo ( $userDb == $user['id'] . '|' . $user['username'] ? 'checked' : '');
-                                                ?> value="<?php echo $user['id'] . '|' . $user['username']; ?>" name="wc_to_vend_user|<?php echo $outlet['id'] ?>"  /><?php echo $user['name'] . "(<i>" . $user['username'] . "</i>)"; ?></div>
+                                                ?> value="<?php echo $user['id'] . '|' . $user['username']; ?>" name="wc_to_vend_user|<?php echo $outlet['id'] ?>"  /><?php echo $user['name'] . "(<i>" . $user['username'] . "</i>)"; ?>
+                                            </div>
                                             <?php
                                         }
                                     }

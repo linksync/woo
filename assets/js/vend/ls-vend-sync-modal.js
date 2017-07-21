@@ -175,7 +175,7 @@
                         console.log(product_sync_response);
 
 
-                        lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.msg + " to Vend (" + product_sync_response.percentage + "%)");
+                        lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.percentage + "% of WooCommerce products to Vend");
                         progressVal = lsVendSyncModal.$progressBar.progressbar("value");
 
                         if (product_sync_response.product_number == product_total_count) {
@@ -280,7 +280,7 @@
                     console.log('Successful AJAX Call! Return Data: =>');
                     console.log(product_sync_response);
 
-                    lsVendSyncModal.$progressBarLabel.html("Imported " + product_sync_response.msg + " in WooCommerce (" + product_sync_response.percentage + "%)");
+                    lsVendSyncModal.$progressBarLabel.html("Imported " + product_sync_response.percentage + "% of products in WooCommerce");
                     progressVal = lsVendSyncModal.$progressBar.progressbar("value");
 
                     if (product_sync_response.product_number == linksync.pagination.results) {

@@ -15,6 +15,11 @@ class LS_Woo_Product
         }
     }
 
+    public function get_meta()
+    {
+        return $this->product_meta;
+    }
+
     public function get_sku()
     {
         return $this->product_meta->get_sku();
@@ -152,5 +157,117 @@ class LS_Woo_Product
         return $childrenId;
     }
 
+
+    public static function direct_db_post_meta_delete($meta_id)
+    {
+        global $wpdb;
+        $result = $wpdb->delete($wpdb->postmeta, array('meta_id' => $meta_id));
+
+        return $result;
+    }
+
+    public static function get_post_meta($product_id, $meta_key, $meta_value = null)
+    {
+        global $wpdb;
+
+        $preparedQuery = $wpdb->prepare("SELECT * FROM $wpdb->postmeta WHERE post_id = %s AND meta_key = %s AND meta_value = %s", $product_id, $meta_key, $meta_value);
+        $result = $wpdb->get_results($preparedQuery, ARRAY_A);
+
+        return $result;
+    }
+
+    /**
+     * Returns all empty sku field for woocommerce product
+     * @return mixed
+     */
+    public static function get_woo_empty_sku()
+    {
+        global $wpdb;
+
+        //get all products with empty sku
+        $empty_skus = $wpdb->get_results("
+					SELECT
+							wposts.ID,
+							wposts.post_title AS product_name,
+                            wposts.post_status AS product_status,
+                            wpmeta.meta_key,
+                            wpmeta.meta_value
+					FROM $wpdb->postmeta AS wpmeta
+					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
+					WHERE wpmeta.meta_key = '_sku' AND wpmeta.meta_value = '' AND wposts.post_type IN('product','product_variation')
+					ORDER BY wpmeta.meta_value ASC
+				", ARRAY_A);
+
+        return $empty_skus;
+    }
+
+    public static function get_woo_duplicate_sku()
+    {
+        global $wpdb;
+
+        //get all duplicate product sku
+        $result = $wpdb->get_results("
+				SELECT
+						wposts.ID,
+						wposts.post_title AS product_name,
+						wposts.post_status AS product_status,
+						wpmeta.meta_key,
+						wpmeta.meta_value
+				FROM $wpdb->postmeta AS wpmeta
+				JOIN (
+						SELECT
+							pmeta.meta_key,
+							pmeta.meta_value
+						FROM  $wpdb->postmeta AS pmeta
+						INNER JOIN $wpdb->posts as w_post ON (w_post.ID = pmeta.post_id)
+						WHERE pmeta.meta_key = '_sku' AND w_post.post_type IN('product','product_variation')
+						GROUP BY pmeta.meta_value
+						HAVING COUNT(pmeta.meta_value) > 1
+					 ) AS s_wpmeta
+						ON wpmeta.meta_value = s_wpmeta.meta_value
+				INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
+				WHERE wpmeta.meta_key = '_sku' AND wpmeta.meta_value != '' AND wposts.post_type IN('product','product_variation') 
+				ORDER BY wpmeta.meta_value ASC
+			", ARRAY_A);
+
+        $real_sku_duplicate = array();
+        if (!empty($result)) {
+            foreach ($result as $duplicateSku) {
+                $product_metas = LS_Woo_Product::get_post_meta($duplicateSku['ID'], $duplicateSku['meta_key'], $duplicateSku['meta_value']);
+                $count = count($product_metas);
+
+                if ($count >= 2) {
+                    if (isset($product_metas[0]['meta_id'])) {
+                        unset($product_metas[0]);
+                    }
+                    foreach ($product_metas as $product_meta) {
+                        self::direct_db_post_meta_delete($product_meta['meta_id']);
+                    }
+                } else {
+                    $real_sku_duplicate[] = $duplicateSku;
+                }
+            }
+        }
+
+        return $real_sku_duplicate;
+    }
+
+    public static function get_product_ids()
+    {
+        global $wpdb;
+
+        $product_ids = $wpdb->get_results("
+						SELECT post.ID AS ID
+						FROM $wpdb->posts AS post
+						WHERE
+							post.post_type IN('product','product_variation') AND 
+							post.post_status != 'auto-draft'
+						ORDER BY post.ID ASC
+						", ARRAY_A);
+
+        if ($product_ids) return $product_ids;
+
+        return null;
+    }
 
 }

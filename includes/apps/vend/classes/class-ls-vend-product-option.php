@@ -19,6 +19,16 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return self::$_instance;
     }
 
+    public function allow_back_order()
+    {
+        return $this->get_option('allow_backorder', 'off');
+    }
+
+    public function update_allow_back_order($value)
+    {
+        return $this->update_option('allow_backorder', $value);
+    }
+
     public function import_by_tag()
     {
         return get_option('ps_imp_by_tag', 'off');
@@ -291,6 +301,7 @@ class LS_Vend_Product_Option extends LS_Vend_Option
 
     public static function save_product_syncing_settings()
     {
+        $productSyncOption = LS_Vend()->product_option();
         $product_sync_type = 'disabled';
         $userProductOptions = array();
         if (!empty($_POST['post_array'])) {
@@ -459,6 +470,18 @@ class LS_Vend_Product_Option extends LS_Vend_Option
                                 }
                             } else {
                                 update_option('ps_unpublish', 'off');
+                            }
+
+                            if (isset($userProductOptions['allow_backorder'])) {
+
+                                if ('on' == $userProductOptions['allow_backorder']) {
+                                    $productSyncOption->update_allow_back_order('on');
+                                } else {
+                                    $productSyncOption->update_allow_back_order('off');
+                                }
+
+                            } else {
+                                $productSyncOption->update_allow_back_order('off');
                             }
                         } else {
                             update_option('ps_quantity', 'off');

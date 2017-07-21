@@ -355,4 +355,13 @@ class LS_Product_Helper
         return $result;
     }
 
+    public static function get_woocommerce_duplicate_or_empty_skus()
+    {
+        $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
+        $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
+        $products_data = array_merge($duplicate_products, $emptyProductSkus);
+
+        return $products_data;
+    }
+
 }

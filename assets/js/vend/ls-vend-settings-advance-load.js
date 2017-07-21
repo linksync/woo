@@ -1,12 +1,11 @@
 (function ($) {
 
-
-
-    function configurationLoad() {
+    function advanceTabLoad() {
         var $mainContainer = $('#ls-main-wrapper');
+
         var data = {
-            action: 'vend_load_configuration_tab',
-            page: 'configuration'
+            action: 'vend_load_advance_tab',
+            page: 'support'
         };
         var $loading = $mainContainer.find('.ls-loading');
         $loading.removeClass('close');
@@ -15,10 +14,9 @@
             $mainContainer.html(html);
         });
     }
-
     $(document).ready(function () {
 
-        configurationLoad();
+        advanceTabLoad();
 
     });
 

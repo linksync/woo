@@ -23,6 +23,7 @@ class LS_Vend_Ajax
         add_action('wp_ajax_vend_load_configuration_tab', array('LS_Vend_Ajax', 'load_configuration_tab'));
         add_action('wp_ajax_vend_load_product_tab', array('LS_Vend_Ajax', 'load_product_tab'));
         add_action('wp_ajax_vend_load_order_tab', array('LS_Vend_Ajax', 'load_order_tab'));
+        add_action('wp_ajax_vend_load_advance_tab', array('LS_Vend_Ajax', 'load_advance_tab'));
         add_action('wp_ajax_vend_load_support_tab', array('LS_Vend_Ajax', 'load_support_tab'));
         add_action('wp_ajax_vend_load_logs_tab', array('LS_Vend_Ajax', 'load_logs_tab'));
 
@@ -39,6 +40,163 @@ class LS_Vend_Ajax
         add_action('wp_ajax_vend_send_log_to_linksync', array('LS_Vend_Ajax', 'send_log_to_linksync'));
         add_action('wp_ajax_vend_clear_logs', array('LS_Vend_Ajax', 'clear_logs'));
 
+
+        add_action('wp_ajax_vend_replace_all_empty_sku', array('LS_Vend_Ajax', 'replace_all_empty_sku_in_woocommerce'));
+        add_action('wp_ajax_vend_make_woo_sku_unique', array('LS_Vend_Ajax', 'make_woo_sku_unique'));
+        add_action('wp_ajax_vend_delete_products_permanently', array('LS_Vend_Ajax', 'delete_woo_products_permanently'));
+        add_action('wp_ajax_vend_get_vend_duplicate_skus', array('LS_Vend_Ajax', 'get_vend_duplicate_skus'));
+
+        add_action('wp_ajax_vend_make_product_sku_unique', array('LS_Vend_Ajax', 'make_vend_product_sku_unique'));
+
+        add_action('wp_ajax_vend_connection_status_view', array('LS_Vend_Ajax', 'config_connection_status'));
+
+    }
+
+    public static function config_connection_status()
+    {
+        LS_Vend_View_Config_Section::connection_status();
+        die();
+    }
+
+    public static function replace_all_empty_sku_in_woocommerce()
+    {
+        if (isset($_POST['product_ids'])) {
+            if (!empty($_POST['product_ids'])) {
+                foreach ($_POST['product_ids'] as $product_id) {
+                    if (is_numeric($product_id)) {
+                        $product_meta = new LS_Product_Meta($product_id);
+                        $sku = $product_meta->get_sku();
+                        if (empty($sku)) {
+                            $newSku = 'sku_' . $product_id;
+                            $product_meta->update_sku($newSku);
+                        }
+                    }
+                }
+            }
+        } else {
+
+            $emptySkus = LS_Woo_Product::get_woo_empty_sku();
+            foreach ($emptySkus as $product_ref) {
+                $sku = $product_ref['meta_value'];
+                if (empty($sku)) {
+                    $product_meta = new LS_Product_Meta($product_ref['ID']);
+                    $newSku = 'sku_' . $product_ref['ID'];
+                    $product_meta->update_sku($newSku);
+                }
+            }
+
+        }
+
+
+        wp_send_json(array('message' => 'done'));
+    }
+
+    public static function make_woo_sku_unique()
+    {
+        if (isset($_POST['product_ids'])) {
+            foreach ($_POST['product_ids'] as $product_id) {
+                if (is_numeric($product_id)) {
+                    $product_meta = new LS_Product_Meta($product_id);
+                    $sku = $product_meta->get_sku();
+                    $uniqueSku = 'sku_' . $product_id;
+                    if ($sku != $uniqueSku && !empty($sku)) {
+                        $newSku = $uniqueSku . $sku;
+                        $product_meta->update_sku($newSku);
+                    }
+                }
+            }
+        } else {
+
+            $duplicateSkus = LS_Woo_Product::get_woo_duplicate_sku();
+            foreach ($duplicateSkus as $duplicateSku) {
+                $sku = $duplicateSku['meta_value'];
+                $productMeta = new LS_Product_Meta($duplicateSku['ID']);
+                $uniqueSku = 'sku_' . $duplicateSku['ID'];
+                if ($sku != $uniqueSku) {
+                    $newSku = $uniqueSku . $sku;
+                    $productMeta->update_sku($newSku);
+                }
+
+            }
+
+        }
+
+
+        wp_send_json(array('message' => 'done'));
+    }
+
+    public static function delete_woo_products_permanently()
+    {
+
+        if (!empty($_POST['product_ids'])) {
+
+            foreach ($_POST['product_ids'] as $product_id) {
+                if (is_numeric($product_id)) {
+                    wp_delete_post($product_id, true);
+                }
+            }
+
+        }
+        wp_send_json(array('message' => 'done'));
+    }
+
+    public static function get_vend_duplicate_skus()
+    {
+        $page = isset($_POST['page']) ? $_POST['page'] : 1;
+        $in_vend_duplicate_and_empty_skus = LS_Vend()->api()->product()->get_duplicate_products($page);
+        LS_Vend()->option()->updateVendDuplicateProducts($in_vend_duplicate_and_empty_skus);
+        wp_send_json($in_vend_duplicate_and_empty_skus);
+    }
+
+    public static function make_vend_product_sku_unique()
+    {
+        $product = new LS_Product($_POST['product']);
+        $product->set_id(get_vend_id($product->get_id()));
+        $sku = $product->get_sku();
+
+        $product->set_sku($sku . '_' . time());
+        $product->set_tax_id((empty($tax_id) ? null : $tax_id));
+        $product->remove_deleted_at();
+        $product->remove_update_at();
+        $variants = $product->get_variants();
+        if (empty($variants)) {
+            $product->unset_data('variants');
+        } else {
+            foreach ($variants as $index => $variant) {
+
+                $var_sku = $variants[$index]['sku'];
+                $var_id = $variants[$index]['id'];
+                $variants[$index]['sku'] = $var_sku . '_' . time();
+                $variants[$index]['id'] = get_vend_id($var_id);
+                error_log('index = >'. $index.' varsku => '.$var_sku);
+            }
+
+            $product->set_variants($variants);
+        }
+        $product->unset_data('category');
+        $product->unset_data('subItem');
+        $product->unset_data('parentId');
+        $product->unset_data('level');
+
+        error_log($product->get_product_json());
+        $quickBooksProductUpdate = LS_Vend()->api()->product()->save_product($product->get_product_json());
+        error_log(json_encode($quickBooksProductUpdate));
+
+        $page = isset($_POST['page']) ? $_POST['page'] : 1;
+        $product_count = isset($_POST['product_count']) ? $_POST['product_count'] : 0;
+        $product_total_count = isset($_POST['product_total_count']) ? $_POST['product_total_count'] : 0;
+        $product_count = ($product_count > $product_total_count) ? $product_total_count : $product_count;
+        $progressValue = round(($product_count / $product_total_count) * 100);
+        $msg = $product_count . " of " . $product_total_count . " Product(s)";
+
+        $response = array(
+            'msg' => $msg,
+            'percentage' => $progressValue,
+            'product_number' => $product_count,
+            'product_total_count' => $product_total_count,
+            'product_update_response' => $quickBooksProductUpdate
+        );
+        wp_send_json($response);
     }
 
     public static function clear_logs()
@@ -121,6 +279,13 @@ class LS_Vend_Ajax
     {
         LS_Vend()->initialize_data();
         LS_Vend()->view()->display_order_configuration_tab();
+        die();
+    }
+
+    public static function load_advance_tab()
+    {
+        LS_Vend()->initialize_data();
+        LS_Vend()->view()->display_advance_tab();
         die();
     }
 
@@ -228,7 +393,7 @@ class LS_Vend_Ajax
         $page = isset($_POST['page']) ? $_POST['page'] : 1;
         $last_sync = LS_Vend()->option()->lastProductUpdate();
         if (empty($last_sync)) {
-            $last_sync =  LS_Vend_Config::get_current_linksync_time();
+            $last_sync = LS_Vend_Config::get_current_linksync_time();
             LS_Vend()->option()->lastProductUpdate($last_sync);
         }
 
@@ -266,6 +431,7 @@ class LS_Vend_Ajax
 
             require_once LS_PLUGIN_DIR . 'update.php';
             LS_Vend_Sync::from_vend_to_woo_quantity_update();
+            LS_Vend_Sync::get_and_sync_product_to_woo_by_sku();
 
         }
 

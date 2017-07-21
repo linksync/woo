@@ -399,18 +399,19 @@ function ls_create_woo_attribute($attribute_label)
  * @return array|bool|null|object|void
  */
 function ls_woo_product_attribute_exist( $attr_label ){
-	global $wpdb;
-	$tbl_name = $wpdb->prefix.'woocommerce_attribute_taxonomies';
-	$attr_name = $attr_label;
+    global $wpdb;
+    $tbl_name = $wpdb->prefix . 'woocommerce_attribute_taxonomies';
+    $attr_name = $attr_label;
 
-	$where_clause = $wpdb->prepare( " attribute_label = %s ", $attr_name );
-	$attribute = $wpdb->get_row( "SELECT * FROM $tbl_name WHERE ".$where_clause , ARRAY_A);
+    $where_clause = $wpdb->prepare(" attribute_label = %s or attribute_name = %s", $attr_name, $attr_name);
+    $sql = "SELECT * FROM $tbl_name WHERE " . $where_clause;
+    $attribute = $wpdb->get_row($sql, ARRAY_A);
 
-	if( null !== $attribute ){
-		return $attribute;
-	}else{
-		return false;
-	}
+    if (null !== $attribute) {
+        return $attribute;
+    } else {
+        return false;
+    }
 
 }
 
