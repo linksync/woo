@@ -76,7 +76,7 @@ class LS_Vend_Product_Helper
                 $product_args['post_status'] = 'draft';
             }
 
-            if(!empty($product_args['post_author'])){
+            if (!empty($product_args['post_author'])) {
                 $product_args['post_author'] = 1;
             }
 
@@ -86,7 +86,7 @@ class LS_Vend_Product_Helper
         return null;
     }
 
-    public static function updateWooProductPostData($productId, LS_Product $product, $productQuantity)
+    public static function updateWooProductPostData($productId, LS_Product $product, $productQuantity, $other_args = null)
     {
         $productSyncOption = LS_Vend()->product_option();
         $productSyncQuantityOption = $productSyncOption->quantity();
@@ -95,6 +95,14 @@ class LS_Vend_Product_Helper
 
         $productDescription = $product->get_description();
         $productName = $product->get_name();
+        if (
+            !empty($other_args['attribute_option']) &&
+            'on' == $other_args['attribute_option'] &&
+            $wooProduct->is_type('variable')
+        ) {
+            self::deleteWooVariationAttribute($productId);
+        }
+
         $postArg['post_status'] = 'publish';
         if (
             'on' == $productSyncQuantityOption &&
@@ -162,11 +170,9 @@ class LS_Vend_Product_Helper
 
         $productQuantity = self::getProductQuantity($product);
         if (!$is_new) {
-            self::updateWooProductPostData($productId, $product, $productQuantity);
-        }
-
-        if ('on' == $productSyncOption->attributes()) {
-            self::deleteWooVariationAttribute($productId);
+            self::updateWooProductPostData($productId, $product, $productQuantity, array(
+                'attribute_option' => $productSyncAttributeOption
+            ));
         }
 
         self::toWooTerms($productId, array(
@@ -186,11 +192,11 @@ class LS_Vend_Product_Helper
              */
             wp_set_object_terms($productId, 'variable', 'product_type');
 
-            self::deleteWooVariantThatDoesNotExistInVend($product, $products_meta);
-
             if (!empty($variants)) {
+                self::deleteWooVariantThatDoesNotExistInVend($product, $products_meta);
+
                 $productAttributes = array();
-                if('off' == $productSyncAttributeOption){
+                if ('off' == $productSyncAttributeOption) {
                     /**
                      * If attribute option is off means attribute should not mirror what is in vend then get current attributes as the initial value
                      * before merging attributes on creating/update variation in the next following lines
@@ -206,7 +212,15 @@ class LS_Vend_Product_Helper
                     $productAttributes = array_merge((array)$productAttributes, isset($res['_product_attributes']) ? (array)$res['_product_attributes'] : array());
                     $sortedIndex++;
                 }
-                $products_meta->update_product_attributes($productAttributes);
+
+                if(!empty($productAttributes)) {
+                    foreach ($productAttributes as $key => $attribute){
+                        if(empty($attribute)){
+                            unset($productAttributes[$key]);
+                        }
+                    }
+                    $products_meta->update_product_attributes($productAttributes);
+                }
 
             }
 
@@ -540,7 +554,11 @@ class LS_Vend_Product_Helper
         $attribute_name = ls_create_woo_attribute($attribute_label);
         $attribute_value = trim($args['attr_value']);
 
-        if (!empty($attribute_label) && !empty($attribute_value)) {
+        if (
+            !empty($attribute_label) &&
+            !empty($attribute_value) &&
+            !empty($attribute_name)
+        ) {
             $attribute_option = $productSyncOption->attributes();
             $visible = '0';
             if ('1' == $productSyncOption->attributeVisibleOnProductPage()) {
@@ -568,20 +586,21 @@ class LS_Vend_Product_Helper
 
             $attr_key = "attribute_" . $attribute_name;
 
-            //Attibute option enabled
-            if ('on' == $attribute_option) {
+            if ('' != trim($term->slug)) {
 
-                if ('' != trim($term->slug)) {
+                if ('on' == $attribute_option) {
+
                     update_post_meta($variation_product_id, $attr_key, $term->slug);
+
+                } elseif ('on' != $attribute_option) {
+
+                    $current_attribute = get_post_meta($variation_product_id, $attr_key, true);
+                    if(empty($current_attribute)){
+                        update_post_meta($variation_product_id, $attr_key, $term->slug);
+                    }
+
                 }
 
-                //Attribute option disabled
-            } elseif ('on' != $attribute_option) {
-
-                $var_attribute = get_post_meta($variation_product_id, $attr_key, true);
-                if ('' != trim($term->slug) && '' != trim($var_attribute)) {
-                    update_post_meta($variation_product_id, $attr_key, $term->slug);
-                }
             }
 
             return array('tax_name' => $attribute_name, 'attr' => $attr);
@@ -686,7 +705,9 @@ class LS_Vend_Product_Helper
 
                         //use for setting _product_attributes meta attribute
                         $attr_data = self::toWooVariantAttributes($attr_args);
-                        $returnDataSet['_product_attributes'][$attr_data['attr']['name']] = $attr_data['attr'];
+                        if(!empty($attr_data['attr']['name'])){
+                            $returnDataSet['_product_attributes'][$attr_data['attr']['name']] = $attr_data['attr'];
+                        }
                     }
                 }
 
@@ -787,6 +808,44 @@ class LS_Vend_Product_Helper
                 }
             }
         }
+    }
+
+    public static function row_action_links($actions, $post)
+    {
+        $vendConfig = new LS_Vend_Config();
+        $vendDomainPrefix = $vendConfig->get_domain_prefix();
+        if (!empty($vendDomainPrefix)) {
+
+            $vendUrl = new LS_Vend_Url($vendConfig);
+
+            if ('product' == $post->post_type) {
+
+                $productMeta = new LS_Product_Meta($post->ID);
+                $vendProductId = $productMeta->get_vend_product_id();
+                if (!empty($vendProductId)) {
+
+                    $vendEditProductLabel = 'Edit in Vend';
+                    $edit_link_in_vend = $vendUrl->get_product_edit_url($vendProductId);
+                    $actions['ls_link_edit_product_in_vend'] = sprintf('<a target="_blank" href="%s">%s</a>', $edit_link_in_vend, $vendEditProductLabel);
+
+                }
+
+            } else if ('shop_order' == $post->post_type) {
+
+                $orderMeta = new LS_Order_Meta($post->ID);
+                $vendReceiptNumber = $orderMeta->get_vend_receipt_number();
+
+                if (!empty($vendReceiptNumber)) {
+                    $order_view_link_in_vend = $vendUrl->get_order_edit_url($vendReceiptNumber);
+                    $vendViewOrderLabel = 'View in Vend';
+                    $actions['ls_link_view_order_in_vend'] = sprintf('<a target="_blank" href="%s">%s</a>', $order_view_link_in_vend, $vendViewOrderLabel);
+                }
+
+            }
+
+        }
+
+        return $actions;
     }
 
 }

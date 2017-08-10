@@ -102,7 +102,7 @@ class LS_Vend_Helper
                 $outlet = explode('|', $vendOptionWooToVendOutletDetail);
                 $pBaseOutlet['name'] = html_entity_decode($outlet[0]);
                 $pBaseOutlet['quantity'] = NULL;
-                if (!empty($product_stock)) {
+                if (!empty($product_stock) || 0 == $product_stock) {
                     $pBaseOutlet['quantity'] = $product_stock;
                 }
                 return array($pBaseOutlet);
@@ -291,4 +291,32 @@ class LS_Vend_Helper
 
     }
 
+    public static function send_capping_notice($total_connected_products = 0, $total_connected_order = 0, $linked_app = 'WooCommerce and Vend POS')
+    {
+        ob_start();
+
+        if(empty($total_connected_products)){
+            $connectedProductsArray = LS_Vend_Product_Helper::get_vend_connected_products();
+            $total_connected_products = count($connectedProductsArray);
+        }
+
+        if(empty($total_connected_order)){
+            $connectedOrdersArray = LS_Vend_Order_Helper::get_vend_connected_orders();
+            $total_connected_order = count($connectedOrdersArray);
+        }
+        $upgrade_url = LS_User_Helper::upgrade_url();
+        include_once LS_PLUGIN_DIR . 'templates/emails/email-capping-notice.php';
+        // Get email contents
+        $capping_html_notice = ob_get_clean();
+
+        $to = get_option('admin_email');
+        $subject = 'Your Syncing Progress Report';
+        $body = $capping_html_notice;
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: linksync <support@linksync.com>',
+        );
+        wp_mail($to, $subject, $body, $headers);
+
+    }
 }

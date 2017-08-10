@@ -3,6 +3,7 @@
 
     lsVendSyncModal = {
         options: '',
+        SYNC_LIMIT: 0,
         init: function (options) {
             this.cacheDom();
             this.bindEvents();
@@ -150,6 +151,35 @@
 
         },
 
+        stopSyncing: function (product_sync_response) {
+            var syncing_response = product_sync_response.response_product_to_vend.response;
+            console.log(syncing_response);
+            var errorCode = syncing_response.errorCode;
+            var errorType = syncing_response.type;
+            if (
+                typeof errorCode != 'undefined' &&
+                typeof errorType != 'undefined' &&
+                'C400' == errorType
+            ) {
+                console.log('Stop syncing now!');
+                console.log(syncing_response);
+
+                return true;
+            }
+
+            return false;
+        },
+        showCappingHtmlError: function (htmlErrorMessage) {
+            lsVendSyncModal.$modalMessage.html('<p style="color:red;">' + htmlErrorMessage + '</p>');
+            lsVendSyncModal.$modalMessage.show();
+            lsVendSyncModal.$modalCloseContainer.show();
+            lsVendSyncModal.$syncProgressContainer.hide();
+            lsVendSyncModal.$modalClose.show();
+            $('.product-capping-error').remove();
+            $('.ls-trial-message').remove();
+            lsVendSyncModal.$mainContainer.before('<div class="notice notice-error product-capping-error"><p>' + htmlErrorMessage + '</p></div>');
+        },
+
         syncProductToVend: function (woocommerce_products, product_index) {
             if (typeof product_index == 'undefined') {
                 product_index = 0;
@@ -169,28 +199,40 @@
                         product_number: product_number,
                         total_count: product_total_count,
                     };
-                    lsVendSyncModal.$modalCloseContainer.hide();
                     lsAjax.post(data).done(function (product_sync_response) {
                         console.log('Successful AJAX Call! Return Data: =>');
                         console.log(product_sync_response);
+                        var haltSync = lsVendSyncModal.stopSyncing(product_sync_response);
+                       console.log('haltSync => '+haltSync);
+                        if (false == haltSync) {
 
+                            lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.percentage + "% of WooCommerce products to Vend");
+                            lsVendSyncModal.$modalClose.hide();
+                            var progressVal = lsVendSyncModal.$progressBar.progressbar("value");
 
-                        lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.percentage + "% of WooCommerce products to Vend");
-                        progressVal = lsVendSyncModal.$progressBar.progressbar("value");
+                            if (product_sync_response.product_number == product_total_count) {
+                                lsVendSyncModal.$progressBar.progressbar("value", 100);
+                                lsVendSyncModal.syncCompleted();
+                            } else {
 
-                        if (product_sync_response.product_number == product_total_count) {
-                            lsVendSyncModal.$progressBar.progressbar("value", 100);
-                            lsVendSyncModal.syncCompleted();
-                        } else {
+                                if (progressVal < product_sync_response.percentage) {
+                                    lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                                }
 
-                            if (progressVal < product_sync_response.percentage) {
-                                lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                            }
+
+                            var temp_product_index = product_index + 1;
+                            lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
+
+                        } else if (true == haltSync) {
+                            var syncing_response = product_sync_response.response_product_to_vend.response;
+                            var htmlErrorMessage = syncing_response.html_error_message;
+                            console.log(htmlErrorMessage);
+                            if(typeof htmlErrorMessage != 'undefined'){
+                                lsVendSyncModal.showCappingHtmlError(htmlErrorMessage);
                             }
 
                         }
-
-                        var temp_product_index = product_index + 1;
-                        lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
 
                     }).fail(function (data) {
 
@@ -262,6 +304,17 @@
                     product_count = product_count + (50 * (linksync.pagination.page - 1));
                 }
 
+                if(json_linksync_products.variants.length > 0){
+                    lsVendSyncModal.SYNC_LIMIT = lsVendSyncModal.SYNC_LIMIT + json_linksync_products.variants.length;
+                } else {
+                    lsVendSyncModal.SYNC_LIMIT = lsVendSyncModal.SYNC_LIMIT + 1;
+                }
+
+                var trialItemCount = linksync.pagination.trialItemCount;
+                if(typeof linksync.pagination.trialItemCount == 'undefined'){
+                    trialItemCount = 'capping_did_not_exists';
+                }
+
                 var p_data = {
                     action: 'vend_import_to_woo',
                     page: linksync.pagination.page,
@@ -269,7 +322,9 @@
                     product: json_linksync_products,
                     product_number: product_count,
                     product_result_count: linksync.pagination.results,
-                    deleted_product: linksync.pagination.deleted_product
+                    deleted_product: linksync.pagination.deleted_product,
+                    trial_item_count : trialItemCount,
+                    sync_limit_count : lsVendSyncModal.SYNC_LIMIT
                 };
 
                 console.log('post data =>');
@@ -278,25 +333,39 @@
                 lsAjax.post(p_data).done(function (product_sync_response) {
 
                     console.log('Successful AJAX Call! Return Data: =>');
-                    console.log(product_sync_response);
-
-                    lsVendSyncModal.$progressBarLabel.html("Imported " + product_sync_response.percentage + "% of products in WooCommerce");
-                    progressVal = lsVendSyncModal.$progressBar.progressbar("value");
-
-                    if (product_sync_response.product_number == linksync.pagination.results) {
-                        lsVendSyncModal.$progressBar.progressbar("value", 100);
-                        lsVendSyncModal.syncCompleted();
-                    } else {
-
-                        if (progressVal < product_sync_response.percentage) {
-                            lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                    console.log('count = '+lsVendSyncModal.SYNC_LIMIT+' trialItemCount = '+trialItemCount);
+                    if(
+                        'capping_did_not_exists' != trialItemCount &&
+                        lsVendSyncModal.SYNC_LIMIT == trialItemCount
+                    ){
+                        //Sync should stop
+                        console.log('Sync should stop!');
+                        if(typeof product_sync_response.html_error_message != 'undefined'){
+                            lsVendSyncModal.showCappingHtmlError(product_sync_response.html_error_message);
                         }
 
+                    } else {
+
+                        lsVendSyncModal.$progressBarLabel.html("Imported " + product_sync_response.percentage + "% of products in WooCommerce");
+                        lsVendSyncModal.$modalClose.hide();
+                        progressVal = lsVendSyncModal.$progressBar.progressbar("value");
+
+                        if (product_sync_response.product_number == linksync.pagination.results) {
+                            lsVendSyncModal.$progressBar.progressbar("value", 100);
+                            lsVendSyncModal.syncCompleted();
+                        } else {
+
+                            if (progressVal < product_sync_response.percentage) {
+                                lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                            }
+
+                        }
+
+
+                        var product_index = product_number + 1;
+                        lsVendSyncModal.syncProductFromVend(linksync, product_index);
+
                     }
-
-
-                    var product_index = product_number + 1;
-                    lsVendSyncModal.syncProductFromVend(linksync, product_index);
 
                 }).fail(function (data) {
 
@@ -419,6 +488,7 @@
             if (typeof delay == 'undefined') {
                 delay = 4000;
             }
+            lsVendSyncModal.SYNC_LIMIT = 0;
             lsVendSyncModal.$syncModalContainer.delay(delay).fadeOut('fast', function () {
                 lsVendSyncModal.$progressBarLabel.html("Sync Completed!");
                 lsVendSyncModal.$modalBackDrop.removeClass('open').addClass('close');
@@ -434,14 +504,14 @@
         open: function (option) {
 
             console.log(option);
-            lsVendSyncModal.$modalClose.show();
             lsVendSyncModal.$syncButtonsContainer.hide();
+            lsVendSyncModal.$modalClose.show();
             lsVendSyncModal.$modalCloseContainer.show();
             var message = 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?';
             if (null != option.htmlMessage) {
                 message = option.htmlMessage;
             }
-
+            lsVendSyncModal.SYNC_LIMIT = 0;
             lsVendSyncModal.$modalMessage.html(message);
 
             if ('woo_to_vend' == option.buttonGroup) {

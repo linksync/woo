@@ -42,7 +42,7 @@ class LS_Vend_Url
     public function get_product_view_url($vend_product_id)
     {
         $url = $this->get_products_url();
-        $url .= '/'.$vend_product_id;
+        $url .= '/' . $vend_product_id;
 
         return $url;
     }
@@ -84,7 +84,19 @@ class LS_Vend_Url
     public function get_order_edit_url($receipt_number)
     {
         $url = $this->get_order_url();
-        $url .= '?receipt_number='.$receipt_number;
+        $url .= '?receipt_number=' . $receipt_number;
+        return $url;
+    }
+
+    /**
+     * Returns vend order url search by receipt number to view the order
+     * @param $receipt_number
+     * @return string
+     */
+    public function get_order_view_url($receipt_number)
+    {
+        $url = $this->get_order_url();
+        $url .= '?receipt_number=' . $receipt_number;
         return $url;
     }
 

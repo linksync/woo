@@ -16,9 +16,19 @@
 
         loadConfigConnectionStatusSection: function () {
            lsAjax.post({action: 'vend_connection_status_view'}).done(function (htmlResponse) {
-               $connectionStatusContainer = $('#ls-vend-status');
+               var $connectionStatusContainer = $('#ls-vend-status');
                $connectionStatusContainer.html(htmlResponse);
            });
+        },
+
+        loadConfigSyncNowSection: function (callback) {
+            lsAjax.post({action: 'vend_sync_now_view'}).done(function (htmlResponse) {
+                var $connectionStatusContainer = $('#ls-vend-sync-now');
+                $connectionStatusContainer.html(htmlResponse);
+                if (typeof callback === "function") {
+                    callback();
+                }
+            });
         },
 
         showHideConfigUpdateSection: function (msg) {
@@ -73,9 +83,12 @@
                     console.log("api key entered is empty");
                     alert('Empty API Key');
                 } else {
+                    $('.product-capping-error').remove();
+                    $('.ls-trial-message').remove();
                     $btnSubmit.prop('disabled', true);
                     $spinner.addClass('is-active');
                     lsAjax.post(data).done(function (response) {
+
                         console.log(response.message);
                         var msg = '', elementClass = 'notice-error';
 
@@ -102,8 +115,9 @@
                         $('.reveal-modal').trigger('reveal:close');
                         setTimeout(function () {
                             lsConfigurationPage.loadConfigConnectionStatusSection();
-                            lsConfigurationPage.showHideConfigUpdateSection(response.message);
-                        }, 5050);
+                            lsConfigurationPage.loadConfigSyncNowSection();
+
+                        }, 10);
                     }).fail(function (e) {
                         console.log('failed saving api key')
                     });
@@ -131,6 +145,8 @@
                     console.log("api key entered is empty");
                     alert('Empty API Key');
                 } else {
+                    $('.product-capping-error').remove();
+                    $('.ls-trial-message').remove();
                     $btnSubmit.prop('disabled', true);
                     $spinner.addClass('is-active');
                     lsAjax.post(data).done(function (response) {

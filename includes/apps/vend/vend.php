@@ -89,14 +89,6 @@ if (!class_exists('LS_Vend')) {
          */
         public function run()
         {
-            $in_woo_duplicate_skus = LS_Woo_Product::get_woo_duplicate_sku();
-            $in_woo_empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
-            $in_vend_duplicate_and_empty_skus = LS_Vend()->api()->product()->get_duplicate_products();
-            LS_Vend()->option()->updateVendDuplicateProducts($in_vend_duplicate_and_empty_skus);
-
-            $GLOBALS['in_woo_duplicate_skus'] = $in_woo_duplicate_skus;
-            $GLOBALS['in_woo_empty_product_skus'] = $in_woo_empty_product_skus;
-            $GLOBALS['in_vend_duplicate_and_empty_skus'] = isset($in_vend_duplicate_and_empty_skus['products']) ? $in_vend_duplicate_and_empty_skus['products'] : array();
 
             $linksync_vend_laid = LS_Vend()->laid()->get_current_laid();
             $GLOBALS['linksync_vend_laid'] = $linksync_vend_laid;
@@ -188,6 +180,8 @@ if (!class_exists('LS_Vend')) {
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-hooks.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-config.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-url.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-order-custom-column.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-product-custom-column.php';
 
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-order-list.php';
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-product-list.php';

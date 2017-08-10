@@ -2182,6 +2182,15 @@ class linksync_class {
                                     }
                                 }
                             }
+
+                            /**
+                             * Fires once a an order from vend has been created or updated in WooCommerce.
+                             *
+                             * @since 2.5.6
+                             *
+                             * @param int $order_id The order ID of the created order coming from vend.
+                             */
+                            do_action('ls_after_vend_to_woo_order_sync', $order_id);
                         }
                         LSC_Log::add('Order Sync Vend to Woo', 'success', 'Vend Order no:' . $order['orderId'] . ', Woo Order no:' . $order_id, get_option('linksync_laid'));
                     }

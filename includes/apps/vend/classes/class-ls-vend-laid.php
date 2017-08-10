@@ -159,7 +159,13 @@ class LS_Vend_Laid
         update_option('linksync_frequency', isset($options['linksync_frequency']) ? $options['linksync_frequency'] : '');
     }
 
-    public function check_api_key($laid = null)
+    /**
+     * Check if the apikey/laid is valid or not
+     * @param null $laid linksync laid
+     * @param bool $force_get_laid If true it forces to get the current laid information from the api
+     * @return null|string
+     */
+    public function check_api_key($laid = null, $force_get_laid = false)
     {
         set_time_limit(0);
         //if laid is null then get the current laid key connection to check its validity
@@ -170,7 +176,7 @@ class LS_Vend_Laid
         }
 
         $current_laid_key_info = $this->get_current_laid_info();
-        if(empty($current_laid_key_info)){
+        if(empty($current_laid_key_info) || true == $force_get_laid){
             $current_laid_key_info = LS_Vend()->laid()->get_laid_info($laid_key);
         }
 
@@ -379,6 +385,8 @@ class LS_Vend_Laid
                         if (isset($_POST['add_api_key'])) {
                             $message = 'api_key_added';
                         }
+
+                        LS_User_Helper::reset_capping_error_message();
                     } else {
                         $message = 'invalid';
                     }

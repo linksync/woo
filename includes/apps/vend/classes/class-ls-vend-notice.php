@@ -5,8 +5,8 @@ class LS_Vend_Notice
 
     public function vendNotice()
     {
+        global $current_screen;
         remove_all_actions('admin_notices');
-        $current_screen = get_current_screen();
 
         if ('shop_order' == $current_screen->id) {
             if (isset($_GET['post'])) {
@@ -19,6 +19,8 @@ class LS_Vend_Notice
                     }
 
                 }
+
+                $this->show_order_woo_to_vend_admin_error_notice($_GET['post']);
 
             }
         } else if ('product' == $current_screen->id) {
@@ -33,6 +35,7 @@ class LS_Vend_Notice
 
                 }
 
+                $this->show_product_woo_to_vend_admin_error_notice($_GET['post']);
             }
         }
 
@@ -41,6 +44,17 @@ class LS_Vend_Notice
          */
         //$this->linksync_video_message();
         $this->linksync_update_plugin_notice();
+
+    }
+
+    public function show_order_woo_to_vend_admin_error_notice($order_id)
+    {
+      
+    }
+
+
+    public function show_product_woo_to_vend_admin_error_notice($product_id)
+    {
 
     }
 
@@ -83,15 +97,12 @@ class LS_Vend_Notice
      */
     public function linksync_update_plugin_notice()
     {
-        global $linksync_vend_laid;
+        global $linksync_vend_laid, $ls_vend_product_capping_error, $ls_vend_order_capping_error, $ls_vend_current_screen;
         $running_version = Linksync_Vend::$version;
 
         if (!empty($linksync_vend_laid)) {
 
-            $laid_info = LS_Vend()->laid()->get_laid_info($linksync_vend_laid);
-            if (!empty($laid_info)) {
-                LS_Vend()->laid()->update_current_laid_info($laid_info);
-            }
+            $laid_info = LS_Vend()->laid()->get_current_laid_info();
 
             if (!empty($laid_info) && !isset($laid_info['errorCode'])) {
 

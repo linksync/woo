@@ -80,7 +80,9 @@
                     if (p_res.product_number >= totalProductCount) {
                         //Making sku unique completed
                         duplicateSkuList.closeModal(function () {
-                            window.location.reload();
+                            $.post(ajaxurl, {action: 'vend_save_product_duplicates'}).done(function (response) {
+                                window.location.reload();
+                            });
                         });
                         console.log('Making sku unique completed');
                     } else {
@@ -247,7 +249,7 @@
                     }
 
                     if(null != string_action && searchIDs.length > 0){
-                        alert(searchIDs);
+
                         all.css({'cursor': 'wait'});
                         spinner.show();
                         data = {

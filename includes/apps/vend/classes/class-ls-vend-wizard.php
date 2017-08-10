@@ -42,7 +42,7 @@ class LS_Vend_Wizard
         // Save and check valid laid api Key
         $apikey = $_POST['linksync']['api_key'];
         if (!empty($apikey)) {
-            $res = LS_Vend()->laid()->check_api_key($apikey);
+            $res = LS_Vend()->laid()->check_api_key($apikey, true);
             if (!empty($res['error_message'])) {
 
                 if (!empty($res['error_message']) && 'Connection to the update URL failed.' == $res['error_message']) {

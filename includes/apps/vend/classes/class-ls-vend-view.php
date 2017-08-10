@@ -8,7 +8,7 @@ class LS_Vend_View
         global $currentScreenId, $linkSyncVendMenuId, $linksync_vend_laid;
 
         if ($linkSyncVendMenuId == $currentScreenId) {
-            echo '<div class="wrap" id="ls-main-wrapper">';
+            echo '<div id="ls-main-wrapper">';
             $this->display_loading_div();
             if (!LS_Vend_Menu::is_settings_linksync_page()) {
 
@@ -93,12 +93,15 @@ class LS_Vend_View
 
     public function display_duplicate_sku_page()
     {
-        global $duplicate_products, $empty_product_skus, $in_vend_duplicate_and_empty_skus;
+
 
         $duplicateSkuList = new LS_Duplicate_Sku_List();
         $active_section = LS_Vend_Menu::get_active_section();
 
         if (empty($active_section) || 'in_woocommerce' == $active_section) {
+
+            $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
+            $empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
 
             $duplicateSkuList = new LS_Duplicate_Sku_List(array(
                 'duplicate_products' => $duplicate_products,
@@ -107,10 +110,10 @@ class LS_Vend_View
         }
 
         if ('in_vend' == $active_section) {
+            $in_vend_duplicate_and_empty_skus = LS_Vend()->option()->getVendDuplicateProducts();
             $duplicateSkuList = new LS_Vend_Duplicate_Sku_List(array(
-                'duplicate_and_empty_skus' => $in_vend_duplicate_and_empty_skus,
+                'duplicate_and_empty_skus' => $in_vend_duplicate_and_empty_skus['products'],
             ));
-
         }
 
         //Fetch, prepare, sort, and filter our data...
@@ -160,7 +163,7 @@ class LS_Vend_View
                         WooCommerce
                     </a> |
                     <a href="<?php echo $mainDuplicateSkuListUrl . '&section=in_vend'; ?>"
-                       class="<?php echo (empty($active_section) || 'in_vend' == $active_section) ? 'current' : ''; ?>">
+                       class="<?php echo ('in_vend' == $active_section) ? 'current' : ''; ?>">
                         In Vend
                     </a>
                 </li>
@@ -328,7 +331,7 @@ class LS_Vend_View
     {
         $currentLaidInfo = LS_User_Helper::getUserPlan();
         ?>
-        <div style="height: 40px;">
+        <div style="height: 40px;margin-top: 15px;">
             <img style="height: 40px;" src="<?php echo LS_ASSETS_URL . 'images/linksync/linksync-site.png'; ?>"/>
             <h2 style="position: relative;top: -51px;left: 181px;font-size: 17px;">
                 (Version: <?php echo Linksync_Vend::$version; ?>)</h2>
@@ -380,6 +383,11 @@ class LS_Vend_View
         <div class="ls-vend-sync-modal">
             <div class="ls-vend-sync-modal-content"
                  style="width: 500px !important; top: 24% !important; display: none;  z-index: 999999999;  position: fixed !important;         padding: 10px !important;         line-height: 30px !important;          left: 34%;         position: absolute;         top: 100%;          float: left;           background-color: #ffffff;         border: 1px solid #ccc;         border: 1px solid rgba(0, 0, 0, 0.2);         -webkit-border-radius: 5px;         -moz-border-radius: 5px;         border-radius: 5px;         -webkit-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -moz-box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);         -webkit-background-clip: padding-box;         -moz-background-clip: padding;         background-clip: padding-box; ">
+
+                <div class="ls-modal-close">
+                    <div class="ui-icon ui-icon-close close-reveal-modal btn-no"
+                         style="width: 16px !important;height: 17px;float: right;"></div>
+                </div>
 
                 <center>
                     <h4 id="sync_start_export_all" class="sync-modal-message">Do you want to sync all product to

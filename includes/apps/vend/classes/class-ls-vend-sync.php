@@ -33,19 +33,25 @@ class LS_Vend_Sync
                 add_action('before_delete_post', array('LS_Vend_Sync', 'deleteVendProduct'));
             }
 
-            /**
-             * Update Vend product on every Woocommmerce Order creation
-             */
-            add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
-            add_action('woocommerce_thankyou', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
+            if(
+                'vend_to_wc-way' == $orderSyncOption->sync_type() ||
+                'disabled' == $orderSyncOption->sync_type()
+            ){
+                add_action('woocommerce_reduce_order_stock', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
+            }
+
+
         }
     }
 
 
-    public static function updateVendProductOnWooCommerceOrderUpdate($order_id)
+    /**
+     * @param $order WC_Order
+     */
+    public static function updateVendProductOnWooCommerceOrderUpdate($order)
     {
-        $wooOrder = wc_get_order($order_id);
-        $orderItems = $wooOrder->get_items();
+        $orderItems = $order->get_items();
+
         foreach ($orderItems as $orderItem) {
             $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
 
@@ -133,6 +139,8 @@ class LS_Vend_Sync
         $product_meta = new LS_Product_Meta($product_id);
         $productHelper = new LS_Product_Helper($product);
         $productOptionSyncType = LS_Vend()->product_option()->sync_type();
+        $returnData = array();
+
 
         if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
             $product_type = $productHelper->getType();
@@ -288,10 +296,25 @@ class LS_Vend_Sync
 
                 if (!empty($j_product)) {
                     $result = LS_Vend()->api()->product()->save_product($j_product);
-                    $product_meta->updateToLinkSyncJson(array(
+                    $returnData = array(
                         'json_being_sent' => $j_product,
                         'response' => $result
-                    ));
+                    );
+
+
+                    if (
+                        !empty($result['errorCode']) &&
+                        !empty($result['type']) &&
+                        'C400' == $result['type']
+                    ) {
+                        $returnData['response']['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
+                        //LS_Vend_Helper::send_capping_notice();
+                    }
+
+
+
+
+                    $product_meta->updateToLinkSyncJson($returnData);
 
                     if (!empty($result['id'])) {
                         LS_Vend_Product_Helper::update_vend_ids($result);
@@ -312,6 +335,7 @@ class LS_Vend_Sync
             }
         }
 
+        return $returnData;
     }
 
     public static function importProductToWoo($product)
@@ -323,11 +347,13 @@ class LS_Vend_Sync
         }
 
         $productSyncOption = LS_Vend()->product_option();
-
+        $activeInVend = $product->getData('active');
         if (
             'disabled_sync' == $productSyncOption->sync_type() ||
             'shipping' == $product->get_sku() ||
-            'refund' == $product->get_sku()
+            'refund' == $product->get_sku() ||
+            '0' == $activeInVend ||
+            0 == $activeInVend
         ) {
             //Do not create this product in woocommerce if the sku is shipping
             //Or return if sync type is disabled
@@ -681,10 +707,26 @@ class LS_Vend_Sync
         $post_order = LS_Vend()->api()->order()->save_orders($order_json_data);
 
         $order_meta = new LS_Order_Meta($order_id);
-        $order_meta->updateOrderJsonFromWooToVend(array(
+        $request_and_response_data = array(
             'order_being_sent' => $json_order->getOrderArray(),
             'response' => $post_order
-        ));
+        );
+
+        if (LS_User_Helper::is_laid_on_free_trial()) {
+
+            if (
+                !empty($post_order['errorCode']) &&
+                !empty($post_order['type']) &&
+                'C400' == $post_order['type']
+            ) {
+                $request_and_response_data['response']['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
+                //LS_Vend_Helper::send_capping_notice();
+            }
+            
+        }
+
+        $order_meta->updateOrderJsonFromWooToVend($request_and_response_data);
+
 
         if (!empty($post_order['id'])) {
             $orderSyncOption->setFlagOrderWasSyncToVend($order_id, $post_order['orderId']);
@@ -696,23 +738,6 @@ class LS_Vend_Sync
             LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_id, LS_Vend()->laid()->get_current_laid());
 
             LSC_Log::add_dev_success('LS_Vend_Sync::importOrderToVend', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
-
-            /**
-             * Update vend product if sync type is two way or woocommerce to vend and quantity option is enabled
-             */
-            $productOption = LS_Vend()->product_option();
-            $productOptionSyncType = $productOption->sync_type();
-            if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType || 'vend_to_wc-way' == $productOptionSyncType) {
-                if ('on' == $productOption->quantity()) {
-                    $productsBeingOrdered = $json_order->get_products();
-                    foreach ($productsBeingOrdered as $productBeingOrdered) {
-                        if (!empty($productBeingOrdered['woo_id']) && is_numeric($productBeingOrdered['woo_id'])) {
-                            self::importProductToVend($productBeingOrdered['woo_id']);
-                        }
-                    }
-                }
-
-            }
 
         } else {
             update_post_meta($order_id, '_ls_json_order_error', $post_order);

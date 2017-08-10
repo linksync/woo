@@ -49,12 +49,48 @@ class LS_Vend_Ajax
         add_action('wp_ajax_vend_make_product_sku_unique', array('LS_Vend_Ajax', 'make_vend_product_sku_unique'));
 
         add_action('wp_ajax_vend_connection_status_view', array('LS_Vend_Ajax', 'config_connection_status'));
+        add_action('wp_ajax_vend_sync_now_view', array('LS_Vend_Ajax', 'config_sync_now_section'));
 
+        add_action('wp_ajax_vend_save_product_duplicates', array('LS_Vend_Ajax', 'save_product_duplicates'));
+
+        $laidClass = LS_Vend()->laid();
+        add_action('wp_ajax_vend_check_api_key', array($laidClass, 'check_api_key'));
+
+    }
+
+
+
+
+    public static function save_product_duplicates()
+    {
+        global $linksync_vend_laid;
+
+        $in_woo_duplicate_skus = LS_Woo_Product::get_woo_duplicate_sku();
+        $in_woo_empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
+
+        if (!empty($linksync_vend_laid)) {
+            $in_vend_duplicate_and_empty_skus = LS_Vend()->api()->product()->get_duplicate_products();
+            LS_Vend()->option()->updateVendDuplicateProducts($in_vend_duplicate_and_empty_skus);
+        }
+
+
+        wp_send_json(array(
+            'vend_product_duplicates' => isset($in_vend_duplicate_and_empty_skus['products']) ? $in_vend_duplicate_and_empty_skus['products'] : array(),
+            'woo_empty_product_skus' => $in_woo_empty_product_skus,
+            'woo_duplicate_skus' => $in_woo_duplicate_skus,
+            'laid' => $linksync_vend_laid,
+        ));
     }
 
     public static function config_connection_status()
     {
         LS_Vend_View_Config_Section::connection_status();
+        die();
+    }
+
+    public static function config_sync_now_section()
+    {
+        LS_Vend_View_Config_Section::sync_now();
         die();
     }
 
@@ -356,8 +392,30 @@ class LS_Vend_Ajax
                 'msg' => $msg,
                 'percentage' => $progressValue,
                 'product_number' => $product_number,
-                'product_results_count' => $product_results_count
+                'product_results_count' => $product_results_count,
+                'upgrade_button' => LS_User_Helper::update_button('upgrade now',''),
+                'why_limit_link' => LS_User_Helper::why_limit_link(),
             );
+
+            $trial_item_count = $_POST['trial_item_count'];
+            $sync_limit_count = $_POST['sync_limit_count'];
+
+            if('capping_did_not_exists' != $trial_item_count){
+
+                if(
+                    LS_Constants::TRIAL_PRODUCT_SYNC_LIMIT == $trial_item_count &&
+                    LS_Constants::TRIAL_PRODUCT_SYNC_LIMIT == $product_number &&
+                    LS_User_Helper::is_laid_on_free_trial()
+                ){
+                    $response['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
+                    //LS_Vend_Helper::send_capping_notice();
+                }
+
+                if($sync_limit_count == $trial_item_count){
+                    $response['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
+                }
+
+            }
             wp_send_json($response);
         }
         wp_send_json(array('import_product_to_woo'));
@@ -371,7 +429,7 @@ class LS_Vend_Ajax
     public static function import_woo_product_to_vend()
     {
         if (!empty($_POST['p_id'])) {
-            LS_Vend_Sync::importProductToVend($_POST['p_id']);
+            $response_product_to_vend = LS_Vend_Sync::importProductToVend($_POST['p_id']);
             $product_number = isset($_POST['product_number']) ? $_POST['product_number'] : 0;
             $product_total_count = isset($_POST['total_count']) ? $_POST['total_count'] : 0;
             $product_number = ($product_number > $product_total_count) ? $product_total_count : $product_number;
@@ -382,6 +440,7 @@ class LS_Vend_Ajax
                 'msg' => $msg,
                 'percentage' => $progressValue,
                 'product_number' => $product_number,
+                'response_product_to_vend' => $response_product_to_vend,
             );
             wp_send_json($response);
         }
@@ -410,6 +469,7 @@ class LS_Vend_Ajax
      */
     public static function sync_triggered_by_lws()
     {
+        $last_product_sync = time();
         if (!isset($_REQUEST['check'])) {
 
             $last_product_sync = LS_Vend()->option()->lastProductUpdate();
@@ -435,7 +495,10 @@ class LS_Vend_Ajax
 
         }
 
-        wp_send_json(array('success' => 'Sync trigger success'));
+        wp_send_json(array(
+            'success' => 'Sync trigger success',
+            'last_product_sync' => $last_product_sync
+        ));
 
     }
 

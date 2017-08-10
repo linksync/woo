@@ -19,6 +19,24 @@ class LS_Vend_Script
             var connected_products_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('connected_products')); ?>';
             var connected_orders_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('connected_orders')); ?>';
         </script>
+        <style>
+            .yes-in-vend{
+                margin: auto 15px;
+            }
+
+            .yes-in-vend::before {
+                content: "\f147";
+                font-size: 30px !important;
+                color: #7cb552;
+                margin-left: -6px;
+            }
+
+            .no-in-vend{
+                color: #a44;
+                font-size: 28px !important;
+                margin: auto 10px;
+            }
+        </style>
         <?php
         if ($linkSyncVendMenuId == $currentScreenId) {
             $activePage = LS_Vend_Menu::get_active_linksync_page();
@@ -61,6 +79,10 @@ class LS_Vend_Script
             if('duplicate_sku' == $activePage){
                 wp_enqueue_script('ls-duplicate-list', LS_ASSETS_URL . 'js/vend/ls-duplicate-list.js', array('jquery'), $pluginVersion, true);
             }
+        } else {
+
+            //Check api key if not on linksync vend plugin page
+            add_action('admin_footer', array(__CLASS__, 'footer_scripts'));
         }
 
         if (isset($_GET['page']) && $_GET['page'] == LS_Vend_Wizard::$slug) {
@@ -72,6 +94,9 @@ class LS_Vend_Script
         if ('shop_order' == $currentScreenId) {
             wp_enqueue_script('ls-shop-order-scripts', LS_ASSETS_URL . 'js/ls-shop-order.js', array('jquery'), $pluginVersion, true);
         }
+
+        $vend_menu = new LS_Vend_Menu();
+        add_action('admin_footer', array($vend_menu, 'footer_scripts'));
     }
 
     public static function javascript_page_loader($isSettingsPage, $activeTab)
@@ -99,6 +124,21 @@ class LS_Vend_Script
             wp_enqueue_script('ls-vend-' . $jsToLoad . '-load', LS_ASSETS_URL . 'js/vend/ls-vend-settings-' . $jsToLoad . '-load.js', array('jquery'), Linksync_Vend::$version, true);
         }
 
+    }
+
+    public static function footer_scripts()
+    {
+        ?>
+        <script>
+            (function ($) {
+                $(document).ready(function () {
+                    $.post(ajaxurl, {action: 'vend_check_api_key'}).done(function (response) {
+
+                    });
+                });
+            }(jQuery));
+        </script>
+        <?php
     }
 
 }

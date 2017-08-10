@@ -195,8 +195,6 @@ class LS_Vend_Menu
 
     public function initialize_admin_menu()
     {
-        global $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_vend_duplicate_and_empty_skus;
-
 
         $menu_slug = LS_Vend::$slug;
         $vendView = new LS_Vend_View();
@@ -256,16 +254,16 @@ class LS_Vend_Menu
             null
         );
 
-        if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_vend_duplicate_and_empty_skus)) {
-            add_submenu_page(
-                $menu_slug,
-                __('linksync Duplicate SKU', $menu_slug),
-                __('Duplicate SKU', $menu_slug),
-                'manage_options',
-                self::page_menu_url('duplicate_sku'),
-                null
-            );
-        }
+//        if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_vend_duplicate_and_empty_skus)) {
+//            add_submenu_page(
+//                $menu_slug,
+//                __('linksync Duplicate SKU', $menu_slug),
+//                __('Duplicate SKU', $menu_slug),
+//                'manage_options',
+//                self::page_menu_url('duplicate_sku'),
+//                null
+//            );
+//        }
 
         add_submenu_page(
             $menu_slug,
@@ -296,6 +294,7 @@ class LS_Vend_Menu
         $mainMenuSelector = '#' . $linkSyncVendMenuId . ' > a';
         $mainMenuHrefUrl = self::menu_url();
         $subMenuSelector = '#' . $linkSyncVendMenuId . ' > ul > li';
+        $duplicateMenuUrl = self::page_menu_url('duplicate_sku');
 
 
         ?>
@@ -311,6 +310,27 @@ class LS_Vend_Menu
                         if ($(this).attr('href') == currentPage) {
                             $(this).parent().addClass('current');
                         }
+
+                        var currentMenuName = $(this).text();
+                        if('Connected Orders' == currentMenuName){
+                            var $connectedOrderElement = $(this).parent();
+
+                            $.post(ajaxurl, {action: 'vend_save_product_duplicates'}).done(function (response) {
+                                var vend_product_duplicates = response.vend_product_duplicates;
+                                var woo_duplicate_product_skus = response.woo_duplicate_skus;
+                                var woo_empty_product_skus = response.woo_empty_product_skus;
+                                if(
+                                    vend_product_duplicates.length > 0 ||
+                                    woo_duplicate_product_skus.length > 0 ||
+                                    woo_empty_product_skus.length > 0
+                                ){
+                                    $connectedOrderElement.after('<li><a href="<?php echo $duplicateMenuUrl; ?>">Duplicate SKU</a></li>');
+                                }
+
+                            });
+                        }
+
+
                     });
 
                 });
