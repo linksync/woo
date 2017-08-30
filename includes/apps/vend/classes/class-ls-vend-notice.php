@@ -6,7 +6,6 @@ class LS_Vend_Notice
     public function vendNotice()
     {
         global $current_screen;
-        remove_all_actions('admin_notices');
 
         if ('shop_order' == $current_screen->id) {
             if (isset($_GET['post'])) {
@@ -129,59 +128,7 @@ class LS_Vend_Notice
 
     public function linksync_video_message()
     {
-        if (get_option('linksync_wooVersion') == 'off') {
-            if (isset($_POST['hide'])) {
-                update_option('hide_this_notice', 'off');
-            }
-            if (get_option('hide_this_notice') == 'on') {
-                ?>
-                <div class="updated">
-                    <p>
-                        <?php
-                        echo '<form method="POST">
-                                <input 
-                                    style="float:right;cursor:pointer" 
-                                    type="submit" 
-                                    class="add-new-h2"   
-                                    name="hide" value="Hide this notice">
-                               </form>
-                               Watch the 3-minute "getting started guide" for linksync for WooCommerce.<br><br>
-                               <a href="//fast.wistia.net/embed/iframe/mfwv2hb8wx?popover=true" 
-                               class="wistia-popover[height=576,playerColor=5aaddd,width=1024]">
-                                    <img src="https://embed-ssl.wistia.com/deliveries/92d5bedfb2638333806b598616d315640b701a95.jpg?image_play_button=true&image_play_button_color=5aaddde0&image_crop_resized=200x113" alt="" />
-                               </a>
-                               
-                                <script charset="ISO-8859-1" src="//fast.wistia.com/assets/external/popover-v1.js"></script>';
-                        ?>
-                    </p>
-                    <style>
-                        .add-new-h2:hover {
-                            background: #2ea2cc;
-                            color: #fff;
-                        }
 
-                        .add-new-h2 {
-                            margin-left: 4px;
-                            padding: 4px 8px;
-                            position: relative;
-                            top: -3px;
-                            color: #0074a2;
-                            text-decoration: none;
-                            border: none;
-                            -webkit-border-radius: 2px;
-                            border-radius: 2px;
-                            background: #e0e0e0;
-                            text-shadow: none;
-                            font-weight: 600;
-                            font-size: 13px;
-                        }
-                    </style>
-
-                </div>
-
-                <?php
-            }
-        }
     }
 
 }

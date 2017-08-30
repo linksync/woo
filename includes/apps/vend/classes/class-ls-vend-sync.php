@@ -33,10 +33,10 @@ class LS_Vend_Sync
                 add_action('before_delete_post', array('LS_Vend_Sync', 'deleteVendProduct'));
             }
 
-            if(
+            if (
                 'vend_to_wc-way' == $orderSyncOption->sync_type() ||
                 'disabled' == $orderSyncOption->sync_type()
-            ){
+            ) {
                 add_action('woocommerce_reduce_order_stock', array('LS_Vend_Sync', 'updateVendProductOnWooCommerceOrderUpdate'));
             }
 
@@ -241,7 +241,12 @@ class LS_Vend_Sync
                     'product_stock' => $product_meta->get_stock()
                 );
 
-                if (LS_Product_Helper::isSimpleProduct($product)) {
+                
+                if (
+                    LS_Product_Helper::isSimpleProduct($product) ||
+                    LS_Product_Helper::isBundleProduct($product) ||
+                    LS_Product_Helper::isSubscriptionProduct($product)
+                ) {
                     $pOutlets = LS_Vend_Helper::buildOutletJsonBaseOnParams($paramsToBuildJsonOutlets);
                     $json_product->set_outlets($pOutlets);
                 }
@@ -310,8 +315,6 @@ class LS_Vend_Sync
                         $returnData['response']['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
                         //LS_Vend_Helper::send_capping_notice();
                     }
-
-
 
 
                     $product_meta->updateToLinkSyncJson($returnData);
@@ -463,7 +466,10 @@ class LS_Vend_Sync
             }
         }
 
+
+
         foreach ($orderItems as $orderItem) {
+
             $orderLineItem = new LS_Woo_Order_Line_Item($orderItem);
             $taxClass = $orderLineItem->get_tax_class();
 
@@ -492,8 +498,10 @@ class LS_Vend_Sync
             }
 
 
-            $product_amount = $product_meta->get_price();
+            $product_price = $product_meta->get_price();
+            $product_amount = $product_price;
             $order_line_product_amount = $orderLineItem->get_product_amount();
+
             if (!empty($order_line_product_amount)) {
                 $product_amount = $order_line_product_amount;
             }
@@ -505,6 +513,19 @@ class LS_Vend_Sync
             $product_total_amount = (float)$product_amount - (float)$discount;
             if (!empty($product_total_amount) && !empty($vendTaxDetails['taxRate'])) {
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
+            }
+            if ('bundle' == $wooProduct->get_type()) {
+
+                $bundleItems = $orderLineItem->get_bundled_items();
+                if(!empty($bundleItems)){
+                    $product_total_amount = $order_line_product_amount;
+                }
+
+            }
+
+            $is_priced_individually = $orderLineItem->is_bundled_item_priced_individually();
+            if('no' == $is_priced_individually){
+                $product_total_amount = 0;
             }
 
             //$product_total_amount = LS_Vend_Order_Helper::prepareProductPriceForSyncingOrderToVend($product_total_amount, $taxValue);
@@ -722,7 +743,7 @@ class LS_Vend_Sync
                 $request_and_response_data['response']['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
                 //LS_Vend_Helper::send_capping_notice();
             }
-            
+
         }
 
         $order_meta->updateOrderJsonFromWooToVend($request_and_response_data);

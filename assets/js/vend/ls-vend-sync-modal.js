@@ -154,12 +154,10 @@
         stopSyncing: function (product_sync_response) {
             var syncing_response = product_sync_response.response_product_to_vend.response;
             console.log(syncing_response);
-            var errorCode = syncing_response.errorCode;
-            var errorType = syncing_response.type;
             if (
-                typeof errorCode != 'undefined' &&
-                typeof errorType != 'undefined' &&
-                'C400' == errorType
+                syncing_response.errorCode &&
+                syncing_response.type &&
+                'C400' == syncing_response.type
             ) {
                 console.log('Stop syncing now!');
                 console.log(syncing_response);
@@ -202,37 +200,46 @@
                     lsAjax.post(data).done(function (product_sync_response) {
                         console.log('Successful AJAX Call! Return Data: =>');
                         console.log(product_sync_response);
-                        var haltSync = lsVendSyncModal.stopSyncing(product_sync_response);
-                       console.log('haltSync => '+haltSync);
-                        if (false == haltSync) {
+                        if(product_sync_response){
 
-                            lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.percentage + "% of WooCommerce products to Vend");
-                            lsVendSyncModal.$modalClose.hide();
-                            var progressVal = lsVendSyncModal.$progressBar.progressbar("value");
+                            var haltSync = lsVendSyncModal.stopSyncing(product_sync_response);
+                            console.log('haltSync => '+haltSync);
+                            if (false == haltSync) {
 
-                            if (product_sync_response.product_number == product_total_count) {
-                                lsVendSyncModal.$progressBar.progressbar("value", 100);
-                                lsVendSyncModal.syncCompleted();
-                            } else {
+                                lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.percentage + "% of WooCommerce products to Vend");
+                                lsVendSyncModal.$modalClose.hide();
+                                var progressVal = lsVendSyncModal.$progressBar.progressbar("value");
 
-                                if (progressVal < product_sync_response.percentage) {
-                                    lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                                if (product_sync_response.product_number == product_total_count) {
+                                    lsVendSyncModal.$progressBar.progressbar("value", 100);
+                                    lsVendSyncModal.syncCompleted();
+                                } else {
+
+                                    if (progressVal < product_sync_response.percentage) {
+                                        lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
+                                    }
+
+                                }
+
+                                var temp_product_index = product_index + 1;
+                                lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
+
+                            } else if (true == haltSync) {
+                                var syncing_response = product_sync_response.response_product_to_vend.response;
+                                var htmlErrorMessage = syncing_response.html_error_message;
+                                console.log(htmlErrorMessage);
+                                if(typeof htmlErrorMessage != 'undefined'){
+                                    lsVendSyncModal.showCappingHtmlError(htmlErrorMessage);
                                 }
 
                             }
 
+                        } else {
+
                             var temp_product_index = product_index + 1;
                             lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
-
-                        } else if (true == haltSync) {
-                            var syncing_response = product_sync_response.response_product_to_vend.response;
-                            var htmlErrorMessage = syncing_response.html_error_message;
-                            console.log(htmlErrorMessage);
-                            if(typeof htmlErrorMessage != 'undefined'){
-                                lsVendSyncModal.showCappingHtmlError(htmlErrorMessage);
-                            }
-
                         }
+
 
                     }).fail(function (data) {
 

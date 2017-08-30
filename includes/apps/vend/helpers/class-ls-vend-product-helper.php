@@ -6,7 +6,7 @@ class LS_Vend_Product_Helper
     public static function isTypeSyncAbleToVend($type)
     {
         $bool = false;
-        $product_types = array('product', 'product_variation', 'simple', 'variation', 'variable');
+        $product_types = array('product', 'product_variation', 'simple', 'variation', 'variable', 'subscription', 'bundle');
         if (in_array($type, $product_types)) {
             $bool = true;
         }
@@ -121,7 +121,10 @@ class LS_Vend_Product_Helper
             'on' == $productSyncOption->allow_back_order() &&
             false == $product->has_variant()
         ) {
-            if ('yes' == $wooProduct->get_meta()->get_backorders()) {
+            if (
+                'yes' == $wooProduct->get_meta()->get_backorders() ||
+                'notify' == $wooProduct->get_meta()->get_backorders()
+            ) {
                 /**
                  * set product status to publish since allow back order is yes so that customers will be able to purchase the product
                  */
@@ -213,9 +216,9 @@ class LS_Vend_Product_Helper
                     $sortedIndex++;
                 }
 
-                if(!empty($productAttributes)) {
-                    foreach ($productAttributes as $key => $attribute){
-                        if(empty($attribute)){
+                if (!empty($productAttributes)) {
+                    foreach ($productAttributes as $key => $attribute) {
+                        if (empty($attribute)) {
                             unset($productAttributes[$key]);
                         }
                     }
@@ -281,11 +284,13 @@ class LS_Vend_Product_Helper
                 }
 
                 if (
-                    'on' == $productSyncQuantityOption &&
                     'on' == $productSyncOption->allow_back_order() &&
                     false == $product->has_variant()
                 ) {
-                    if ('yes' == $products_meta->get_backorders()) {
+                    if (
+                        'yes' == $products_meta->get_backorders() ||
+                        'notify' == $products_meta->get_backorders()
+                    ) {
                         /**
                          * set instock since allow back order is yes so that customers will be able to purchase the product
                          */
@@ -428,12 +433,18 @@ class LS_Vend_Product_Helper
     {
 
         $price_option = LS_Vend()->product_option()->priceField();
+        $productId = $product_meta->getWooProductId();
+        $wooProduct = new LS_Woo_Product($productId);
+        $productType = $wooProduct->get_type();
 
         $price = ($price == 0) ? '' : $price;
 
         if ('regular_price' == $price_option) {
 
             $product_meta->update_regular_price($price);
+            if ('subscription' == $productType) {
+                $product_meta->update_meta('_subscription_price', $price);
+            }
 
             $sale_price_meta = $product_meta->get_sale_price();
             if ('' == $sale_price_meta) {
@@ -447,6 +458,9 @@ class LS_Vend_Product_Helper
 
             $product_meta->update_sale_price($price);
             $product_meta->update_price($price);
+            if ('subscription' == $productType) {
+                $product_meta->update_meta('_subscription_price', $price);
+            }
 
         }
 
@@ -595,7 +609,7 @@ class LS_Vend_Product_Helper
                 } elseif ('on' != $attribute_option) {
 
                     $current_attribute = get_post_meta($variation_product_id, $attr_key, true);
-                    if(empty($current_attribute)){
+                    if (empty($current_attribute)) {
                         update_post_meta($variation_product_id, $attr_key, $term->slug);
                     }
 
@@ -677,7 +691,10 @@ class LS_Vend_Product_Helper
                     }
 
                     if ('on' == $productSyncOption->allow_back_order()) {
-                        if ('yes' == $var_meta->get_backorders()) {
+                        if (
+                            'yes' == $var_meta->get_backorders() ||
+                            'notify' == $var_meta->get_backorders()
+                        ) {
                             /**
                              * set product stock to instock since allow back order is yes so that customers will be able to purchase the product
                              */
@@ -705,7 +722,7 @@ class LS_Vend_Product_Helper
 
                         //use for setting _product_attributes meta attribute
                         $attr_data = self::toWooVariantAttributes($attr_args);
-                        if(!empty($attr_data['attr']['name'])){
+                        if (!empty($attr_data['attr']['name'])) {
                             $returnDataSet['_product_attributes'][$attr_data['attr']['name']] = $attr_data['attr'];
                         }
                     }
@@ -748,7 +765,7 @@ class LS_Vend_Product_Helper
     }
 
 
-    public static function get_vend_connected_products($orderBy = '', $order = 'asc')
+    public static function get_vend_connected_products($orderBy = '', $order = 'asc', $search_key = '')
     {
         global $wpdb;
 
@@ -759,6 +776,17 @@ class LS_Vend_Product_Helper
             $orderBySql = 'ORDER BY wpmeta.meta_value ASC';
         }
 
+        $searchWhere = "AND wpmeta.meta_key IN ('_ls_vend_pid') AND wpmeta.meta_value != ''";
+        if (!empty($search_key)) {
+
+            $prepare_sku_search = $wpdb->prepare("wpmeta.meta_key = '_sku' AND wpmeta.meta_value LIKE %s ", '%' . $search_key . '%');
+            $prepare_product_name_search = $wpdb->prepare(" OR wposts.post_title LIKE %s ", '%' . $search_key . '%');
+            $prepare_product_desc_search = $wpdb->prepare(" OR wposts.post_content LIKE %s ", '%' . $search_key . '%');
+
+            $searchWhere = " AND (" . $prepare_sku_search . $prepare_product_name_search . $prepare_product_desc_search . ")";
+        }
+
+        $groupBy = ' GROUP BY wposts.ID ';
         $sql = "
 					SELECT
 							wposts.ID,
@@ -771,15 +799,22 @@ class LS_Vend_Product_Helper
 					FROM $wpdb->postmeta AS wpmeta
 					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
 					WHERE 
-					      wpmeta.meta_key IN ('_ls_vend_pid') AND wpmeta.meta_value != '' AND 
-					      wposts.post_type IN('product','product_variation')
-					  $orderBySql
-				";
+					          wposts.post_type IN('product','product_variation')  
+				". $searchWhere.$groupBy.$orderBy;
 
-        //get all products with empty sku
-        $empty_skus = $wpdb->get_results($sql, ARRAY_A);
+        $results = $wpdb->get_results($sql, ARRAY_A);
 
-        return $empty_skus;
+        foreach ($results as $key => $result) {
+            $vend_id = get_post_meta($result['ID'], '_ls_vend_pid', true);
+            if(empty($vend_id)){
+                unset($results[$key]);
+            } else {
+                $result['vend_id'] = $vend_id;
+                $results[$key] = $result;
+            }
+        }
+
+        return $results;
     }
 
     /**

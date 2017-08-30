@@ -70,7 +70,7 @@ class LS_Vend_Order_Helper
         return $linksync_order_statuses;
     }
 
-    public static function get_vend_connected_orders( $orderBy = '', $order = 'DESC')
+    public static function get_vend_connected_orders( $orderBy = '', $order = 'DESC', $search_key = '')
     {
         global $wpdb;
 
@@ -80,6 +80,17 @@ class LS_Vend_Order_Helper
         } else {
             $orderBySql = 'ORDER BY ID DESC';
         }
+
+        $searchWhere = " AND wpmeta.meta_key IN ('_ls_vend_receipt_number') AND wpmeta.meta_value != '' ";
+        if (!empty($search_key)) {
+
+            $prepare_id_search = $wpdb->prepare(" wposts.ID LIKE %s ", '%' . $search_key . '%');;
+
+            $searchWhere = " AND (" . $prepare_id_search . ")";
+        }
+
+        $groupBy = ' GROUP BY wposts.ID ';
+
 
         $sql = "
 					SELECT
@@ -92,15 +103,23 @@ class LS_Vend_Order_Helper
 					FROM $wpdb->postmeta AS wpmeta
 					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
 					WHERE
-					      wpmeta.meta_key IN ('_ls_vend_receipt_number') AND wpmeta.meta_value != '' AND
-					      wposts.post_type IN('shop_order')
-					  $orderBySql
-				";
+					      wposts.post_type IN('shop_order')  
+				".$searchWhere.$groupBy.$orderBySql;
 
         //get all products with empty sku
-        $empty_skus = $wpdb->get_results($sql, ARRAY_A);
+        $results = $wpdb->get_results($sql, ARRAY_A);
 
-        return $empty_skus;
+        foreach ($results as $key => $result) {
+            $vend_receip_number = get_post_meta($result['ID'], '_ls_vend_receipt_number', true);
+            if(empty($vend_receip_number)){
+                unset($results[$key]);
+            } else {
+                $result['vend_receipt_number'] = $vend_receip_number;
+                $results[$key] = $result;
+            }
+        }
+
+        return $results;
     }
 
 }

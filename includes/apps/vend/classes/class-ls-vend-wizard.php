@@ -205,6 +205,10 @@ class LS_Vend_Wizard
 
     public static function wizard_handler($res)
     {
+        /**
+         * Remove all admin notice in wizard page
+         */
+        remove_all_actions('admin_notices');
         ?>
         <p id="logo"><img src="<?php echo LS_PLUGIN_URL ?>assets/images/linksync/logo.png" alt=""/></p>
         <div class="wizard-content">

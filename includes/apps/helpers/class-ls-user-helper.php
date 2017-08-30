@@ -23,7 +23,7 @@ class LS_User_Helper
     public static function save_syncing_error_limit()
     {
 
-        $html_error_message = 'You have reached your linksync syncing limit. With your free trial, you can only sync 50 products and 50 orders. You can check your <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('connected_products').'">connected products</a> and <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('connected_orders').'">connected orders</a>. '.LS_User_Helper::why_limit_link('Learn more').' <br/><br/> If you want to sync more, '.LS_User_Helper::update_button('Upgrade Now','');
+        $html_error_message = 'Alert: You have reached your linksync syncing limit. Your free trial is limited to syncing of 50 products and 50 order. '.LS_User_Helper::why_limit_link('Learn more about limits with our free trial').' or view your <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('connected_products').'">synced products</a> and <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('connected_orders').'">synced orders</a>.  <br/><br/> Sync withour limits '.LS_User_Helper::update_button('Upgrade Now','');
         LS_Vend()->option()->update_option('capping_error_limit', $html_error_message);
 
         return $html_error_message;
@@ -166,9 +166,10 @@ class LS_User_Helper
                     $user_message = 'Hey, sorry to say but your linksync account was Cancelled!' . $update_button;
                 } elseif ('1' == $remaining_days && 'Terminated' != $service_status) {
                     $user_message = 'Your linksync FREE  trial ends tomorrow! ' . $update_button;
+                    $showTrialEnds = true;
                 } elseif ('0' == $remaining_days && 'Terminated' != $service_status) {
                     $user_message = 'Your linksync FREE trial ends today! ' . $update_button;
-                    $showTrialEnds = false;
+                    $showTrialEnds = true;
                 } else {
                     $user_message = 'Your linksync FREE trial ends in ' . $remaining_days . ' days! ' . $update_button;
                 }
@@ -190,14 +191,13 @@ class LS_User_Helper
             }
 
 
-            $showTrialUpgradeMessage = true;
             if(!empty($ls_vend_capping_error_limit) && false == $showTrialEnds){
 
                 LS_Message_Builder::notice($ls_vend_capping_error_limit, 'error product-capping-error capping-error-limit');
-                $showTrialUpgradeMessage = false;
+                $user_message = '';
             }
 
-            if (!empty($user_message) && (true == $showTrialUpgradeMessage || true == $showTrialEnds) ) {
+            if (!empty($user_message)) {
                 ?>
                 <div class="error notice ls-trial-message">
                     <h3><?php echo $user_message; ?></h3>

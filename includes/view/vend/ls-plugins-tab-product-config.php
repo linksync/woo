@@ -464,7 +464,7 @@ $productSyncOption = LS_Vend()->product_option();
                 <?php
                 help_link(array(
                     'label' => 'Publish product on allowed Backorder',
-                    'title' => "Enable this option if you want products to be published if Backorders is set to 'Allow'"
+                    'title' => "Enable this option if you want products to be published if Backorders is set to 'Allow' or 'Allow, but notify customer' "
                 ));
                 ?>
             </label>

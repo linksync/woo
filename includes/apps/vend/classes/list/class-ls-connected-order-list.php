@@ -81,7 +81,7 @@ class LS_Vend_Connected_Order_List extends WP_List_Table
         $orderMeta = new LS_Order_Meta($item['ID']);
 
         $edit_link_in_woo = get_edit_post_link($item['ID']);
-        $edit_link_in_vend = $vendUrl->get_order_edit_url($item['meta_value']);
+        $edit_link_in_vend = $vendUrl->get_order_edit_url($item['vend_receipt_number']);
         $user_edit_link = get_edit_user_link($orderMeta->get_customer_id());
 
         //Build row actions

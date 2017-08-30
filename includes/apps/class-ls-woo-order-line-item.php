@@ -97,7 +97,6 @@ class LS_Woo_Order_Line_Item
         }
 
 
-
         if (!empty($discount)) {
             $discount = (float)($discount / $this->get_quantity());
         }
@@ -214,7 +213,7 @@ class LS_Woo_Order_Line_Item
 
     public function get_shipping_tax_total()
     {
-        if(null == $this->lineOrderItemTax){
+        if (null == $this->lineOrderItemTax) {
             return $this->lineItem['shipping_tax_amount'];
         }
 
@@ -223,6 +222,87 @@ class LS_Woo_Order_Line_Item
     }
 
 
+    public function get_bundled_items()
+    {
+        if (null == $this->productOrderItem) {
+            return isset($this->lineItem['bundled_items']) ? $this->lineItem['bundled_items'] : null;
+        }
+
+
+        $custom_meta_data = $this->wooLineItem->get_data();
+
+        foreach ($custom_meta_data['meta_data'] as $meta_data) {
+            if ('_bundled_items' == $meta_data->key) {
+                return (array)$meta_data;
+            }
+
+        }
+
+        return null;
+    }
+
+    public function get_bundled_item_id()
+    {
+        if (null == $this->productOrderItem) {
+            return isset($this->lineItem['bundled_item_id']) ? $this->lineItem['bundled_item_id'] : null;
+        }
+
+
+        $custom_meta_data = $this->wooLineItem->get_data();
+
+        foreach ($custom_meta_data['meta_data'] as $meta_data) {
+            if ('_bundled_item_id' == $meta_data->key) {
+                return (array)$meta_data;
+            }
+
+        }
+
+        return null;
+
+    }
+
+    public function get_bundled_item_priced_individually()
+    {
+        if (null == $this->productOrderItem) {
+            return isset($this->lineItem['bundled_item_needs_shipping']) ? $this->lineItem['bundled_item_needs_shipping'] : null;
+        }
+
+
+        $custom_meta_data = $this->wooLineItem->get_data();
+
+        foreach ($custom_meta_data['meta_data'] as $meta_data) {
+            if ('_bundled_item_priced_individually' == $meta_data->key) {
+                return (array)$meta_data;
+            }
+
+        }
+
+        return null;
+    }
+
+    public function is_bundled_item_priced_individually()
+    {
+        $priced_individually = $this->get_bundled_item_priced_individually();
+        return isset($priced_individually['value']) ? $priced_individually['value'] : null;
+    }
+
+    public function get_bundle_cart_key()
+    {
+        if (null == $this->productOrderItem) {
+            return isset($this->lineItem['bundle_cart_key']) ? $this->lineItem['bundle_cart_key'] : null;
+        }
+
+        $custom_meta_data = $this->wooLineItem->get_data();
+
+        foreach ($custom_meta_data['meta_data'] as $meta_data) {
+            if ('_bundle_cart_key' == $meta_data->key) {
+                return (array)$meta_data;
+            }
+
+        }
+
+        return null;
+    }
 
     /**
      * Get line item base on its key

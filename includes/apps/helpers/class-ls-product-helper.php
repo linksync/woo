@@ -93,6 +93,16 @@ class LS_Product_Helper
         return html_entity_decode(remove_escaping_str($product->get_name()));
     }
 
+    public static function isBundleProduct(LS_Woo_Product $product)
+    {
+        return $product->is_type('bundle');
+    }
+
+    public static function isSubscriptionProduct(LS_Woo_Product $product)
+    {
+        return $product->is_type('subscription');
+    }
+
     public static function isSimpleProduct(LS_Woo_Product $product)
     {
         return $product->is_type('simple');

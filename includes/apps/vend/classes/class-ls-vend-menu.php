@@ -239,18 +239,18 @@ class LS_Vend_Menu
         add_submenu_page(
             $menu_slug,
             __('linksync Connected Products', $menu_slug),
-            __('Connected Products', $menu_slug),
+            __('Synced Products', $menu_slug),
             'manage_options',
-            self::page_menu_url('connected_products'),
+            self::page_menu_url('synced_products'),
             null
         );
 
         add_submenu_page(
             $menu_slug,
             __('linksync Connected Orders', $menu_slug),
-            __('Connected Orders', $menu_slug),
+            __('Synced Orders', $menu_slug),
             'manage_options',
-            self::page_menu_url('connected_orders'),
+            self::page_menu_url('synced_orders'),
             null
         );
 

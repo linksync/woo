@@ -12,10 +12,10 @@ class LS_Vend_View
             $this->display_loading_div();
             if (!LS_Vend_Menu::is_settings_linksync_page()) {
 
-                if (LS_Vend_Menu::is_linksync_page('connected_products')) {
+                if (LS_Vend_Menu::is_linksync_page('synced_products')) {
                     $this->display_connected_product_page();
 
-                } else if (LS_Vend_Menu::is_linksync_page('connected_orders')) {
+                } else if (LS_Vend_Menu::is_linksync_page('synced_orders')) {
 
                     $this->display_connected_order_page();
 
@@ -43,14 +43,31 @@ class LS_Vend_View
             $order = $_REQUEST['order'];
         }
 
-        $connectedProductsArray = LS_Vend_Product_Helper::get_vend_connected_products($orderByName, $order);
+        $search_key = '';
+        if(!empty($_REQUEST['s'])){
+            $search_key = $_REQUEST['s'];
+        }
+
+        $connectedProductsArray = LS_Vend_Product_Helper::get_vend_connected_products($orderByName, $order, $search_key);
         $connectedProducts = new LS_Vend_Connected_Product_List($connectedProductsArray);
         $connectedProducts->prepare_items();
 
         ?>
+
+
         <div class="wrap" id="ls-wrapper">
             <div id="icon-users" class="icon32"><br/></div>
             <div class="ls-duplicate-sku-container">
+
+                <form method="get">
+                    <p class="search-box">
+                        <input type="hidden" name="page" value="<?php echo LS_Vend::$slug; ?>">
+                        <input type="hidden" name="linksync_page" value="synced_products">
+                        <input type="search" id="post-search-input" name="s" value="<?php echo $search_key; ?>">
+                        <input type="submit" id="search-submit" class="button" value="Search Synced Products">
+                    </p>
+                </form>
+
                 <form id="frm-duplicate-skus" method="get">
                     <?php $connectedProducts->display() ?>
                 </form>
@@ -74,7 +91,12 @@ class LS_Vend_View
             $order = $_REQUEST['order'];
         }
 
-        $connectedOrdersArray = LS_Vend_Order_Helper::get_vend_connected_orders($orderBy, $order);
+        $search_key = '';
+        if(!empty($_REQUEST['s'])){
+            $search_key = $_REQUEST['s'];
+        }
+
+        $connectedOrdersArray = LS_Vend_Order_Helper::get_vend_connected_orders($orderBy, $order, $search_key);
         $connectedOrders = new LS_Vend_Connected_Order_List($connectedOrdersArray);
         $connectedOrders->prepare_items();
 
@@ -82,6 +104,16 @@ class LS_Vend_View
         <div class="wrap" id="ls-wrapper">
             <div id="icon-users" class="icon32"><br/></div>
             <div class="ls-duplicate-sku-container">
+
+                <form method="get">
+                    <p class="search-box">
+                        <input type="hidden" name="page" value="<?php echo LS_Vend::$slug; ?>">
+                        <input type="hidden" name="linksync_page" value="synced_orders">
+                        <input type="search" id="post-search-input" name="s" value="<?php echo $search_key; ?>" placeholder="Search Order ID">
+                        <input type="submit" id="search-submit" class="button" value="Search Synced Orders">
+                    </p>
+                </form>
+
                 <form id="frm-duplicate-skus" method="get">
                     <?php $connectedOrders->display() ?>
                 </form>

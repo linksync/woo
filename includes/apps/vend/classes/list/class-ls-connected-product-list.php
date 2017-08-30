@@ -95,12 +95,13 @@ class LS_Vend_Connected_Product_List extends WP_List_Table
         }
 
         $vendLabel = 'Edit in Vend';
-        $edit_link_in_vend = $vendUrl->get_product_edit_url($item['meta_value']);
+        $vend_id = $item['vend_id'];
+        $edit_link_in_vend = $vendUrl->get_product_edit_url($vend_id);
 
         //Build row actions
         $actions = array(
             'edit_in_woo' => sprintf('<a target="_blank" href="%s">Edit in WooCommerce</a>', $edit_product_link),
-            'edit_in_vend' => sprintf('<a target="_blank" href="%s">%s</a>', $edit_link_in_vend, $vendLabel),
+            'edit_in_vend' => sprintf('<a target="_blank" href="%s">Edit in Vend</a>', $edit_link_in_vend),
         );
 
 
@@ -170,7 +171,7 @@ class LS_Vend_Connected_Product_List extends WP_List_Table
 
 
         $data = $this->connected_products;
-        if (empty($this->connected_products)) {
+        if (empty($this->connected_products) && !isset($_REQUEST['s'])) {
             $data = LS_Vend_Product_Helper::get_vend_connected_products();
         }
 
