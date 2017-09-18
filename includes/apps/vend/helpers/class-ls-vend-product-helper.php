@@ -2,6 +2,100 @@
 
 class LS_Vend_Product_Helper
 {
+    public static function filter_product_categories()
+    {
+        $categories = get_terms('product_cat');
+        if (!empty($categories)) {
+            ?>
+            <td>
+                Product Categories
+                <?php
+                help_link(array(
+                    'title' => 'Only product(s) with the selected type and/or has the categories of what you will select below'
+                ));
+                echo '<br/>';
+
+                $output = '<select multiple name="product_category" id="dropdown_product_category" style="height: 100%;">';
+                foreach ($categories as $category) {
+                    $output .= '<option value="' . $category->term_id . '">';
+                    $output .= $category->name;
+                    $output .= '</option>';
+                }
+                $output .= '</select>';
+                echo $output;
+                ?>
+            </td>
+            <?php
+        }
+    }
+
+    public static function filter_product_tags()
+    {
+        $tags = get_terms('product_tag');
+        if (!empty($tags)) {
+            ?>
+            <td>
+                Product Tags
+                <?php
+                help_link(array(
+                    'title' => 'Only product(s) with the selected type and/or has tags of what you will select below'
+                ));
+                echo '<br/>';
+
+                $output = '<select multiple name="product_tag" id="dropdown_product_tag" style="height: 100%;">';
+                foreach ($tags as $tag) {
+                    $output .= '<option value="' . $tag->term_id . '">';
+                    $output .= $tag->name;
+                    $output .= '</option>';
+                }
+                $output .= '</select>';
+                echo $output;
+                ?>
+            </td>
+            <?php
+        }
+    }
+
+    public static function filter_select_product_types()
+    {
+        ?>
+        <td>
+            Product Types
+            <?php
+            help_link(array(
+                'title' => 'Only the selected product will be exported to Vend'
+            ));
+            echo '<br/>';
+            $terms = get_terms('product_type');
+
+            $output = '<select multiple name="product_type" id="dropdown_product_type" style="height: 100%;">';
+            foreach ($terms as $product_type) {
+                if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($product_type->slug)) {
+                    $output .= '<option value="' . $product_type->term_id . '">';
+                    switch ($product_type->name) {
+
+                        case 'variable' :
+                            $output .= __('Variable product', 'woocommerce');
+                            break;
+                        case 'simple' :
+                            $output .= __('Simple product', 'woocommerce');
+                            break;
+                        default :
+                            // Assuming that we have other types in future
+                            $output .= ucfirst($product_type->name);
+                            break;
+                    }
+                    $output .= '</option>';
+
+                }
+            }
+            $output .= '</select>';
+
+            echo $output;
+            ?>
+        </td>
+        <?php
+    }
 
     public static function isTypeSyncAbleToVend($type)
     {
@@ -24,13 +118,17 @@ class LS_Vend_Product_Helper
         $delete_option = LS_Vend()->product_option()->delete();
         $deleted = false;
         if ('on' == $delete_option) {
-            $var_ids = LS_Product_Helper::getVariantIds($product_id);
-            if (!empty($var_ids)) {
-                foreach ($var_ids as $var_id) {
-                    wp_delete_post($var_id, $force_delete);
+            if (!empty($product_id) && is_numeric($product_id)) {
+
+                $var_ids = LS_Product_Helper::getVariantIds($product_id);
+                if (!empty($var_ids)) {
+                    foreach ($var_ids as $var_id) {
+                        wp_delete_post($var_id, $force_delete);
+                    }
                 }
+                $deleted = wp_delete_post($product_id, $force_delete);
+
             }
-            $deleted = wp_delete_post($product_id, $force_delete);
         }
 
         return $deleted;
@@ -446,6 +544,10 @@ class LS_Vend_Product_Helper
                 $product_meta->update_meta('_subscription_price', $price);
             }
 
+            if ('bundle' == $productType) {
+                $product_meta->update_meta('_wc_pb_base_regular_price', $price);
+            }
+
             $sale_price_meta = $product_meta->get_sale_price();
             if ('' == $sale_price_meta) {
                 $product_meta->update_price($price);
@@ -633,7 +735,7 @@ class LS_Vend_Product_Helper
         $variantSku = $variant->get_sku();
         if (empty($deletedAt)) {
             $variantParentId = $variant->getParentMeta()->getWooProductId();
-            $varProductId = LS_Product_Helper::getProductIdBySku($variantSku);
+            $varProductId = LS_Product_Helper::getProductVariationIdBySku($variantSku);
             $product_name = $variant->get_name();
             $button_order = $variant->get_button_order();
             $status = 'publish';
@@ -755,9 +857,14 @@ class LS_Vend_Product_Helper
         $variantsThatDoesNotExistInVend = array_diff($wooVariantSkuSets, $vendVariantSkuSets);
         if (is_array($variantsThatDoesNotExistInVend)) {
             foreach ($variantsThatDoesNotExistInVend as $var_sku) {
-                $varId = LS_Product_Helper::getProductIdBySku(trim($var_sku));
+                $varId = LS_Product_Helper::getProductVariationIdBySku(trim($var_sku));
                 if (!empty($varId)) {
-                    wp_delete_post($varId, true);
+                    $product = new LS_Woo_Product($varId);
+                    $product_type = $product->get_type();
+                    if ('variation' == $product_type) {
+                        wp_delete_post($varId, true);
+                    }
+
                 }
             }
         }
@@ -800,13 +907,13 @@ class LS_Vend_Product_Helper
 					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
 					WHERE 
 					          wposts.post_type IN('product','product_variation')  
-				". $searchWhere.$groupBy.$orderBy;
+				" . $searchWhere . $groupBy . $orderBy;
 
         $results = $wpdb->get_results($sql, ARRAY_A);
 
         foreach ($results as $key => $result) {
             $vend_id = get_post_meta($result['ID'], '_ls_vend_pid', true);
-            if(empty($vend_id)){
+            if (empty($vend_id)) {
                 unset($results[$key]);
             } else {
                 $result['vend_id'] = $vend_id;
@@ -825,7 +932,7 @@ class LS_Vend_Product_Helper
     {
         if (!empty($linksync_product) && !empty($linksync_product['id'])) {
             $responseProduct = new LS_Product($linksync_product);
-            $productId = LS_Product_Helper::getProductIdBySku($responseProduct->get_sku());
+            $productId = LS_Product_Helper::getParentProductIdBySku($responseProduct->get_sku());
             if (!empty($productId)) {
                 $product_meta = new LS_Product_Meta($productId);
                 $product_meta->update_vend_product_id(get_vend_id($responseProduct->get_id()));
@@ -835,7 +942,7 @@ class LS_Vend_Product_Helper
                 $variants = $responseProduct->get_variants();
                 foreach ($variants as $variation) {
                     $variationProduct = new LS_Product($variation);
-                    $variationId = LS_Product_Helper::getProductIdBySku($variationProduct->get_sku());
+                    $variationId = LS_Product_Helper::getProductVariationIdBySku($variationProduct->get_sku());
                     if (!empty($variationId)) {
                         $variationMeta = new LS_Product_Meta($variationId);
                         $variationMeta->update_vend_product_id(get_vend_id($variationProduct->get_id()));

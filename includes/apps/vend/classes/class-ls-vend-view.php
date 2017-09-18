@@ -342,7 +342,15 @@ class LS_Vend_View
             <br/>
             <div id="ls-vend-update"
                  class="ls-vend-section">
-                <?php LS_Vend_View_Config_Section::update_section(); ?>
+                <?php
+
+                    LS_Vend_View_Config_Section::update_section();
+                    LS_Vend_View_Advance_Section::custom_since_sync();
+                    LS_Vend_View_Advance_Section::custom_woo_sync_to_vend();
+
+                    //show the modal for syncing above
+                    LS_Vend()->view()->display_syncing_modal();
+                ?>
             </div>
         </div>
         <?php
@@ -484,10 +492,21 @@ class LS_Vend_View
                         <input type="button" class="button btn-no ls-modal-close" name="no" value='No'/>
                     </div>
 
+                    <div class="sync-buttons sync-to-woo-via-filter-buttons">
+                        <input type="button" class="button product_sync_to_woo_via_filter btn-yes" value="Yes">
+                        <input type="button" class="button btn-no ls-modal-close" name="no" value='No'/>
+                    </div>
+
                     <div class="sync-buttons sync-to-woo-buttons-since-last-update">
                         <input type="button" class="button product_sync_to_woo_since_last_sync btn-yes" value="Yes">
                         <input type="button" class="button btn-no ls-modal-close" name="no" value='No'/>
                     </div>
+
+                    <div class="sync-buttons sync-to-woo-buttons-since-specified">
+                        <input type="button" class="button product_sync_to_woo_since_specified btn-yes" value="Yes">
+                        <input type="button" class="button btn-no ls-modal-close" name="no" value='No'/>
+                    </div>
+
                 </div>
 
 

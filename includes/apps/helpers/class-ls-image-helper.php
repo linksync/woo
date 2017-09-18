@@ -2,6 +2,43 @@
 
 class LS_Image_Helper
 {
+    public static function media_side_loaded_image($file, $post_id, $desc = null)
+    {
+        if (!empty($file)) {
+
+            // Set variables for storage, fix file filename for query strings.
+            preg_match('/[^\?]+\.(jpe?g|jpe|gif|png)\b/i', $file, $matches);
+            if (!$matches) {
+                return new WP_Error('image_sideload_failed', __('Invalid image URL'));
+            }
+
+            $file_array = array();
+            $file_array['name'] = basename($matches[0]);
+
+            // Download file to temp location.
+            $file_array['tmp_name'] = download_url($file);
+
+            // If error storing temporarily, return the error.
+            if (is_wp_error($file_array['tmp_name'])) {
+                return $file_array['tmp_name'];
+            }
+
+            // Do the validation and storage stuff.
+            $id = media_handle_sideload($file_array, $post_id, $desc);
+
+            // If error storing permanently, unlink.
+            if (is_wp_error($id)) {
+                @unlink($file_array['tmp_name']);
+                return $id;
+            }
+
+            return $id;
+        }
+
+        return null;
+
+    }
+
 
     public static function insertToProductUsingUrl($image_url, LS_Product_Meta $product_meta, $add_to_gallery = true)
     {
@@ -44,6 +81,36 @@ class LS_Image_Helper
         return $attachmentDataSet;
     }
 
+    public static function add_image_gallery_attachment_id(LS_Product_Meta $product_meta, $attach_id)
+    {
+
+        $imageDataSet = $product_meta->get_image_gallery();
+        if (!empty($imageDataSet)) {
+            $product_meta->add_image_gallery_id($attach_id);
+        } else {
+            $product_meta->update_image_gallery($attach_id);
+        }
+
+    }
+
+
+    public static function setProductThumbnailFromImageUrl($product_image_url, LS_Product_Meta $product_meta)
+    {
+        $postThumbnail = [];
+        $post_id = $product_meta->getWooProductId();
+
+        if (!empty($post_id)) {
+
+            $attachment_id = self::media_side_loaded_image($product_image_url, $post_id);
+            if (!empty($attachment_id)) {
+                $postThumbnail['attachment_id'] = $attachment_id;
+                $postThumbnail['post_thumbnail'] = self::setProductThumbnail($post_id, $attachment_id);
+            }
+
+        }
+
+        return $postThumbnail;
+    }
 
     public static function addProductThumbnail($image_url, LS_Product_Meta $product_meta)
     {
@@ -80,12 +147,16 @@ class LS_Image_Helper
      */
     public static function getProductImagesPaths($product_gallery_ids)
     {
-        $product_gallery_ids = explode(',', $product_gallery_ids);
-        $gallery_urls = array();
-        foreach ($product_gallery_ids as $product_gallery_id) {
-            $gallery_urls[] = self::getImagePath($product_gallery_id);
+        if(!empty($product_gallery_ids)){
+            $product_gallery_ids = explode(',', $product_gallery_ids);
+            $gallery_urls = array();
+            foreach ($product_gallery_ids as $product_gallery_id) {
+                $gallery_urls[$product_gallery_id] = self::getImagePath($product_gallery_id);
+            }
+            return $gallery_urls;
         }
-        return $gallery_urls;
+
+        return null;
     }
 
 

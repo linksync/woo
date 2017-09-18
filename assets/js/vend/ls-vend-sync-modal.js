@@ -14,14 +14,24 @@
             this.options = options;
         },
 
+        since: null,
+        getSinceSpecifiedDate: function () {
+           var $mainContainer = $('#ls-main-wrapper');
+           return $mainContainer.find('#sinceSpecifiedDate').val();
+        },
+
         cacheDom: function () {
             this.$mainContainer = $('#ls-main-wrapper');
             this.$btnClassVendToWoo = '.product_sync_to_woo';
             this.$btnClassWooToVend = '.product_sync_to_vend';
+            this.$btnClassWooToVendViaFilter = '.product_sync_to_woo_via_filter';
             this.$btnClassVendToWooSinceLastSync = '.product_sync_to_woo_since_last_sync';
+            this.$btnClassVendToWooSinceSpecified = '.product_sync_to_woo_since_specified';
             this.btnClassShowPopUpForWooToVend = '.btn-sync-woo-to-vend';
+            this.btnClassShowPopUpForWooToVendViaFilter = '.btn-sync-woo-to-vend-via-filter';
             this.btnClassShowPopUpForVendToWoo = '.btn-sync-vend-to-woo';
             this.btnClassShopPopUpForVendToWooSinceLastUpdate = '.vend_to_woo_since_last_update';
+            this.btnClassShopPopUpForVendToWooSinceSpecified = '.vend_to_woo_since_specified';
 
 
             this.$modalMessage = this.$mainContainer.find('.sync-modal-message');
@@ -39,8 +49,10 @@
             this.$syncButtonsContainer = this.$mainContainer.find('.sync-buttons');
 
             this.$syncToWooButtons = this.$mainContainer.find('.sync-to-woo-buttons');
+            this.$syncToWooViaFilterButtons = this.$mainContainer.find('.sync-to-woo-via-filter-buttons');
             this.$syncToVendButtons = this.$mainContainer.find('.sync-to-vend-buttons');
             this.$syncToWooButtonsSinceLastSync = this.$mainContainer.find('.sync-to-woo-buttons-since-last-update');
+            this.$syncToWooButtonsSinceSpecified = this.$mainContainer.find('.sync-to-woo-buttons-since-specified');
             this.$syncTwoWayButtons = this.$mainContainer.find('.two-way-sync-vend-buttons');
 
             this.$tabMenu = this.$mainContainer.find('.ls-tab-menu');
@@ -74,6 +86,14 @@
             });
         },
 
+        openWooToVendViaFilterSyncModal: function () {
+            lsVendSyncModal.cacheDom();
+            lsVendSyncModal.open({
+                buttonGroup: 'woo_to_vend_via_filter',
+                htmlMessage: 'Your WooCommerce products will be exported to Vend.<br/>Do you wish to continue?'
+            });
+        },
+
         openVendToWooSyncModal: function () {
             lsVendSyncModal.cacheDom();
             lsVendSyncModal.open({
@@ -86,6 +106,14 @@
             lsVendSyncModal.cacheDom();
             lsVendSyncModal.open({
                 buttonGroup: 'vend_to_woo_since_last_sync',
+                htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
+            });
+        },
+
+        openVendToWooSinceSpecified: function () {
+            lsVendSyncModal.cacheDom();
+            lsVendSyncModal.open({
+                buttonGroup: 'vend_to_woo_since_specified',
                 htmlMessage: 'Your products from Vend will be imported to WooCommerce.<br/>Do you wish to continue?'
             });
         },
@@ -103,6 +131,23 @@
                     lsVendSyncModal.$progressBar.progressbar("value", 0);
                     lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
                     lsVendSyncModal.syncProductsFromVend();
+                });
+            });
+
+
+            this.click(this.$btnClassVendToWooSinceSpecified, function () {
+                var specifiedDate = lsVendSyncModal.getSinceSpecifiedDate();
+                lsVendSyncModal.since = specifiedDate;
+                lsVendSyncModal.cacheDom();
+                lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
+                    lsVendSyncModal.setOptions({
+                        first_message_label: "Getting products from Vend since "+specifiedDate+".",
+                        no_products_to_import_woo: "No products were imported to WooCommerce since last sync",
+                        action: 'vend_get_products'
+                    });
+                    lsVendSyncModal.$progressBar.progressbar("value", 0);
+                    lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
+                    lsVendSyncModal.syncProductsFromVend(1, specifiedDate);
                 });
             });
 
@@ -129,6 +174,18 @@
                 });
             });
 
+
+            this.click(this.$btnClassWooToVendViaFilter, function () {
+                lsVendSyncModal.cacheDom();
+                lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
+                    lsVendSyncModal.$progressBar.progressbar("value", 0);
+                    lsVendSyncModal.$progressBarLabel.html("Sync is starting!");
+                    lsVendSyncModal.syncProductsToVendViaFilter();
+                });
+            });
+
+
+
             this.click('.ls-modal-close', function () {
                 lsVendSyncModal.cacheDom();
                 lsVendSyncModal.close(1);
@@ -143,8 +200,16 @@
                 lsVendSyncModal.openWooToVendSyncModal();
             });
 
+            this.click(this.btnClassShowPopUpForWooToVendViaFilter, function () {
+                lsVendSyncModal.openWooToVendViaFilterSyncModal();
+            });
+
             this.click(this.btnClassShopPopUpForVendToWooSinceLastUpdate, function () {
                 lsVendSyncModal.openVendToWooSinceLastSyncModal();
+            });
+
+            this.click(this.btnClassShopPopUpForVendToWooSinceSpecified, function () {
+                lsVendSyncModal.openVendToWooSinceSpecified();
             });
 
             this.initializeSyncProgress();
@@ -264,6 +329,57 @@
 
             }
 
+        },
+
+        syncProductsToVendViaFilter: function () {
+
+
+            var $mainContainer = $('#ls-main-wrapper');
+
+
+            var selectedStatuses = [];
+            $('.other_syncable_status').each(function (e) {
+                if($(this).prop('checked')){
+                    var val = $(this).val();
+                    selectedStatuses.push(val);
+                }
+            });
+
+            var productTypes = $mainContainer.find('#dropdown_product_type');
+            var productCategories = $mainContainer.find('#dropdown_product_category');
+            var productTags = $mainContainer.find('#dropdown_product_tag');
+
+            var postData = {
+                statuses: selectedStatuses,
+                product_types : productTypes.val(),
+                categories : productCategories.val(),
+                tags: productTags.val(),
+                action: 'vend_woo_get_products_via_filter'
+            };
+
+            console.log(postData);
+
+            lsAjax.post(postData).done(function (woo_products) {
+
+                lsVendSyncModal.$progressBarLabel.html("Getting WooCommerce products to be exported in Vend.");
+                console.log(woo_products);
+
+                if (!$.isEmptyObject(woo_products)) {
+
+                    lsVendSyncModal.syncProductToVend(woo_products, 0);
+
+                } else {
+                    lsVendSyncModal.$progressBar.progressbar("value", 100);
+                    lsVendSyncModal.$progressBarLabel.html("No products from WooCommerce to export in Vend");
+                }
+
+            }).fail(function (data) {
+
+                console.log('Failed AJAX Call of syncProductsToVend :( Return Data: => ');
+                console.log(data);
+                lsVendSyncModal.syncProductToVend();
+
+            });
         },
 
         syncProductsToVend: function () {
@@ -386,7 +502,7 @@
                 console.log('No product index page => ' + linksync.pagination.page + ' pages => ' + linksync.pagination.pages);
                 var page = linksync.pagination.page + 1;
                 if (linksync.pagination.pages >= page) {
-                    lsVendSyncModal.syncProductsFromVend(page);
+                    lsVendSyncModal.syncProductsFromVend(page, lsVendSyncModal.since);
                 }
 
             }
@@ -394,7 +510,7 @@
 
         },
 
-        syncProductsFromVend: function (page) {
+        syncProductsFromVend: function (page, since) {
 
             //check if page is undefined then we set it to one
             if (typeof page == 'undefined') {
@@ -413,6 +529,10 @@
                 action: action,
                 page: page
             };
+
+            if (typeof since != 'undefined' || since != null) {
+                data_to_request.since = since;
+            }
             console.log('data_to_request => ');
             console.log(data_to_request);
 
@@ -441,7 +561,7 @@
             }).fail(function (data) {
                 console.log('Failed AJAX Call of syncProductsFromVend :( Return Data: ' + data);
                 //Failed then retry with the same page
-                lsVendSyncModal.syncProductsFromVend(page);
+                lsVendSyncModal.syncProductsFromVend(page, lsVendSyncModal.since);
             });
         },
 
@@ -479,6 +599,7 @@
         },
 
         syncCompleted: function (delay) {
+            lsVendSyncModal.since = null;
             if (typeof delay == 'undefined') {
                 delay = 4000;
             }
@@ -495,6 +616,8 @@
             if (typeof delay == 'undefined') {
                 delay = 4000;
             }
+
+            lsVendSyncModal.since = null;
             lsVendSyncModal.SYNC_LIMIT = 0;
             lsVendSyncModal.$syncModalContainer.delay(delay).fadeOut('fast', function () {
                 lsVendSyncModal.$progressBarLabel.html("Sync Completed!");
@@ -523,10 +646,14 @@
 
             if ('woo_to_vend' == option.buttonGroup) {
                 lsVendSyncModal.$syncToVendButtons.show();
+            } else if ('woo_to_vend_via_filter' == option.buttonGroup) {
+                lsVendSyncModal.$syncToWooViaFilterButtons.show();
             } else if ('vend_to_woo' == option.buttonGroup) {
                 lsVendSyncModal.$syncToWooButtons.show();
             } else if ('vend_to_woo_since_last_sync' == option.buttonGroup) {
                 lsVendSyncModal.$syncToWooButtonsSinceLastSync.show();
+            } else if ('vend_to_woo_since_specified' == option.buttonGroup) {
+                lsVendSyncModal.$syncToWooButtonsSinceSpecified.show();
             } else if ('two_way' == option.buttonGroup) {
                 lsVendSyncModal.$syncTwoWayButtons.show();
             }

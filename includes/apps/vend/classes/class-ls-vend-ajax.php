@@ -12,6 +12,7 @@ class LS_Vend_Ajax
         add_action('wp_ajax_vend_import_to_woo', array('LS_Vend_Ajax', 'import_product_to_woo'));
 
         add_action('wp_ajax_vend_woo_get_products', array('LS_Vend_Ajax', 'woo_get_products'));
+        add_action('wp_ajax_vend_woo_get_products_via_filter', array('LS_Vend_Ajax', 'woo_get_products_via_filter'));
         add_action('wp_ajax_vend_import_to_vend', array('LS_Vend_Ajax', 'import_woo_product_to_vend'));
 
         add_action('wp_ajax_vend_since_last_sync', array('LS_Vend_Ajax', 'get_products_since_last_update'));
@@ -363,7 +364,12 @@ class LS_Vend_Ajax
     public static function get_products()
     {
         $page = isset($_POST['page']) ? $_POST['page'] : 1;
-        $productUrlParams = LS_Vend_Sync::prepare_url_params_for_get_product($page);
+        if (!empty($_POST['since'])) {
+            $productUrlParams = LS_Vend_Sync::prepare_url_params_for_get_product($page, $_POST['since']);
+        } else {
+            $productUrlParams = LS_Vend_Sync::prepare_url_params_for_get_product($page);
+        }
+
         LSC_Log::add_dev_success('LS_Vend_Ajax::get_products', ' get_product_args => ' . $productUrlParams);
         $products = LS_Vend()->api()->product()->get_product($productUrlParams);
         wp_send_json($products);
@@ -424,6 +430,11 @@ class LS_Vend_Ajax
     public static function woo_get_products()
     {
         wp_send_json(LS_Product_Helper::get_simple_product_ids());
+    }
+
+    public static function woo_get_products_via_filter()
+    {
+        wp_send_json(LS_Product_Helper::getProductViaFilter($_POST));
     }
 
     public static function import_woo_product_to_vend()

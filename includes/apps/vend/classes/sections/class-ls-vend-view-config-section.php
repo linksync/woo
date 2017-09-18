@@ -192,7 +192,6 @@ class LS_Vend_View_Config_Section
             </tr>
             </tbody>
         </table>
-        <?php LS_Vend()->view()->display_syncing_modal(); ?>
         <?php
     }
 

@@ -266,9 +266,21 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return get_option('cat_radio');
     }
 
+    public function syncable_product_status()
+    {
+        $optionValue = $this->get_option('syncable_product_status', '');
+        return $optionValue;
+    }
+
+    public function update_syncable_product_status($value)
+    {
+        $this->update_option('syncable_product_status', $value);
+    }
+
     public function get_syncing_options()
     {
         return array(
+            'syncable_product_status' => $this->syncable_product_status(),
             'sync_type' => $this->sync_type(),
             'name_or_title' => $this->nameTitle(),
             'description' => $this->description(),
@@ -337,6 +349,13 @@ class LS_Vend_Product_Option extends LS_Vend_Option
                 }
 
                 if (isset($message['result']) && $message['result'] == 'success') {
+                    if (isset($userProductOptions['syncable_product_status'])) {
+                        LS_Vend()->product_option()->update_syncable_product_status($userProductOptions['syncable_product_status']);
+                    } else {
+                        LS_Vend()->product_option()->update_syncable_product_status('');
+                    }
+
+
                     update_option('prod_update_suc', NULL);
                     update_option('prod_last_page', NULL);
                     update_option('product_detail', NULL);

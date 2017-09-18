@@ -312,7 +312,7 @@ class LS_Vend_Menu
                         }
 
                         var currentMenuName = $(this).text();
-                        if('Connected Orders' == currentMenuName){
+                        if('Synced Orders' == currentMenuName){
                             var $connectedOrderElement = $(this).parent();
 
                             $.post(ajaxurl, {action: 'vend_save_product_duplicates'}).done(function (response) {

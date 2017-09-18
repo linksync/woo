@@ -119,9 +119,9 @@ if (!class_exists('LS_Vend')) {
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-api.php';
 
 
-            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-option.php';
-            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-order-option.php';
-            include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-product-option.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/options/class-ls-vend-option.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/options/class-ls-vend-order-option.php';
+            include_once LS_INC_DIR . 'apps/vend/classes/options/class-ls-vend-product-option.php';
 
             include_once LS_INC_DIR . 'apps/classes/class-ls-address.php';
             include_once LS_INC_DIR . 'apps/classes/class-ls-order.php';
@@ -155,8 +155,9 @@ if (!class_exists('LS_Vend')) {
 
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-menu.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view.php';
-            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view-config-section.php';
-            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-view-product-section.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/sections/class-ls-vend-view-config-section.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/sections/class-ls-vend-view-product-section.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/sections/class-ls-vend-view-advance-section.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-laid.php';
 
             include_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-notice.php';
@@ -180,8 +181,8 @@ if (!class_exists('LS_Vend')) {
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-hooks.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-config.php';
             require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-url.php';
-            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-order-custom-column.php';
-            require_once LS_INC_DIR . 'apps/vend/classes/class-ls-vend-product-custom-column.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/customized-column/class-ls-vend-order-custom-column.php';
+            require_once LS_INC_DIR . 'apps/vend/classes/customized-column/class-ls-vend-product-custom-column.php';
 
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-order-list.php';
             require_once LS_INC_DIR . 'apps/vend/classes/list/class-ls-connected-product-list.php';

@@ -123,6 +123,46 @@ class LS_Product_Helper
         return $product->get_parent_id();
     }
 
+    public static function getProductIdBySkuAndPostType($sku, $post_type)
+    {
+        global $wpdb;
+
+        if(empty($post_type)){
+            /**
+             * Post type should not be empty so return null
+             */
+            return null;
+        }
+
+
+        $product_id = $wpdb->get_var(
+            $wpdb->prepare("
+						SELECT post.ID
+						FROM $wpdb->posts AS post
+						INNER JOIN $wpdb->postmeta AS pmeta ON (post.ID = pmeta.post_id)
+						WHERE
+							pmeta.meta_key = '_sku' AND
+							pmeta.meta_value = %s AND
+							post.post_type = %s 
+						LIMIT 1"
+                , $sku, $post_type)
+        );
+
+        if ($product_id) return $product_id;
+
+        return null;
+    }
+
+    public static function getProductVariationIdBySku($sku)
+    {
+        return self::getProductIdBySkuAndPostType($sku, 'product_variation');
+    }
+
+    public static function getParentProductIdBySku($sku)
+    {
+        return self::getProductIdBySkuAndPostType($sku, 'product');
+    }
+
     /**
      * Get Product using the sku
      * @param $sku
@@ -218,13 +258,14 @@ class LS_Product_Helper
         return wp_insert_post($postarr, $wp_error);
     }
 
-    public static function deleteWooProductBySku($variant_wku, $force_delete = true)
+    public static function deleteWooProductBySku($sku, $force_delete = true, $post_type = 'product_variation')
     {
 
         $deleted = false;
-        $varId = self::getProductIdBySku($variant_wku);
-        if (!empty($varId)) {
-            $deleted = wp_delete_post($varId, $force_delete);
+        $productId = self::getProductIdBySkuAndPostType($sku, $post_type);
+
+        if (!empty($productId)) {
+            $deleted = wp_delete_post($productId, $force_delete);
         }
 
         return $deleted;
@@ -248,6 +289,91 @@ class LS_Product_Helper
 
         return null;
     }
+
+    public static function getProductViaFilter($params)
+    {
+        global $wpdb;
+        $product_statuses = get_post_statuses();
+
+        $defaultParams = array(
+            'post_type'             => 'product',
+            'post_status'           => array_keys($product_statuses),
+            'ignore_sticky_posts'   => 1,
+            'posts_per_page'        => -1,
+        );
+
+
+        if (!empty($params['statuses'])) {
+            $defaultParams['post_status'] = $params['statuses'];
+        }
+
+        if (!empty($params['product_types'])) {
+
+            $product_types_taxonomy_query = array(
+                'taxonomy' => 'product_type',
+                'field' => 'term_id', //This is optional, as it defaults to 'term_id'
+                'terms' => $params['product_types'],
+                'operator' => 'IN' // Possible values are 'IN', 'NOT IN', 'AND'.
+            );
+        }
+
+        if (!empty($params['categories'])) {
+            $product_categories_taxonomy_query = array(
+                'taxonomy' => 'product_cat',
+                'field' => 'term_id', //This is optional, as it defaults to 'term_id'
+                'terms' => $params['categories'],
+                'operator' => 'IN' // Possible values are 'IN', 'NOT IN', 'AND'.
+            );
+        }
+
+        if (!empty($params['tags'])) {
+            $product_tags_taxonomy_query = array(
+                'taxonomy' => 'product_tag',
+                'field' => 'term_id', //This is optional, as it defaults to 'term_id'
+                'terms' => $params['tags'],
+                'operator' => 'IN' // Possible values are 'IN', 'NOT IN', 'AND'.
+            );
+        }
+
+
+        if (!empty($product_types_taxonomy_query)) {
+            $defaultParams['tax_query'] =  array($product_types_taxonomy_query);
+
+            if(!empty($product_categories_taxonomy_query)){
+                $defaultParams['tax_query'] =  array(
+                    'relation' => 'AND',
+                    $product_types_taxonomy_query,
+                    $product_categories_taxonomy_query
+                );
+            }
+
+            if(!empty($product_tags_taxonomy_query)){
+                $defaultParams['tax_query'] =  array(
+                    'relation' => 'AND',
+                    $product_types_taxonomy_query,
+                    $product_tags_taxonomy_query
+                );
+            }
+
+            if(!empty($product_categories_taxonomy_query) && !empty($product_tags_taxonomy_query)){
+                $defaultParams['tax_query'] =  array(
+                    'relation' => 'AND',
+                    $product_types_taxonomy_query,
+                    array(
+                        'relation' => 'OR',
+                        $product_categories_taxonomy_query,
+                        $product_tags_taxonomy_query
+                    )
+
+                );
+            }
+
+        }
+
+        $products = new WP_Query($defaultParams);
+        return !empty($products->posts) ? $products->posts : null;
+    }
+
 
     public static function get_product_ids()
     {

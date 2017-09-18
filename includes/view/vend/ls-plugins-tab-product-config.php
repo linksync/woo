@@ -73,6 +73,42 @@ $productSyncOption = LS_Vend()->product_option();
         </p>
         <table class="form-table">
             <tbody>
+            <tr class="tr-syncable" valign="top" style="<?php echo ('two_way' == $product_sync_type || 'wc_to_vend' == $product_sync_type) ? '': ''; ?>">
+                <th class="titledesc">
+                    Syncable product status
+                    <?php
+                    help_link(array(
+                        'title' => 'Select any of the product status where you want a product as syncable to Vend. Uncheck the product status that you don\'t want to sync in vend.
+                            Example, if you only select Publish then only products with the status of Publish is syncable to Vend 
+                        '
+                    ));
+                    ?>
+                </th>
+
+                <td class="forminp forminp-checkbox">
+                    <?php
+                    $syncable_statuses = $productSyncOption->syncable_product_status();
+                    ?>
+                    <label>
+                        <input class="syncable-status-all" name="syncable_product_status[all]" value="All" type="checkbox" <?php echo (empty($syncable_statuses) || isset($syncable_statuses['all'])) ? 'checked' : ''; ?>>
+                        All
+                    </label><br/>
+                    <?php
+                    $product_statuses = get_post_statuses();
+                    foreach ($product_statuses as $key => $product_status){
+                        ?>
+                        <label>
+                            <input class="other_syncable_status other_syncable_status_<?php echo $key;?>" name="syncable_product_status[<?php echo $key; ?>]" value="<?php echo $key; ?>" type="checkbox"
+                                <?php echo (isset($syncable_statuses[$key]) || empty($syncable_statuses)) ? 'checked' : ''; ?>>
+                            <?php echo $product_status; ?>
+                        </label><br/>
+                        <?php
+                    }
+                    ?>
+
+                </td>
+            </tr>
+
             <tr valign="top">
                 <th  class="titledesc">
                     <?php
@@ -759,8 +795,11 @@ $productSyncOption = LS_Vend()->product_option();
             if (jQuery("input[value='vend_to_wc-way']").is(":checked")) {
                 jQuery('#sync_reset_all_btn_id').hide(500);
                 jQuery('#import_by_tags_tr').fadeIn(500);
+                jQuery('.tr-syncable').hide();
+
             } else {
                 jQuery('#sync_reset_all_btn_id').show(500);
+                jQuery('.tr-syncable').show();
             }
             if (jQuery("input[value='two_way']").is(":checked")) {
                 jQuery('#import_by_tags_tr').fadeIn(500);
@@ -989,6 +1028,45 @@ $productSyncOption = LS_Vend()->product_option();
                 });
                 e.preventDefault();
             });
+
+            $mainContainer.on('click', '.syncable-status-all', function (e) {
+                var $currentElement = $(this);
+                var isChecked = $currentElement.prop("checked");
+
+                $('.other_syncable_status').each(function (e) {
+                    $(this).prop('checked', isChecked);
+                });
+
+                if(!isChecked){
+                    $('.other_syncable_status_publish').prop('checked', true);
+                }
+
+            });
+
+            $mainContainer.on('click', '.other_syncable_status', function (e) {
+
+                var checkedCount = 0;
+                var checkAll = true;
+                $('.other_syncable_status').each(function (e) {
+
+                    var isChecked = $(this).prop("checked");
+                    if(!isChecked){
+                        checkAll = false;
+                        checkedCount += 1;
+                    }
+
+                });
+
+                $('.syncable-status-all').prop('checked', checkAll);
+
+                if(4 == checkedCount){
+                    //If everything is unchecked then check published product to be checked as default
+                    $('.other_syncable_status_publish').prop('checked', true);
+                }
+
+            });
+
+
         });
 
     })(jQuery);

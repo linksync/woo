@@ -42,6 +42,45 @@ class LS_Vend_Sync
 
 
         }
+
+        /**
+         * This is triggered when a user edits an order and clicks either Reduce stock or Increase stock.
+         * On this action woocommerce either increase the stock quantity of a product or decrease the quantity of a product.
+         * Therefore, its logical to also trigger the sync to vend if quantity option is enabled
+         */
+        add_action('woocommerce_restore_order_stock', array('LS_Vend_Sync', 'updateVendQuantityAfterStockIncreaseOrReduction'));
+    }
+
+    public static function updateVendQuantityAfterStockIncreaseOrReduction($order)
+    {
+        $order_items = $order->get_items();
+        $order_item_ids = isset($_POST['order_item_ids']) ? $_POST['order_item_ids'] : array();
+
+        if ($order && !empty($order_items) && sizeof($order_item_ids) > 0) {
+
+            foreach ($order_items as $item_id => $order_item) {
+                // Only send product quantity updates to vend on the selected order item
+                if ( ! in_array( $item_id, $order_item_ids ) ) {
+                    continue;
+                }
+
+                $orderLineItem = new LS_Woo_Order_Line_Item($order_item);
+
+                $variationId = $orderLineItem->get_variation_id();
+                if (!empty($variationId)) {
+                    $product_id = $variationId;
+                } else {
+                    $product_id = $orderLineItem->get_product_id();
+                }
+
+                if(!empty($product_id)){
+                    self::importProductToVend($product_id);
+                }
+
+            }
+
+        }
+
     }
 
 
@@ -151,6 +190,22 @@ class LS_Vend_Sync
             }
 
             $product_post_status = LS_Product_Helper::getProductStatus($product);
+            $syncable_statuses = LS_Vend()->product_option()->syncable_product_status();
+
+            /**
+             * Empty syncable statuses means that all product should be sync to vend because this option
+             * should not be empty if the user was able to set it via product syncing settings
+             */
+            if (!empty($syncable_statuses)) {
+
+                /**
+                 * If the product status selected on syncable product status is not
+                 * in the setting or not all then do not continue to sync to vend
+                 */
+                if (!isset($syncable_statuses[$product_post_status])) {
+                    return $returnData;
+                }
+            }
 
             //Check if the post type is product or product_variation
             if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($product_type)) {
@@ -241,7 +296,7 @@ class LS_Vend_Sync
                     'product_stock' => $product_meta->get_stock()
                 );
 
-                
+
                 if (
                     LS_Product_Helper::isSimpleProduct($product) ||
                     LS_Product_Helper::isBundleProduct($product) ||
@@ -300,6 +355,7 @@ class LS_Vend_Sync
                 }
 
                 if (!empty($j_product)) {
+
                     $result = LS_Vend()->api()->product()->save_product($j_product);
                     $returnData = array(
                         'json_being_sent' => $j_product,
@@ -364,7 +420,7 @@ class LS_Vend_Sync
         }
 
         remove_all_actions('save_post');
-        $wooProductId = LS_Product_Helper::getProductIdBySku($product->get_sku());
+        $wooProductId = LS_Product_Helper::getParentProductIdBySku($product->get_sku());
         $productDeletedAt = $product->get_deleted_at();
 
         if (!empty($productDeletedAt)) {
@@ -457,15 +513,15 @@ class LS_Vend_Sync
         foreach ($orderTaxes as $tax_label) {
             $orderTaxData = new LS_Woo_Order_Line_Item($tax_label);
             $orderShippingTaxTotal = $orderTaxData->get_shipping_tax_total();
+            $orderTaxRateId = $orderTaxData->get_tax_rate_id();
 
             if (empty($orderShippingTaxTotal)) {
                 $orderTaxLabel = $orderTaxData->get_tax_label();
-                $orderTaxRateId = $orderTaxData->get_tax_rate_id();
             } else {
-                $orderShippingTaxRateId = $orderTaxData->get_tax_rate_id();
+                $orderShippingTaxRateId = $orderTaxRateId;
             }
-        }
 
+        }
 
 
         foreach ($orderItems as $orderItem) {
@@ -491,8 +547,7 @@ class LS_Vend_Sync
             if ('taxable' == $wooProductTaxStatus) {
 
                 $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
-                    $orderTaxLabel,
-                    $taxClass
+                    $orderTaxRateId
                 );
 
             }
@@ -501,6 +556,7 @@ class LS_Vend_Sync
             $product_price = $product_meta->get_price();
             $product_amount = $product_price;
             $order_line_product_amount = $orderLineItem->get_product_amount();
+            $orderLineTax = $orderLineItem->get_line_tax();
 
             if (!empty($order_line_product_amount)) {
                 $product_amount = $order_line_product_amount;
@@ -514,17 +570,36 @@ class LS_Vend_Sync
             if (!empty($product_total_amount) && !empty($vendTaxDetails['taxRate'])) {
                 $taxValue = ($product_total_amount * $vendTaxDetails['taxRate']);
             }
+
+            if (!empty($orderLineTax)) {
+                /**
+                 * $orderLineTax is the total tax per order line item in woocommerce and we need to divide it
+                 * to the current line item quantity to get the tax value per line item for vend calculation
+                 * because vend will do the calculation with the below formula.
+                 * Formula in vend per line item
+                 *          total_per_line_item = (line item product_price * line item product quantity) + ( tax value per product * line item product quantity)
+                 *
+                 * Formula vend total
+                 *          total = sum of total_per_line_item
+                 */
+                $taxValue = $orderLineTax / $lineQuantity;
+            }
+
             if ('bundle' == $wooProduct->get_type()) {
 
                 $bundleItems = $orderLineItem->get_bundled_items();
-                if(!empty($bundleItems)){
-                    $product_total_amount = $order_line_product_amount;
+                if (!empty($bundleItems)) {
+                    /**
+                     * line item product_price should be in the following formula for product bundle
+                     * line item product_price = line item price - line item discount
+                     */
+                    $product_total_amount = $order_line_product_amount - (float)$discount;
                 }
 
             }
 
             $is_priced_individually = $orderLineItem->is_bundled_item_priced_individually();
-            if('no' == $is_priced_individually){
+            if ('no' == $is_priced_individually) {
                 $product_total_amount = 0;
             }
 
@@ -905,7 +980,7 @@ class LS_Vend_Sync
         }
 
         if (null != $last_product_sync) {
-            $urlParams .= 'since=' . urlencode($last_product_sync) . '&';
+            $urlParams .= 'since=' . urlencode(date('Y-m-d H:i:s', strtotime($last_product_sync))) . '&';
         }
 
         $urlParams .= 'page=' . urlencode($page);
@@ -971,7 +1046,7 @@ class LS_Vend_Sync
                         foreach ($product['variants'] as $pro_variant) {
 
                             if (!empty($pro_variant['sku'])) {
-                                $product_id = LS_Product_Helper::getProductIdBySku($pro_variant['sku']);
+                                $product_id = LS_Product_Helper::getProductVariationIdBySku($pro_variant['sku']);
                                 if (!empty($product_id)) {
                                     $product_meta = new LS_Product_Meta($product_id);
                                     ls_last_product_updated_at($pro_variant['update_at']);
@@ -995,7 +1070,7 @@ class LS_Vend_Sync
                         }
                     } else {
                         if (!empty($product['sku'])) {
-                            $product_id = LS_Product_Helper::getProductIdBySku($product['sku']);
+                            $product_id = LS_Product_Helper::getParentProductIdBySku($product['sku']);
                             if (!empty($product_id)) {
                                 $product_meta = new LS_Product_Meta($product_id);
                                 ls_last_product_updated_at($product['update_at']);
