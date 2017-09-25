@@ -19,6 +19,31 @@ class LS_Vend_Product_Option extends LS_Vend_Option
         return self::$_instance;
     }
 
+    /**
+     * used on vend to woo sync type option for selecting multiple checkbox outlets for quantity syncing
+     * @return array
+     */
+    public function vend_to_woo_selected_outlet()
+    {
+        $getoutlets = get_option('ps_outlet_details');
+
+        return  explode("|", $getoutlets);
+    }
+
+    /**
+     * used on two way and woo to vend sync type option for selecting radio button outlets for quantity syncing
+     * @return array
+     */
+    public function two_way_selected_outlet()
+    {
+        $selected_outlets = get_option('wc_to_vend_outlet_detail');
+        $selected_outlets = explode("|", $selected_outlets);
+        if(!empty($selected_outlets[1])){
+            return array($selected_outlets[1]);
+        }
+        return array();
+    }
+
     public function allow_back_order()
     {
         return $this->get_option('allow_backorder', 'off');

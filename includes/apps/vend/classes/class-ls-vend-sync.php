@@ -184,12 +184,12 @@ class LS_Vend_Sync
         if ('two_way' == $productOptionSyncType || 'wc_to_vend' == $productOptionSyncType) {
             $product_type = $productHelper->getType();
 
-            if (LS_Product_Helper::isVariationProduct($product)) {
+            if ($product->is_variation()) {
                 $parent_id = LS_Product_Helper::getProductParentId($product);
                 $product = new LS_Woo_Product($parent_id);
             }
 
-            $product_post_status = LS_Product_Helper::getProductStatus($product);
+            $product_post_status = $product->get_status();
             $syncable_statuses = LS_Vend()->product_option()->syncable_product_status();
 
             /**
@@ -207,7 +207,9 @@ class LS_Vend_Sync
                 }
             }
 
-            //Check if the post type is product or product_variation
+            /**
+             * Check if the post type is syncable to vend
+             */
             if (LS_Vend_Product_Helper::isTypeSyncAbleToVend($product_type)) {
 
                 $json_product = new LS_Json_Product_Factory();
@@ -244,7 +246,7 @@ class LS_Vend_Sync
 
                 $pTitle = null;
                 if ('on' == $productOptionNameTitle) {
-                    $pTitle = LS_Product_Helper::getProductName($product);
+                    $pTitle = $product->get_name();
                 }
                 $json_product->set_name($pTitle);
 
@@ -298,16 +300,16 @@ class LS_Vend_Sync
 
 
                 if (
-                    LS_Product_Helper::isSimpleProduct($product) ||
-                    LS_Product_Helper::isBundleProduct($product) ||
-                    LS_Product_Helper::isSubscriptionProduct($product)
+                    $product->is_simple() ||
+                    $product->is_bundle() ||
+                    $product->is_subscription()
                 ) {
                     $pOutlets = LS_Vend_Helper::buildOutletJsonBaseOnParams($paramsToBuildJsonOutlets);
                     $json_product->set_outlets($pOutlets);
                 }
 
 
-                if (true == LS_Product_Helper::isVariableProduct($product)) {
+                if (true == $product->is_variable()) {
                     $has_children = $product->has_child();
                     if (true == $has_children) {
                         $variation_ids = $product->get_children();
@@ -350,7 +352,7 @@ class LS_Vend_Sync
 
                 $j_product = $json_product->get_json_product();
 
-                if (true == LS_Product_Helper::isVariableProduct($product) && false == LS_Product_Helper::hasChildren($product)) {
+                if (true == $product->is_variable() && false == $product->has_child()) {
                     $j_product = '';//Do not sync variable if no variation
                 }
 
@@ -1013,12 +1015,16 @@ class LS_Vend_Sync
         $product_sync_type = $productSyncOption->sync_type();
         $product_quantity_option = $productSyncOption->quantity();
 
+        /**
+         * Checks if quantity is on and current syncing type is woocommerce to vend
+         */
         if (
             !empty($product_sync_type) &&
             'wc_to_vend' == $product_sync_type &&
             'on' == $product_quantity_option
         ) {
             $laid_info = LS_Vend()->laid()->get_current_laid();
+            $selected_outlets = LS_Vend()->product_option()->two_way_selected_outlet();
 
             $result_time = date("Y-m-d H:i:s", $laid_info['time']);
             $url = '';
@@ -1041,55 +1047,73 @@ class LS_Vend_Sync
                 $total_pages = $products['pagination']['pages'];
 
                 foreach ($products['products'] as $product) {
-                    if (!empty($product['variants'])) {
 
+                    if (!empty($product['variants'])) {
+                        if (!empty($product['sku'])) {
+
+                            $product_id = LS_Product_Helper::getParentProductIdBySku($product['sku']);
+                            if (!empty($product_id)) {
+
+                                $ls_parent_product_meta = new LS_Product_Meta($product_id);
+                                $ls_var_parent_product = new LS_Product($product);
+                                $quantity = $ls_var_parent_product->getTotalVariantsQuantityOnSelectedOutlets($selected_outlets);
+                                /**
+                                 * Manage stock should be unticked/unchecked for the parent/main product of variations
+                                 */
+                                $ls_parent_product_meta->update_manage_stock('no');
+                                $ls_parent_product_meta->update_stock_status_base_on_quantity($quantity);
+
+
+                            }
+                        }
                         foreach ($product['variants'] as $pro_variant) {
 
                             if (!empty($pro_variant['sku'])) {
                                 $product_id = LS_Product_Helper::getProductVariationIdBySku($pro_variant['sku']);
                                 if (!empty($product_id)) {
+                                    $ls_var_product = new LS_Product($pro_variant);
                                     $product_meta = new LS_Product_Meta($product_id);
                                     ls_last_product_updated_at($pro_variant['update_at']);
-                                    $quantity = 0;
-                                    if (!empty($pro_variant['outlets'])) {
-                                        foreach ($pro_variant['outlets'] as $outlet) {
-                                            if (!empty($outlet['quantity'])) {
-                                                $quantity += (int)$outlet['quantity'];
-                                            }
-                                        }
-                                    }
 
-                                    $product_meta->update_stock($quantity);
-                                    if ($quantity <= 0) {
-                                        $product_meta->update_stock_status('outofstock');
+                                    if ($ls_var_product->has_outlets()) {
+
+                                        $quantity = $ls_var_product->getQuantityOnSelectedOutlets($selected_outlets);
+                                        $product_meta->update_stock($quantity);
+                                        $product_meta->update_manage_stock('yes');
+                                        $product_meta->update_stock_status_base_on_quantity($quantity);
+
                                     } else {
+                                        $product_meta->update_manage_stock('no');
+                                        $product_meta->update_stock(NULL);
                                         $product_meta->update_stock_status('instock');
                                     }
+
+
                                 }
                             }
                         }
                     } else {
+
                         if (!empty($product['sku'])) {
+
                             $product_id = LS_Product_Helper::getParentProductIdBySku($product['sku']);
                             if (!empty($product_id)) {
+                                $ls_product = new LS_Product($product);
                                 $product_meta = new LS_Product_Meta($product_id);
                                 ls_last_product_updated_at($product['update_at']);
-                                $quantity = 0;
 
-                                if (!empty($product['outlets'])) {
-                                    foreach ($product['outlets'] as $outlet) {
-                                        if (!empty($outlet['quantity'])) {
-                                            $quantity += (int)$outlet['quantity'];
-                                        }
-                                    }
-                                }
+                                if ($ls_product->has_outlets()) {
 
-                                $product_meta->update_stock($quantity);
-                                if ($quantity <= 0) {
-                                    $product_meta->update_stock_status('outofstock');
+                                    $quantity = $ls_product->getQuantityOnSelectedOutlets($selected_outlets);
+                                    $product_meta->update_stock($quantity);
+                                    $product_meta->update_manage_stock('yes');
+                                    $product_meta->update_stock_status_base_on_quantity($quantity);
                                 } else {
+                                    $product_meta->update_manage_stock('no');
+                                    $product_meta->update_stock(NULL);
                                     $product_meta->update_stock_status('instock');
                                 }
+
                             }
                         }
                     }

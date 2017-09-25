@@ -2089,11 +2089,7 @@ class linksync_class {
                                                 $current_product_stock = $product_meta->get_stock();
                                                 $new_product_stock = $current_product_stock - $products['quantity'];
                                                 $product_meta->update_stock($new_product_stock);
-                                                if ($new_product_stock <= 0) {
-                                                    $product_meta->update_stock_status('outofstock');
-                                                } else {
-                                                    $product_meta->update_stock_status('instock');
-                                                }
+                                                $product_meta->update_stock_status_base_on_quantity($new_product_stock);
                                             }
 
                                             $line_tax = array();

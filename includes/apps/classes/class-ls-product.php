@@ -479,6 +479,73 @@ class LS_Product
         $this->set_data('category', $value);
     }
 
+    /**
+     * Always returns zero if there are no outlets on the current json product.
+     * Therefore has_outlets method of this class should be checked first to see
+     * if the current json product really have quantity or not
+     *
+     * @param $selected_outlets array of selected vend outlets id to get outlets quantity and add up to the total quantity
+     * @return int total quantity of the selected outlets
+     */
+    public function getQuantityOnSelectedOutlets($selected_outlets)
+    {
+        $quantity = 0;
+        $outlets = $this->get_outlets();
+        if (!empty($outlets)) {
+
+            foreach ($outlets as $outlet) {
+
+                /**
+                 * If on the selected outlets then add the to the total quantity
+                 */
+                if(in_array($outlet['outlet_id'], $selected_outlets)){
+                    //add the outlets quantity
+                    $quantity += (int)$outlet['quantity'];
+                }
+
+            }
+        }
+
+        return $quantity;
+    }
+
+    /**
+     * Always returns zero if there are no outlets on the current json product variations.
+     *
+     * @param $selected_outlets array of selected vend outlets id to get outlets quantity and add up to the total quantity
+     * @return int total quantity of the selected outlets
+     */
+    public function getTotalVariantsQuantityOnSelectedOutlets($selected_outlets)
+    {
+        $quantity = 0;
+
+        $variants = $this->get_variants();
+        if (!empty($variants)) {
+            /**
+             *Loop through the available variants to get the quantity
+             */
+            foreach ($variants as $variant) {
+                if (isset($variant['outlets'])) {
+                    /**
+                     * Loop through to get the quantity on each available outlet
+                     */
+                    foreach ($variant['outlets'] as $outlet) {
+                        /**
+                         * If on the selected outlets then add the to the total quantity
+                         */
+                        if(in_array($outlet['outlet_id'], $selected_outlets)){
+                            //add the outlets quantity
+                            $quantity += (int)$outlet['quantity'];
+                        }
+                    }
+                }
+            }
+
+        }
+        return $quantity;
+    }
+
+
     public function getTotalVariantsQuantity()
     {
         $quantity = 0;

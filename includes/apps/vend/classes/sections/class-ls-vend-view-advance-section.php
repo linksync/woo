@@ -140,7 +140,7 @@ class LS_Vend_View_Advance_Section
                                    ('Active' == $status && 'wc_to_vend' == $product_sync_type)
                                )  ? 'btn-sync-woo-to-vend-via-filter' : ''; ?>"
                             <?php echo ('Inactive' == $status || !in_array($product_sync_type, $availabLeSyncingType)) ? 'disabled' : ''; ?>
-                               value="Synced filtered products to Vend">
+                               value="Sync filtered products to Vend">
                     </p>
                 </td>
             </tr>

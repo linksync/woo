@@ -353,6 +353,15 @@ class LS_Product_Meta
         return $this->get_meta('_stock_status');
     }
 
+    public function update_stock_status_base_on_quantity($product_quantity)
+    {
+        if ($product_quantity <= 0) {
+            $this->update_stock_status('outofstock');
+        } else {
+            $this->update_stock_status('instock');
+        }
+
+    }
     public function update_stock_status($meta_value)
     {
         return $this->update_meta('_stock_status', $meta_value);

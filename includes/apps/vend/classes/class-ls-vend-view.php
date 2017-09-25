@@ -445,6 +445,7 @@ class LS_Vend_View
                     </center>
                     <center>
                         <div>
+                            <div id="estimated_time" style="">Estimated syncing time of completion:</div>
                             <div id="progressbar"></div>
                             <div class="progress-label">Loading...</div>
                         </div>

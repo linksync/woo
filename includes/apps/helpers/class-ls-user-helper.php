@@ -23,7 +23,7 @@ class LS_User_Helper
     public static function save_syncing_error_limit()
     {
 
-        $html_error_message = 'Alert: You have reached your linksync syncing limit. Your free trial is limited to syncing of 50 products and 50 order. '.LS_User_Helper::why_limit_link('Learn more about limits with our free trial').' or view your <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('connected_products').'">synced products</a> and <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('connected_orders').'">synced orders</a>.  <br/><br/> Sync withour limits '.LS_User_Helper::update_button('Upgrade Now','');
+        $html_error_message = 'Alert: You have reached your linksync syncing limit. Your free trial is limited to syncing of 50 products and 50 order. '.LS_User_Helper::why_limit_link('Learn more about limits with our free trial').' or view your <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('synced_products').'">synced products</a> and <a target="_blank" href="'.LS_Vend_Menu::page_menu_url('synced_orders').'">synced orders</a>.  <br/><br/> Sync withour limits '.LS_User_Helper::update_button('Upgrade Now','');
         LS_Vend()->option()->update_option('capping_error_limit', $html_error_message);
 
         return $html_error_message;

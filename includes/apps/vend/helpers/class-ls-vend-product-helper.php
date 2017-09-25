@@ -99,8 +99,17 @@ class LS_Vend_Product_Helper
 
     public static function isTypeSyncAbleToVend($type)
     {
+        $type = strtolower($type);
         $bool = false;
-        $product_types = array('product', 'product_variation', 'simple', 'variation', 'variable', 'subscription', 'bundle');
+        $product_types = array(
+            'product',
+            'product_variation',
+            'simple',
+            'variation',
+            'variable',
+            'subscription',
+            'bundle',
+        );
         if (in_array($type, $product_types)) {
             $bool = true;
         }
@@ -353,16 +362,13 @@ class LS_Vend_Product_Helper
 
         if ('on' == $productSyncQuantityOption) {
             if (true == $product->has_variant()) {
-                if ('on' == $productSyncOption->changeProductStatusBaseOnQuantity()) {
 
-                    $totalVariantQuantity = $product->getTotalVariantsQuantity();
-                    if ($totalVariantQuantity <= 0) {
-                        $products_meta->update_stock_status('outofstock');
-                    } else {
-                        $products_meta->update_stock_status('instock');
-                    }
-
-                }
+                $totalVariantQuantity = LS_Vend_Product_Helper::getVendVariationTotalQuantityBaseOnSelectedOutletSettings($product, $productSyncOption);
+                /**
+                 * Manage stock should be unticked/unchecked for the parent/main product of variations
+                 */
+                $products_meta->update_manage_stock('no');
+                $products_meta->update_stock_status_base_on_quantity($totalVariantQuantity);
 
             } else {
 
@@ -988,6 +994,25 @@ class LS_Vend_Product_Helper
         }
 
         return $actions;
+    }
+
+    public static function getVendVariationTotalQuantityBaseOnSelectedOutletSettings(
+            LS_Product $product,
+            LS_Vend_Product_Option $product_syncing_options
+    ){
+        $syncing_type = $product_syncing_options->sync_type();
+
+
+        $selected_outlets = array();
+        if ('vend_to_wc-way' == $syncing_type) {
+            $selected_outlets = $product_syncing_options->vend_to_woo_selected_outlet();
+        } else if ('two_way' == $syncing_type) {
+            $selected_outlets = $product_syncing_options->two_way_selected_outlet();
+        }
+
+        $quantity = $product->getTotalVariantsQuantityOnSelectedOutlets($selected_outlets);
+
+        return $quantity;
     }
 
 }

@@ -196,6 +196,16 @@ label {
     float: right;
 }
 
+.ls-vend-sync-modal-content #estimated_time{
+    text-align: left;
+    margin-left: 25px;
+}
+
+#estimated_time b{
+    font-weight: bold;
+    color: #d87575;
+}
+
 .ls-sync-modal .ui-progressbar,
 .ls-vend-sync-modal .ui-progressbar{
     position: relative;
@@ -228,7 +238,7 @@ label {
 .ls-vend-sync-modal .ui-progressbar {
     height: 23px !important;
     text-align: left !important;
-    margin-top: 19px;
+    margin-top: 0px;
 }
 .ls-sync-modal #progressbar ,
 .ls-vend-sync-modal #progressbar {

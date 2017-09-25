@@ -143,7 +143,7 @@ class LS_Vend_Helper
 
         $varProductTitle = null;
         if ('on' == $productOptionNameTitle) {
-            $varProductTitle = LS_Product_Helper::getProductName($var_product);
+            $varProductTitle = $var_product->get_name();
         }
         $var_json_product->set_name($varProductTitle);
 

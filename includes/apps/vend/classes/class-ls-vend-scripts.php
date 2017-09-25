@@ -16,8 +16,8 @@ class LS_Vend_Script
 
         ?>
         <script>
-            var connected_products_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('connected_products')); ?>';
-            var connected_orders_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('connected_orders')); ?>';
+            var connected_products_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('synced_products')); ?>';
+            var connected_orders_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('synced_orders')); ?>';
         </script>
         <style>
             .yes-in-vend{

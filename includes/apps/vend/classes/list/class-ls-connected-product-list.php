@@ -24,8 +24,8 @@ class LS_Vend_Connected_Product_List extends WP_List_Table
 
         //Set parent defaults
         parent::__construct(array(
-            'singular' => 'connected_product',
-            'plural' => 'connected_products',
+            'singular' => 'synced_product',
+            'plural' => 'synced_products',
             'ajax' => true
         ));
 

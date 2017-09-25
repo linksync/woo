@@ -78,12 +78,38 @@ class LS_Woo_Product
     public function is_type($type)
     {
         $product_type = $this->get_type();
+        $product_type = strtolower($product_type);
 
         if ($type == $product_type) {
             return true;
         }
 
         return false;
+    }
+
+    public function is_simple()
+    {
+        return $this->is_type('simple');
+    }
+
+    public function is_bundle()
+    {
+        return $this->is_type('bundle');
+    }
+
+    public function is_subscription()
+    {
+        return $this->is_type('subscription');
+    }
+
+    public function is_variable()
+    {
+        return $this->is_type('variable');
+    }
+
+    public function is_variation()
+    {
+        return $this->is_type('variation');
     }
 
     public function get_parent_id()
@@ -129,7 +155,7 @@ class LS_Woo_Product
             $product_name = $post_data->post_title;
         }
 
-        return $product_name;
+        return html_entity_decode(remove_escaping_str($product_name));
     }
 
     public function has_child()

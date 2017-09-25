@@ -481,6 +481,8 @@ class LS_Vend_Ajax
     public static function sync_triggered_by_lws()
     {
         $last_product_sync = time();
+
+        $response['success'] = 'Sync trigger success';
         if (!isset($_REQUEST['check'])) {
 
             $last_product_sync = LS_Vend()->option()->lastProductUpdate();
@@ -504,13 +506,10 @@ class LS_Vend_Ajax
             LS_Vend_Sync::from_vend_to_woo_quantity_update();
             LS_Vend_Sync::get_and_sync_product_to_woo_by_sku();
 
+            $response['last_product_sync'] = $last_product_sync;
         }
 
-        wp_send_json(array(
-            'success' => 'Sync trigger success',
-            'last_product_sync' => $last_product_sync
-        ));
-
+        wp_send_json($response);
     }
 
 

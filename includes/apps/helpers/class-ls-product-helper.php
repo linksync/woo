@@ -66,56 +66,9 @@ class LS_Product_Helper
         return $product->has_child();
     }
 
-    public static function isVariableAndDontHaveChildren(LS_Woo_Product $product)
-    {
-        if (true == self::isVariableProduct($product)) {
-            $has_children = $product->has_child();
-            if (true == $has_children) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public static function getProductStatus(LS_Woo_Product $product)
-    {
-        return $product->get_status();
-    }
-
     public static function getProductDescription(LS_Woo_Product $product)
     {
         return remove_escaping_str(html_entity_decode($product->get_description()));
-    }
-
-    public static function getProductName(LS_Woo_Product $product)
-    {
-        return html_entity_decode(remove_escaping_str($product->get_name()));
-    }
-
-    public static function isBundleProduct(LS_Woo_Product $product)
-    {
-        return $product->is_type('bundle');
-    }
-
-    public static function isSubscriptionProduct(LS_Woo_Product $product)
-    {
-        return $product->is_type('subscription');
-    }
-
-    public static function isSimpleProduct(LS_Woo_Product $product)
-    {
-        return $product->is_type('simple');
-    }
-
-    public static function isVariableProduct(LS_Woo_Product $product)
-    {
-        return $product->is_type('variable');
-    }
-
-    public static function isVariationProduct(LS_Woo_Product $product)
-    {
-        return $product->is_type('variation');
     }
 
     public static function getProductParendId(LS_Woo_Product $product)

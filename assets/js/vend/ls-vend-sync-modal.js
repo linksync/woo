@@ -1,9 +1,114 @@
 (function ($) {
 
+    function getFormattedTimeWithOutSeconds(date) {
+        var date = new Date(date);
+
+        var years = date.getFullYear();
+        var months = date.getMonth() + 1;
+        var days = date.getDate();
+        var hours = date.getHours();
+        var minutes = date.getMinutes();
+        var seconds = date.getSeconds();
+
+        if (years < 10) {
+            years = "0" + years;
+        }
+        if (months < 10) {
+            months = "0" + months;
+        }
+        if (days < 10) {
+            days = "0" + days;
+        }
+
+
+        if (hours < 10) {
+            hours = "0" + hours;
+        }
+        if (minutes < 10) {
+            minutes = "0" + minutes;
+        }
+        if (seconds < 10) {
+            seconds = "0" + seconds;
+        }
+
+        return years + '-' + months + '-' + days + ' ' + hours + ':' + minutes;
+    }
+
+    LS_Syncing_Time = {
+        start_date : new Date(),
+        end_date: new Date(),
+        set_start_time: function () {
+            this.start_date = new Date();
+        },
+
+        get_start_time: function () {
+            return this.start_date;
+        },
+
+        set_end_time: function () {
+            this.end_date = new Date();
+        },
+
+        get_end_time: function () {
+            return this.end_date;
+        },
+
+        get_execution_time_in_seconds: function () {
+            return (this.get_end_time().getTime() - this.get_start_time().getTime()) / 1000;
+        },
+
+        get: function () {
+            return {
+                'start_time': this.get_start_time(),
+                'end_time' : this.get_end_time(),
+                'execution_time_in_seconds' : this.get_execution_time_in_seconds()
+            }
+        }
+    };
 
     lsVendSyncModal = {
         options: '',
         SYNC_LIMIT: 0,
+        syncing_times_in_seconds: [],
+        get_average_syncing_time_in_seconds: function () {
+            var average_syncing_time_in_seconds = 0;
+            var recorded_syncing_time_count = lsVendSyncModal.syncing_times_in_seconds.length;
+
+            console.log('lsVendSyncModal.syncing_times_in_seconds', lsVendSyncModal.syncing_times_in_seconds);
+            console.log('recorded_syncing_time_count', recorded_syncing_time_count);
+            if(recorded_syncing_time_count > 0){
+
+                lsVendSyncModal.syncing_times_in_seconds.forEach(function (time_in_seconds, index) {
+                    console.log(time_in_seconds);
+                    average_syncing_time_in_seconds += time_in_seconds;
+                })
+            }
+
+            return average_syncing_time_in_seconds / recorded_syncing_time_count;
+        },
+
+        calculated_time_of_completion: function (seconds) {
+
+            var total_seconds_for_completion = seconds;
+            var total_minutes_for_completion = total_seconds_for_completion / 60;
+            var total_hours_for_completion = total_minutes_for_completion / 60;
+
+            var calculated_time_of_completion = '';
+            if (total_seconds_for_completion >= 1) {
+                calculated_time_of_completion = ' ( ' + total_seconds_for_completion.toFixed(2) + ' seconds )';
+            }
+
+            if (total_minutes_for_completion >= 1) {
+                calculated_time_of_completion = ' ( ' + total_minutes_for_completion.toFixed(2) + ' minutes )';
+            }
+
+            if (total_hours_for_completion >= 1) {
+                calculated_time_of_completion = ' ( ' + total_hours_for_completion.toFixed(2) + ' hours )';
+            }
+
+            return calculated_time_of_completion;
+        },
+
         init: function (options) {
             this.cacheDom();
             this.bindEvents();
@@ -22,6 +127,8 @@
 
         cacheDom: function () {
             this.$mainContainer = $('#ls-main-wrapper');
+
+            this.$estimatedTime = this.$mainContainer.find('#estimated_time');
             this.$btnClassVendToWoo = '.product_sync_to_woo';
             this.$btnClassWooToVend = '.product_sync_to_vend';
             this.$btnClassWooToVendViaFilter = '.product_sync_to_woo_via_filter';
@@ -244,6 +351,9 @@
         },
 
         syncProductToVend: function (woocommerce_products, product_index) {
+            var syncingTime = Object.create(LS_Syncing_Time);
+            syncingTime.set_start_time();
+
             if (typeof product_index == 'undefined') {
                 product_index = 0;
             } else if (product_index <= 0) {
@@ -271,6 +381,22 @@
                             console.log('haltSync => '+haltSync);
                             if (false == haltSync) {
 
+                                syncingTime.set_end_time();
+                                lsVendSyncModal.syncing_times_in_seconds.push(syncingTime.get_execution_time_in_seconds());
+
+                                var currentDate = new Date();
+                                var average_syncing_time_in_seconds = lsVendSyncModal.get_average_syncing_time_in_seconds();
+                                var remaining_item_to_sync = product_total_count - product_sync_response.product_number;
+                                var total_seconds_for_completion = (average_syncing_time_in_seconds * remaining_item_to_sync);
+
+                                var estimatedDateTime = currentDate.setSeconds(currentDate.getSeconds() + total_seconds_for_completion);
+                                var calculated_time_of_completion = lsVendSyncModal.calculated_time_of_completion(total_seconds_for_completion);
+
+
+                                lsVendSyncModal.$estimatedTime.html('Estimated syncing time of completion: <b>'+getFormattedTimeWithOutSeconds(estimatedDateTime)+calculated_time_of_completion+'</b>');
+                                lsVendSyncModal.$estimatedTime.show();
+
+
                                 lsVendSyncModal.$progressBarLabel.html("Exported " + product_sync_response.percentage + "% of WooCommerce products to Vend");
                                 lsVendSyncModal.$modalClose.hide();
                                 var progressVal = lsVendSyncModal.$progressBar.progressbar("value");
@@ -284,10 +410,11 @@
                                         lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
                                     }
 
+                                    var temp_product_index = product_index + 1;
+                                    lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
                                 }
 
-                                var temp_product_index = product_index + 1;
-                                lsVendSyncModal.syncProductToVend(woocommerce_products, temp_product_index);
+
 
                             } else if (true == haltSync) {
                                 var syncing_response = product_sync_response.response_product_to_vend.response;
@@ -383,7 +510,8 @@
         },
 
         syncProductsToVend: function () {
-
+            var syncingTime = Object.create(LS_Syncing_Time);
+            syncingTime.set_start_time();
 
             lsAjax.post({action: 'vend_woo_get_products'}).done(function (woo_products) {
 
@@ -391,6 +519,9 @@
                 console.log(woo_products);
 
                 if (!$.isEmptyObject(woo_products)) {
+
+                    syncingTime.set_end_time();
+                    lsVendSyncModal.syncing_times_in_seconds.push(syncingTime.get_execution_time_in_seconds());
 
                     lsVendSyncModal.syncProductToVend(woo_products, 0);
 
@@ -409,6 +540,8 @@
         },
 
         syncProductFromVend: function (linksync, product_number) {
+            var syncingTime = Object.create(LS_Syncing_Time);
+            syncingTime.set_start_time();
 
             if (typeof product_number == 'undefined') {
                 product_number = 0;
@@ -455,6 +588,7 @@
                 lsVendSyncModal.$modalCloseContainer.hide();
                 lsAjax.post(p_data).done(function (product_sync_response) {
 
+
                     console.log('Successful AJAX Call! Return Data: =>');
                     console.log('count = '+lsVendSyncModal.SYNC_LIMIT+' trialItemCount = '+trialItemCount);
                     if(
@@ -469,12 +603,24 @@
 
                     } else {
 
+                        var currentDate = new Date();
+                        var average_syncing_time_in_seconds = lsVendSyncModal.get_average_syncing_time_in_seconds();
+                        var remaining_item_to_sync = product_sync_response.product_results_count - product_sync_response.product_number;
+                        var total_seconds_for_completion = (average_syncing_time_in_seconds * remaining_item_to_sync);
+
+                        var estimatedDateTime = currentDate.setSeconds(currentDate.getSeconds() + total_seconds_for_completion);
+                        var calculated_time_of_completion = lsVendSyncModal.calculated_time_of_completion(total_seconds_for_completion);
+
+                        lsVendSyncModal.$estimatedTime.html('Estimated syncing time of completion: <b>'+getFormattedTimeWithOutSeconds(estimatedDateTime)+calculated_time_of_completion+'</b>');
+                        lsVendSyncModal.$estimatedTime.show();
+
                         lsVendSyncModal.$progressBarLabel.html("Imported " + product_sync_response.percentage + "% of products in WooCommerce");
                         lsVendSyncModal.$modalClose.hide();
                         progressVal = lsVendSyncModal.$progressBar.progressbar("value");
 
                         if (product_sync_response.product_number == linksync.pagination.results) {
                             lsVendSyncModal.$progressBar.progressbar("value", 100);
+
                             lsVendSyncModal.syncCompleted();
                         } else {
 
@@ -482,11 +628,13 @@
                                 lsVendSyncModal.$progressBar.progressbar("value", product_sync_response.percentage);
                             }
 
+                            var product_index = product_number + 1;
+                            lsVendSyncModal.syncProductFromVend(linksync, product_index);
+
                         }
 
 
-                        var product_index = product_number + 1;
-                        lsVendSyncModal.syncProductFromVend(linksync, product_index);
+
 
                     }
 
@@ -512,6 +660,8 @@
 
         syncProductsFromVend: function (page, since) {
 
+            var syncingTime = Object.create(LS_Syncing_Time);
+            syncingTime.set_start_time();
             //check if page is undefined then we set it to one
             if (typeof page == 'undefined') {
                 page = 1;
@@ -542,6 +692,9 @@
                 lsVendSyncModal.$progressBarLabel.html("Syncing products from Vend to WooCommerce.");
                 console.log('Ajax Call Done of syncProductsFromVend :) Returned Data =>');
                 console.log(linksync_response);
+                syncingTime.set_end_time();
+                lsVendSyncModal.syncing_times_in_seconds.push(syncingTime.get_execution_time_in_seconds());
+
 
                 var product_count = linksync_response.products.length;
                 if (product_count > 0) {
@@ -599,6 +752,9 @@
         },
 
         syncCompleted: function (delay) {
+            console.log(lsVendSyncModal.syncing_times_in_seconds);
+            console.log(lsVendSyncModal.get_average_syncing_time_in_seconds());
+            lsVendSyncModal.syncing_times_in_seconds = [];
             lsVendSyncModal.since = null;
             if (typeof delay == 'undefined') {
                 delay = 4000;
@@ -616,7 +772,7 @@
             if (typeof delay == 'undefined') {
                 delay = 4000;
             }
-
+            lsVendSyncModal.syncing_times_in_seconds = [];
             lsVendSyncModal.since = null;
             lsVendSyncModal.SYNC_LIMIT = 0;
             lsVendSyncModal.$syncModalContainer.delay(delay).fadeOut('fast', function () {
@@ -634,6 +790,8 @@
         open: function (option) {
 
             console.log(option);
+            lsVendSyncModal.$estimatedTime.hide();
+            lsVendSyncModal.syncing_times_in_seconds = [];
             lsVendSyncModal.$syncButtonsContainer.hide();
             lsVendSyncModal.$modalClose.show();
             lsVendSyncModal.$modalCloseContainer.show();
