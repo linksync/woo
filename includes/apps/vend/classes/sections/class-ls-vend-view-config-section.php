@@ -31,13 +31,11 @@ class LS_Vend_View_Config_Section
                             <td><b style='font-size: 14px;'>API Key*:</b></td>
                             <td>
                                 <?php echo '<b class="apikeyholder">', empty($linksync_vend_laid) ? 'No Api Key' : $linksync_vend_laid, '</b>'; ?>
-                                <a href="https://www.linksync.com/help/woocommerce"
-                                   style="text-decoration: none !important;">
-                                    <img title="The linksync API Key is a unique key that's created when you link two apps via the linksync dashboard. You need a valid API Key for this linkysnc extension to work."
-                                         style="margin-bottom: -4px;"
-                                         src="../wp-content/plugins/linksync/assets/images/linksync/help.png"
-                                         height="16" width="16"/>
-                                </a>
+                                <?php
+                                help_link(array(
+                                    'title' => 'The linksync API Key is a unique key that\'s created when you link two apps via the linksync dashboard. You need a valid API Key for this linkysnc extension to work.'
+                                ));
+                                ?>
                             </td>
                             <td>
                                 &nbsp;&nbsp;&nbsp;&nbsp;

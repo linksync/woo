@@ -39,15 +39,15 @@ function help_link($attribute)
      */
     $href = isset($attribute['href']) ? $attribute['href'] : 'https://www.linksync.com/help/woocommerce';
 
-    $src = '../wp-content/plugins/linksync/assets/images/linksync/help.png';
+    $src = LS_ASSETS_URL.'images/linksync/help.png';
     if (!empty($attribute['label'])) {
         echo $attribute['label'];
     }
 
-    echo '	<a style="color: transparent !important" target="_blank" href="', $href, '">
-				<img style="position: relative;top: 5px;margin-right: 10px;" title="', $attribute['title'], '"
+    echo '	<a style="color: transparent !important;text-decoration: none;" target="_blank" href="', $href, '">
+				<img style="position: relative;top: 5px;" title="', $attribute['title'], '"
 					 src="', $src, '"
-					 height="18" width="18">
+					 height="16" width="16">
 			</a>';
 }
 

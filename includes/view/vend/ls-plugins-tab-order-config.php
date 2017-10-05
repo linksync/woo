@@ -39,17 +39,32 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
             <td>
                 <p>
                     <label>
-                        <input type="radio" name="order_sync_type" id="wc_to_vend_sync_id"  <?php echo (get_option('order_sync_type') == 'wc_to_vend' ? 'checked' : ''); ?> value="wc_to_vend"> WooCommerce to Vend <a href="https://www.linksync.com/help/woocommerce"><img title="If you're using the Vend to WooCommerce product syncing option, then you need to enable this option so that any sales in WooCommerce are synced to Vend - this ensures that the inventory levels in Vend are updated based on any orders entered in WooCommerce. " style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
+                        <input type="radio" name="order_sync_type" id="wc_to_vend_sync_id"  <?php echo (get_option('order_sync_type') == 'wc_to_vend' ? 'checked' : ''); ?> value="wc_to_vend"> WooCommerce to Vend
+                        <?php
+                        help_link(array(
+                            'title' => "If you're using the Vend to WooCommerce product syncing option, then you need to enable this option so that any sales in WooCommerce are synced to Vend - this ensures that the inventory levels in Vend are updated based on any orders entered in WooCommerce. "
+                        ));
+                        ?>
                         &nbsp;&nbsp;&nbsp;&nbsp;
                     </label>
 
                     <label>
-                        <input type="radio" name="order_sync_type" id="vend_to_wc_sync_id"  <?php echo (get_option('order_sync_type') == 'vend_to_wc-way' ? 'checked' : ''); ?> value="vend_to_wc-way"> Vend to WooCommerce <a href="https://www.linksync.com/help/woocommerce"><img title="If you're using the WooCommerce to Vend product syncing option, then you need to enable this option so that any sales in Vend are synced to WooCommerce - this ensures that the inventory levels in WooCommerce are updated based on any orders entered in Vend."  style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
+                        <input type="radio" name="order_sync_type" id="vend_to_wc_sync_id"  <?php echo (get_option('order_sync_type') == 'vend_to_wc-way' ? 'checked' : ''); ?> value="vend_to_wc-way"> Vend to WooCommerce
+                        <?php
+                        help_link(array(
+                            'title' => "If you're using the WooCommerce to Vend product syncing option, then you need to enable this option so that any sales in Vend are synced to WooCommerce - this ensures that the inventory levels in WooCommerce are updated based on any orders entered in Vend."
+                        ));
+                        ?>
                         &nbsp;&nbsp;&nbsp;&nbsp;
                     </label>
 
                     <label>
-                        <input type="radio" name="order_sync_type" id="disabled_sync_id"  <?php echo (get_option('order_sync_type') == 'disabled' ? 'checked' : ''); ?> value="disabled"> Disabled <a href="https://www.linksync.com/help/woocommerce"><img title="Prevent any orders syncing between Vend and WooCommerce stores." style="margin-bottom: -4px; " src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a>
+                        <input type="radio" name="order_sync_type" id="disabled_sync_id"  <?php echo (get_option('order_sync_type') == 'disabled' ? 'checked' : ''); ?> value="disabled"> Disabled
+                        <?php
+                        help_link(array(
+                            'title' => "Prevent any orders syncing between Vend and WooCommerce stores."
+                        ));
+                        ?>
                     </label>
 
                 </p>
@@ -78,7 +93,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
             <table class="form-table">
                 <tbody>
                 <tr valign="top">
-                    <th  class="titledesc">Order Status<a href="https://www.linksync.com/help/woocommerce"><img title="Use this option to select what status the order must be before it is exported. Keep in mind that an order can only be exported to Vend once, and once exported, it can not be edited in Vend. " style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th>
+                    <th  class="titledesc">Order Status
+                        <?php
+                        help_link(array(
+                            'title' => "Use this option to select what status the order must be before it is exported. Keep in mind that an order can only be exported to Vend once, and once exported, it can not be edited in Vend. "
+                        ));
+                        ?>
+                    </th>
                     <td class="forminp forminp-checkbox">
                         <?php
                         if (isset($order_Status) && !empty($order_Status)) {
@@ -138,7 +159,14 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                     if (isset($linksync_outlets['outlets'])) {
                     if (!empty($outletDb)) {
                         ?>
-                        <th  class="titledesc">Outlets<a href="https://www.linksync.com/help/woocommerce"><img title="If you have multiple Outlets in Vend, use this option to select which Outlet you want orders from WooCommerce to be associated with. If you have multiple registers and users for an outlet, you can also choose which register and/or user you want the orders to be imported against. " style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th> <td class="forminp forminp-checkbox"><?php
+                        <th  class="titledesc">Outlets
+                            <?php
+                            help_link(array(
+                                'title' => "If you have multiple Outlets in Vend, use this option to select which Outlet you want orders from WooCommerce to be associated with. If you have multiple registers and users for an outlet, you can also choose which register and/or user you want the orders to be imported against. "
+                            ));
+                            ?>
+                        </th>
+                        <td class="forminp forminp-checkbox"><?php
                         foreach ($linksync_outlets['outlets'] as $outlet) {
                             ?>
                             <input type="radio" class="outlet_class" <?php
@@ -212,7 +240,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                         ?></td><?php
                     } else {
                     ?>
-                    <th  class="titledesc">Outlets<a href="https://www.linksync.com/help/woocommerce"><img title="If you have multiple Outlets in Vend, use this option to select which Outlet you want orders from WooCommerce to be associated with. If you have multiple registers and users for an outlet, you can also choose which register and/or user you want the orders to be imported against. " style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th>
+                    <th  class="titledesc">Outlets
+                        <?php
+                        help_link(array(
+                            'title' => "If you have multiple Outlets in Vend, use this option to select which Outlet you want orders from WooCommerce to be associated with. If you have multiple registers and users for an outlet, you can also choose which register and/or user you want the orders to be imported against. "
+                        ));
+                        ?>
+                    </th>
                     <td  class="forminp forminp-checkbox"><?php
                         $checkOutlet = 0;
                         foreach ($linksync_outlets['outlets'] as $outlet) {
@@ -320,7 +354,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
 
                 <!------------------------------------------------------------------ Tax Mapping Wc_to_Vend---------------------------------------->
                 <tr valign="top">
-                    <th  class="titledesc">Tax mapping<a href="https://www.linksync.com/help/woocommerce"><img title="When syncing orders, both Vend and WooCommerce have their own tax configurations - use these Tax Mapping settings to 'map' the Vend taxes with those in your WooCommerce store." style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th>
+                    <th  class="titledesc">Tax mapping
+                        <?php
+                        help_link(array(
+                            'title' => "When syncing orders, both Vend and WooCommerce have their own tax configurations - use these Tax Mapping settings to 'map' the Vend taxes with those in your WooCommerce store."
+                        ));
+                        ?>
+                    </th>
                     <td class="forminp forminp-checkbox"><?php
                         #Check for the Taxes
 
@@ -380,7 +420,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
 
                 <!------------------------------------------------------------------ Payment Mapping Wc_to_Vend---------------------------------------->
                 <tr valign="top">
-                    <th  class="titledesc">Payment mapping<a href="https://www.linksync.com/help/woocommerce"><img title="When syncing orders, both Vend and WooCommerce have their own payment methods - use these Payment Mapping settings to 'map' the Vend payment methods with those in your WooCommerce store." style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a> </th>
+                    <th  class="titledesc">Payment mapping
+                        <?php
+                        help_link(array(
+                            'title' => "When syncing orders, both Vend and WooCommerce have their own payment methods - use these Payment Mapping settings to 'map' the Vend payment methods with those in your WooCommerce store."
+                        ));
+                        ?>
+                    </th>
                     <td class="forminp forminp-checkbox">
                         <?php
                         #Check for the Payment
@@ -437,11 +483,11 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                             <input  checked  type="radio"
                                     value="customer" <?php echo (get_option('wc_to_vend_export') == 'customer' ? 'checked' : ''); ?>
                                     name="wc_to_vend_export" />Export Customer data
-                            <a href="https://www.linksync.com/help/woocommerce">
-                                <img title="Select this option if you'd like customer data, such as name, email address and shipping and billing address, to be included when exporting orders to Vend."
-                                     style="margin-left: 4px;margin-bottom: -3px;"
-                                     src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16">
-                            </a>
+                            <?php
+                            help_link(array(
+                                'title' => "Select this option if you'd like customer data, such as name, email address and shipping and billing address, to be included when exporting orders to Vend."
+                            ));
+                            ?>
                         </legend><br>
                         <?php
                         $orderOption = LS_Vend()->order_option();
@@ -459,7 +505,14 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                             <input name="useshippingtobepostal" value="yes" type="checkbox" <?php echo $checkedShippingPostalOption; ?>>Use Woocommerce Shipping Address as Vend Postal Address
                         </label>
 
-                        <legend style="display: inline-block;width: 25em; "><input type="radio" value="cash_sale" <?php echo (get_option('wc_to_vend_export') == 'cash_sale' ? 'checked' : ''); ?>  name="wc_to_vend_export" />Export as 'Cash Sale' <a href="https://www.linksync.com/help/woocommerce"><img title="Select this option if you're not interested in including the customer information when exporting orders to Vend. " style="margin-left: 4px;margin-bottom: -3px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></legend></td>
+                        <legend style="display: inline-block;width: 25em; "><input type="radio" value="cash_sale" <?php echo (get_option('wc_to_vend_export') == 'cash_sale' ? 'checked' : ''); ?>  name="wc_to_vend_export" />Export as 'Cash Sale'
+                            <?php
+                            help_link(array(
+                                'title' => "Select this option if you're not interested in including the customer information when exporting orders to Vend. "
+                            ));
+                            ?>
+                        </legend>
+                    </td>
                 </tr>
                 </tbody>
             </table>
@@ -476,7 +529,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
             <table class="form-table">
                 <tbody>
                 <tr valign="top">
-                    <th  class="titledesc">Order Status<a href="https://www.linksync.com/help/woocommerce"><img title="Use this option to select the default status of the order when it's imported. In most cases you will set this to 'Completed'  " style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th>
+                    <th  class="titledesc">Order Status
+                        <?php
+                        help_link(array(
+                            'title' => "Use this option to select the default status of the order when it's imported. In most cases you will set this to 'Completed'  "
+                        ));
+                        ?>
+                    </th>
                     <td class="forminp forminp-checkbox">
                         <?php if (isset($order_Status) && !empty($order_Status)) { ?>
 
@@ -498,7 +557,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                 </tr>
                 <!------------------------------------------------------------------ Tax Mapping vend_to_wc---------------------------------------->
                 <tr valign="top">
-                    <th  class="titledesc">Tax mapping<a href="https://www.linksync.com/help/woocommerce"><img title="When syncing orders, both Vend and WooCommerce have their own tax configurations - use these Tax Mapping settings to 'map' the Vend taxes with those in your WooCommerce store. " style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th>
+                    <th  class="titledesc">Tax mapping
+                        <?php
+                        help_link(array(
+                            'title' => "When syncing orders, both Vend and WooCommerce have their own tax configurations - use these Tax Mapping settings to 'map' the Vend taxes with those in your WooCommerce store. "
+                        ));
+                        ?>
+                    </th>
                     <td class="forminp forminp-checkbox">
                         <?php
                         #Check for the Taxes
@@ -543,7 +608,13 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                 </tr>
                 <!------------------------------------------------------------------ Payment Mapping vend_to_wc---------------------------------------->
                 <tr valign="top">
-                    <th  class="titledesc">Payment mapping<a href="https://www.linksync.com/help/woocommerce"><img title="When syncing orders, both Vend and WooCommerce have their own payment methods - use these Payment Mapping settings to 'map' the Vend payment methods with those in your WooCommerce store." style="margin-bottom: -4px;margin-left: 4px;" src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></th>
+                    <th  class="titledesc">Payment mapping
+                        <?php
+                        help_link(array(
+                            'title' => "When syncing orders, both Vend and WooCommerce have their own payment methods - use these Payment Mapping settings to 'map' the Vend payment methods with those in your WooCommerce store."
+                        ));
+                        ?>
+                    </th>
                     <td class="forminp forminp-checkbox">
                         <?php
                         #Check for the Payment
@@ -584,8 +655,21 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                 <tr valign="top">
                     <th  class="titledesc">Customer Import </th>
                     <td class="forminp forminp-checkbox">
-                        <legend style="display: inline-block;width: 25em; ">  <input type="radio"  checked  <?php echo (get_option('vend_to_wc_customer') == 'customer_data' ? 'checked' : ''); ?> value="customer_data" name="vend_to_wc_customer" />Import Customer data<a href="https://www.linksync.com/help/woocommerce"><img title="Select this option if you'd like customer data, such as name, email address and shipping and billing address, to be included when importing orders from Vend."   style="margin-left: 4px;margin-bottom: -3px;"src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a></legend><br>
-                        <legend style="display: inline-block;width: 25em; "><input type="radio" <?php echo (get_option('vend_to_wc_customer') == 'guest' ? 'checked' : ''); ?> value="guest" name="vend_to_wc_customer" />Import as 'Guest'<a href="https://www.linksync.com/help/woocommerce"><img title="Select this option if you're not interested in including the customer information when importing orders from Vend." style="margin-left: 4px;margin-bottom: -3px;"  src="../wp-content/plugins/linksync/assets/images/linksync/help.png" height="16" width="16"></a><br/><br/>
+                        <legend style="display: inline-block;width: 25em; ">  <input type="radio"  checked  <?php echo (get_option('vend_to_wc_customer') == 'customer_data' ? 'checked' : ''); ?> value="customer_data" name="vend_to_wc_customer" />Import Customer data
+
+                            <?php
+                            help_link(array(
+                                'title' => "Select this option if you'd like customer data, such as name, email address and shipping and billing address, to be included when importing orders from Vend."
+                            ));
+                            ?>
+                        </legend><br>
+                        <legend style="display: inline-block;width: 25em; ">
+                            <input type="radio" <?php echo (get_option('vend_to_wc_customer') == 'guest' ? 'checked' : ''); ?> value="guest" name="vend_to_wc_customer" />Import as 'Guest'
+                            <?php
+                            help_link(array(
+                                'title' => "Select this option if you're not interested in including the customer information when importing orders from Vend."
+                            ));
+                            ?><br/><br/>
                         </legend>
                     </td>
                 </tr>

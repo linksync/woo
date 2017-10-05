@@ -100,7 +100,8 @@ class LS_Vend_Helper
             if ('on' == $productOptionQuantity && 'on' == $vendOptionWooToVendOutlet && !empty($vendOptionWooToVendOutletDetail)) {
 
                 $outlet = explode('|', $vendOptionWooToVendOutletDetail);
-                $pBaseOutlet['name'] = html_entity_decode($outlet[0]);
+                $pBaseOutlet['id'] = remove_escaping_str(html_entity_decode($outlet[1]));
+                $pBaseOutlet['name'] = remove_escaping_str(html_entity_decode($outlet[0]));
                 $pBaseOutlet['quantity'] = NULL;
                 if (!empty($product_stock) || 0 == $product_stock) {
                     $pBaseOutlet['quantity'] = $product_stock;

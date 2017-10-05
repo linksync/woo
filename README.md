@@ -1,2 +1,0 @@
-# woo
-linksync for woocommerce

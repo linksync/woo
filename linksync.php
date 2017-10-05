@@ -1,11 +1,11 @@
 <?php
 /*
-  Plugin Name: linksync for WooCommerce
+  Plugin Name: linksync for WooCommerce and Vend
   Plugin URI: http://www.linksync.com/integrate/woocommerce
-  Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
+  Description:  WooCommerce extension for syncing inventory and order data with Vend.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.9
+  Version: 2.5.10
  */
 
 if (!class_exists('Linksync_Vend')) {
@@ -16,7 +16,7 @@ if (!class_exists('Linksync_Vend')) {
         /**
          * @var string
          */
-        public static $version = '2.5.9';
+        public static $version = '2.5.10';
         protected static $_instance = null;
 
         /**

@@ -245,6 +245,7 @@
             this.click(this.$btnClassVendToWooSinceSpecified, function () {
                 var specifiedDate = lsVendSyncModal.getSinceSpecifiedDate();
                 lsVendSyncModal.since = specifiedDate;
+                console.log(specifiedDate);
                 lsVendSyncModal.cacheDom();
                 lsVendSyncModal.hideSyncButtonsAndShowProgress(function () {
                     lsVendSyncModal.setOptions({
@@ -327,6 +328,10 @@
             var syncing_response = product_sync_response.response_product_to_vend.response;
             console.log(syncing_response);
             if (
+                syncing_response &&
+                typeof(syncing_response) == "object" &&
+                typeof syncing_response.errorCode != 'undefined' &&
+                typeof syncing_response.type != 'undefined' &&
                 syncing_response.errorCode &&
                 syncing_response.type &&
                 'C400' == syncing_response.type

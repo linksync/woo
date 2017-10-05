@@ -73,7 +73,7 @@ $productSyncOption = LS_Vend()->product_option();
         </p>
         <table class="form-table">
             <tbody>
-            <tr class="tr-syncable" valign="top" style="<?php echo ('two_way' == $product_sync_type || 'wc_to_vend' == $product_sync_type) ? '': ''; ?>">
+            <tr class="tr-syncable" valign="top" style="<?php echo ('two_way' == $product_sync_type || 'wc_to_vend' == $product_sync_type) ? '': 'display:none;'; ?>">
                 <th class="titledesc">
                     Syncable product status
                     <?php
@@ -589,7 +589,7 @@ $productSyncOption = LS_Vend()->product_option();
                     ?>
                 </label>
                 <br><br>
-                <label class="ps_categories" style="display: inline-block;width: 10em; " ><input type="radio" name="cat_radio" <?php echo (get_option('cat_radio') == 'ps_cat_product_type' ? 'checked' : ''); ?>  value="ps_cat_product_type">
+                <label class="ps_categories" style="display: inline-block; " ><input type="radio" name="cat_radio" <?php echo (get_option('cat_radio') == 'ps_cat_product_type' ? 'checked' : ''); ?>  value="ps_cat_product_type">
                     <?php
                     help_link(array(
                         'label' => 'Product Types',
