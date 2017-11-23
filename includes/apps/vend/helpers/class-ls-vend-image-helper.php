@@ -14,33 +14,36 @@ class LS_Vend_Image_Helper
     {
         $product_thumbnail_path = LS_Image_Helper::getImagePath($product_thumbnail_id);
         $product_thumbnail_path_info = pathinfo($product_thumbnail_path);
+        $vend_1st_img = pathinfo($vend_images[0]['url']);
         $thumbnail_image_url = '';
 
-        if (empty($product_thumbnail_path_info['basename']) && !empty($vend_images[0]['url'])) {
+        if($product_thumbnail_path_info['basename'] != $vend_1st_img['basename']) {
+            if (empty($product_thumbnail_path_info['basename']) && !empty($vend_images[0]['url'])) {
 
-            $thumbnail_image_url = $vend_images[0]['url'];
+                $thumbnail_image_url = $vend_images[0]['url'];
 
-        } else if (!empty($product_thumbnail_path_info['basename']) && !empty($vend_images[0]['url'])) {
+            } else if (!empty($product_thumbnail_path_info['basename']) && !empty($vend_images[0]['url'])) {
 
-            $thumbnail_image_url = $vend_images[0]['url'];
+                $thumbnail_image_url = $vend_images[0]['url'];
 
-        }
+            }
 
 
-        if (!empty($thumbnail_image_url)) {
+            if (!empty($thumbnail_image_url)) {
 
-            $attach_id = LS_Image_Helper::setProductThumbnailFromImageUrl($vend_images[0]['url'], $product_meta);
-            $thumbnailArray = array(
-                'attach_id' => $attach_id['attachment_id'],
-                'vend_url' => trim($vend_images[0]['url']),
-                'pathinfo' => pathinfo($vend_images[0]['url'])
-            );
-            $product_meta->updateVendImageThumbnail($thumbnailArray);
+                $attach_id = LS_Image_Helper::setProductThumbnailFromImageUrl($vend_images[0]['url'], $product_meta);
+                $thumbnailArray = array(
+                    'attach_id' => $attach_id['attachment_id'],
+                    'vend_url' => trim($vend_images[0]['url']),
+                    'pathinfo' => pathinfo($vend_images[0]['url'])
+                );
+                $product_meta->updateVendImageThumbnail($thumbnailArray);
 
-            LS_Image_Helper::add_image_gallery_attachment_id($product_meta, $attach_id['attachment_id']);
-            unset($vend_images[0]);
+                LS_Image_Helper::add_image_gallery_attachment_id($product_meta, $attach_id['attachment_id']);
+                unset($vend_images[0]);
 
-            return $thumbnailArray;
+                return $thumbnailArray;
+            }
         }
 
         return $thumbnail_image_url;
