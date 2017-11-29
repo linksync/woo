@@ -39,9 +39,6 @@ class LS_Vend_Image_Helper
                 );
                 $product_meta->updateVendImageThumbnail($thumbnailArray);
 
-                LS_Image_Helper::add_image_gallery_attachment_id($product_meta, $attach_id['attachment_id']);
-                unset($vend_images[0]);
-
                 return $thumbnailArray;
             }
         }
