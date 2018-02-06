@@ -101,22 +101,45 @@ class LS_Vend_Image_Helper
     public static function existFromPreviouslySavedGalleryImage($woo_image_gallery_url_paths, $new_image_url)
     {
         $vend_image_path_info = pathinfo($new_image_url);
+        $tolower_vend_image = strtolower($vend_image_path_info['basename']);
         $vend_image_exist_in_woo = false;
 
         if(!empty($woo_image_gallery_url_paths)){
-
+            $list_image = array();
             foreach ($woo_image_gallery_url_paths as $woo_gallery_index => $woo_image_gallery_url_path) {
                 $woo_image_path_info = pathinfo($woo_image_gallery_url_path);
-
-                if ($vend_image_path_info['basename'] == $woo_image_path_info['basename']) {
+                $tolower_wp_image = strtolower($woo_image_path_info['basename']);
+                if ($tolower_vend_image == $tolower_wp_image) {
                     return array(
                         'attach_id' => $woo_gallery_index
                     );
                 }
-            }
 
+                $pos_img = strpos($woo_image_path_info['basename'], $vend_image_path_info['filename']);
+                if($pos_img !== false) {
+                    return array(
+                        'attach_id' => $woo_gallery_index
+                    );
+                }
+                // $list_image[$woo_gallery_index] = $tolower_wp_image;
+            }
+            // print_r($list_image);exit;
         }
         return $vend_image_exist_in_woo;
+    }
+
+    public static function existFromPreviouslySavedThumbnail($savedimage, $vendimage)
+    {
+        $vend_image_path_info = pathinfo($vendimage);
+        if(isset($savedimage['pathinfo']['basename'])) {
+            $tolower_vend_image = strtolower($vend_image_path_info['basename']);
+            $tolower_wp_image = strtolower($savedimage['pathinfo']['basename']);
+            if($tolower_wp_image == $tolower_vend_image) {
+                return array('attach_id' => $savedimage['attach_id']);
+            }
+        }
+
+        return false;
     }
 
     public static function importProductImageToWoo(LS_Product $product, LS_Product_Meta $product_meta, $importImageOption)
@@ -143,7 +166,7 @@ class LS_Vend_Image_Helper
             if ('Enable' == $importImageOption) {
 
 
-                $previously_exist = self::existFromPreviouslySavedGalleryImage($woo_image_gallery_url_paths, $vend_images[0]['url']);
+                $previously_exist = self::existFromPreviouslySavedThumbnail($previously_saved_vend_thumbnail_data, $vend_images[0]['url']);
                 if (false !== $previously_exist) {
                     $attach_id = $previously_exist['attach_id'];
 
@@ -200,7 +223,7 @@ class LS_Vend_Image_Helper
                     foreach ($vend_images as $vend_image_index => $vend_image_value) {
 
                         $vend_image_exist_in_woo = self::existFromPreviouslySavedGalleryImage($woo_image_gallery_url_paths, $vend_image_value['url']);
-                        if (false == $vend_image_exist_in_woo) {
+                        if ($vend_image_exist_in_woo == false) {
 
                             $attach_id = LS_Image_Helper::media_side_loaded_image($vend_image_value['url'], $post_id);
                             if (!empty($attach_id)) {
@@ -232,7 +255,7 @@ class LS_Vend_Image_Helper
 
             } elseif ('Ongoing' == $importImageOption) {
 
-                $previously_exist = self::existFromPreviouslySavedGalleryImage($woo_image_gallery_url_paths, $vend_images[0]['url']);
+                $previously_exist = self::existFromPreviouslySavedThumbnail($previously_saved_vend_thumbnail_data, $vend_images[0]['url']);
 //                ls_print_r($woo_image_gallery_url_paths);
 //                ls_print_r($vend_images[0]['url']);
 //                ls_var_dump($previously_exist);
@@ -284,12 +307,19 @@ class LS_Vend_Image_Helper
 
 
 
+                if (!empty($vend_images[0])) {
+                    /**
+                     * Unset first index of linksync image api response because that is the featured images or
+                     * the main/primary image in vend
+                     */
+                    unset($vend_images[0]);
+                }
                 if (!empty($vend_images)) {
                     $imageGalleryAttached = array();
                     foreach ($vend_images as $vend_image_index => $vend_image_url) {
 
                         $vend_image_exist_in_woo = self::existFromPreviouslySavedGalleryImage($woo_image_gallery_url_paths, $vend_image_url['url']);
-                        if (false == $vend_image_exist_in_woo) {
+                        if ($vend_image_exist_in_woo == false) {
 
                             $attach_id = LS_Image_Helper::media_side_loaded_image($vend_image_url['url'], $post_id);
                             if (!empty($attach_id)) {
