@@ -379,7 +379,7 @@ class LS_Vend_Sync
 
                     if (!empty($result['id'])) {
                         LS_Vend_Product_Helper::update_vend_ids($result);
-                        LSC_Log::add_dev_success('LS_Vend_Sync::importProductToVend', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
+                        LSC_Log::add_dev_success('LS_Vend_Sync::importProductToVend', 'Product was imported to Vend <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
                     } else {
                         LSC_Log::add_dev_failed('LS_Vend_Sync::importProductToVend25', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
                     }
@@ -401,7 +401,6 @@ class LS_Vend_Sync
 
     public static function importProductToWoo($product)
     {
-
         //Make sure its the instance of LS_Simple_Product class
         if (!$product instanceof LS_Product) {
             $product = new LS_Product($product);
@@ -435,12 +434,12 @@ class LS_Vend_Sync
             return;
         }
 
-
         $is_new = false;
         if (empty($wooProductId)) {
             $is_new = true;
             $wooProductId = LS_Vend_Product_Helper::createWooProduct($productSyncOption, $product, $is_new);
         }
+
 
         if (!empty($wooProductId)) {
 
@@ -546,6 +545,22 @@ class LS_Vend_Sync
                 'taxId' => null,
                 'taxRate' => null
             );
+            
+            /**
+             * Fix for taxes label not correct needs to check to other version of woocomerce if $orderItem->get_data() will not cause errors
+             * 
+             * Set $orderTaxRateId value to get the exact tax rate details 
+             */
+            $item_data = $orderItem->get_data(); 
+			$item_taxes_array = $item_data['taxes'];
+			if(!empty($item_taxes_array['total'])){
+			    foreach($item_taxes_array['total'] as $rate_id => $tax_value){
+			        if(strlen($tax_value) > 0){
+			            $orderTaxRateId = $rate_id;
+			        }
+			    }
+			}
+			
             if ('taxable' == $wooProductTaxStatus) {
 
                 $vendTaxDetails = LS_Vend_Tax_helper::getVendTaxDetailsBaseOnTaxClassMapping(
@@ -553,8 +568,11 @@ class LS_Vend_Sync
                 );
 
             }
+			
+			
 
-
+            
+			
             $product_price = $product_meta->get_price();
             $product_amount = $product_price;
             $order_line_product_amount = $orderLineItem->get_product_amount();
@@ -620,7 +638,6 @@ class LS_Vend_Sync
                 'taxValue' => isset($taxValue) ? $taxValue : null,
                 //'discountTitle' => isset($discountTitle) ? $discountTitle : 'sale',
             );
-
             $products[] = $productArgs;
             $totalQuantity += $lineQuantity;
         }
@@ -657,6 +674,7 @@ class LS_Vend_Sync
             );
         }
 
+		
         $orderTotalRefund = $wooOrder->get_total_refunded();
         /**
          * Refund handling
@@ -960,6 +978,7 @@ class LS_Vend_Sync
             }
         }
 
+        $outlets = '';
         $outletOption = $productSyncOption->vendToWooOutlet();
         if ('on' == $outletOption) {
             if ($product_sync_type == 'vend_to_wc-way') {
@@ -968,7 +987,9 @@ class LS_Vend_Sync
                     $outletDb_arr = explode('|', $outletDb);
                     //    Outlets - use the 'outlet' parameter for the Product endpoint to request product
                     foreach ($outletDb_arr as $outlet_name) {
-                        $urlParams .= 'outlet=' . urlencode($outlet_name) . '&';
+                        if(!empty($outlet_name)) {
+                            $outlets .= 'outlet=' . urlencode($outlet_name) . '&';
+                        }
                     }
                 }
             } elseif ($product_sync_type == 'two_way') {
@@ -976,9 +997,15 @@ class LS_Vend_Sync
                 if ('on' == $wooToVendOutlet) {
                     $getoutlet = get_option('wc_to_vend_outlet_detail');
                     $outlet = explode('|', $getoutlet);
-                    $urlParams .= 'outlet=' . urlencode(isset($outlet[1]) ? $outlet[1] : '') . '&';
+                    if(!empty($outlet[1])) {
+                        $outlets .= 'outlet=' . urlencode(isset($outlet[1]) ? $outlet[1] : '') . '&';
+                    }
                 }
             }
+        }
+
+        if(!empty($outlets)) {
+            $urlParams = $outlets;
         }
 
         if (null != $last_product_sync) {
