@@ -461,6 +461,9 @@ class LS_Vend_Sync
             );
         }
 
+        // THIS HOOK IS FOR EBAY PURPOSSES
+        do_action( 'wplister_product_has_changed', $wooProductId );
+
         /**
          * Fires once a product has been created or updated in WooCommerce.
          *
@@ -1005,7 +1008,7 @@ class LS_Vend_Sync
         }
 
         if(!empty($outlets)) {
-            $urlParams = $outlets;
+            $urlParams .= $outlets;
         }
 
         if (null != $last_product_sync) {
