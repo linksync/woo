@@ -194,7 +194,7 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                             } else {
                                                 $checked = '';
                                             }
-                                            ?>  <div style="margin-left:20px;float: left;<?php echo $display_register; ?>"><input style="margin-top: 2px;float: left;" type="radio"  <?php
+                                            ?>  <div style="margin-left:20px;<?php echo $display_register; ?>"><input style="margin-top: 2px;" type="radio"  <?php
                                                 if (isset($checked))
                                                     echo $checked . ' ';
                                                 echo ( $registerDb == $register['id'] ? 'checked' : '');
@@ -205,7 +205,7 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                 }
                                 if (!empty($userDb)) {
                                     if (count($users['users']) > 1) {
-                                        ?><br><b style="margin-left:40px;float: left; ">User :-</b><?php
+                                        ?><br><b style="margin-left:40px;">User :-</b><?php
                                         $display_user = 'display:block;';
                                     } else {
                                         $display_user = 'display:none;';
@@ -224,8 +224,8 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                                 $checked = '';
                                             }
                                             ?>
-                                            <div style="margin-left:20px;float: left;<?php echo $display_user; ?>">
-                                                <input type="radio" style="margin-top: 2px;float: left;"  <?php
+                                            <div style="margin-left:20px;<?php echo $display_user; ?>">
+                                                <input type="radio" style="margin-top: 2px;"  <?php
                                                 if (isset($checked))
                                                     echo $checked . ' ';
                                                 echo ( $userDb == $user['id'] . '|' . $user['username'] ? 'checked' : '');
@@ -265,7 +265,7 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                                         if (!isset($registers['errorCode'])) {
                                                             if (isset($registers['registers'])) {
                                                                 if (count($registers['registers']) > 1) {
-                                                                    ?><br><b style="margin-left:40px;float: left;">Register :-</b><?php
+                                                                    ?><br><b style="margin-left:40px;">Register :-</b><?php
                                                                     $display_register = 'display:block;';
                                                                 } else {
                                                                     $display_register = 'display:none;';
@@ -280,7 +280,7 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                                                         } else {
                                                                             $checked = '';
                                                                         }
-                                                                        ?><div style="margin-left:20px;float: left;<?php echo $display_register; ?>"><input style="margin-top: 2px;float: left;" type="radio" <?php echo $checked;
+                                                                        ?><div style="margin-left:20px;<?php echo $display_register; ?>"><input style="margin-top: 2px;" type="radio" <?php echo $checked;
                                                                         ?> value="<?php echo $register['id'] ?>"  name="wc_to_vend_register|<?php echo $outlet['id'] ?>" /><?php echo $register['name'] ?>
                                                                         </div>
                                                                         <?php
@@ -305,7 +305,7 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                             #-------------Changes---------------#
 
                                             if (count($users['users']) > 1) {
-                                                ?><br><b style="margin-left:40px;float: left; ">User :-</b><?php
+                                                ?><br><b style="margin-left:40px;">User :-</b><?php
                                                 $display = 'display:block;';
                                             } else {
                                                 $display = 'display:none;';
@@ -320,7 +320,7 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                                     } else {
                                                         $checked = '';
                                                     }
-                                                    ?> <div style="margin-left:20px;float: left;<?php echo $display; ?>"><input style="margin-top: 2px;float: left;" type="radio"  <?php echo $checked; ?> value="<?php echo $user['id'] . '|' . $user['username']; ?>" name="wc_to_vend_user|<?php echo $outlet['id'] ?>"  /><?php echo $user['name'] . "(<i>" . $user['username'] . "</i>)" ?></div>
+                                                    ?> <div style="margin-left:20px;<?php echo $display; ?>"><input style="margin-top: 2px;" type="radio"  <?php echo $checked; ?> value="<?php echo $user['id'] . '|' . $user['username']; ?>" name="wc_to_vend_user|<?php echo $outlet['id'] ?>"  /><?php echo $user['name'] . "(<i>" . $user['username'] . "</i>)" ?></div>
                                                     <?php
                                                 }
                                             }

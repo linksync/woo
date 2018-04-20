@@ -1901,8 +1901,9 @@ class linksync_class {
 
                     ls_last_order_update_at($order['updated_at']);
                     LS_Vend()->option()->lasOrderUpdate($order['updated_at']);
-					$ls_oid = ls_order_exist( $order['id'] );
-					if( false == $ls_oid ){
+					$ls_vend_order_exist = ls_vend_woo_order_exist( $order['id'], $order['orderId'] );
+                    LSC_Log::add_dev_success('linksync_class->importOrderToWoocommerce', " Vend orderid => ". $order['id'] ." Woo ordermetaid => ". $ls_oid);
+					if( $ls_vend_order_exist == false ){
 
                         $order_data = array(
                             'post_name' => 'order-' . date('M-d-Y-hi-a'), //'order-nov-29-2014-0503-am'
@@ -1931,6 +1932,7 @@ class linksync_class {
                              * Linksync order id
                              */
                             update_post_meta( $order_id, 'ls_oid', $order['id'] );
+                            update_post_meta( $order_id, 'ls_orderkey', $order['orderId'] );
                             $orderMeta->update_vend_order_id($order['id']);
                             $orderMeta->update_vend_receipt_number($order['orderId']);
 

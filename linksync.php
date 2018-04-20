@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with Vend.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.15
+  Version: 2.5.16
  */
 
 if (!class_exists('Linksync_Vend')) {
@@ -16,7 +16,7 @@ if (!class_exists('Linksync_Vend')) {
         /**
          * @var string
          */
-        public static $version = '2.5.15';
+        public static $version = '2.5.16';
         protected static $_instance = null;
 
         /**
