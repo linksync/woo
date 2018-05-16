@@ -53,17 +53,6 @@ function ls_get_product_variant_ids( $product_id ){
  * @param $ls_order_id
  * @return null|int null or the linksync order id
  */
-function ls_vend_woo_order_exist($ls_order_id, $ls_order_key)
-{
-	$id = ls_order_exist($ls_order_id);
-	$key = ls_order_key_exist($ls_order_key);
-
-	if(!empty($id) || !empty($key)) {
-		return $id;
-	}
-	return false;
-}
-
 function ls_order_exist( $ls_order_id ){
 	global $wpdb;
 
@@ -78,27 +67,6 @@ function ls_order_exist( $ls_order_id ){
 							post.post_type IN('shop_order')
 						LIMIT 1"
 			, $ls_order_id )
-	);
-
-	if ( $order_id ) return  $order_id;
-
-	return false;
-}
-
-function ls_order_key_exist( $ls_order_key ){
-	global $wpdb;
-
-	$order_id =	$wpdb->get_var(
-		$wpdb->prepare("
-						SELECT post.ID
-						FROM $wpdb->posts AS post
-						INNER JOIN $wpdb->postmeta AS pmeta ON (post.ID = pmeta.post_id)
-						WHERE
-							pmeta.meta_key='ls_orderkey' AND
-							pmeta.meta_value=%s AND
-							post.post_type IN('shop_order')
-						LIMIT 1"
-			, $ls_order_key )
 	);
 
 	if ( $order_id ) return  $order_id;
