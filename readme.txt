@@ -1,4 +1,4 @@
-=== linksync for WooCommerce and Vend ===
+﻿=== linksync for WooCommerce and Vend ===
 Contributors: linksync, jameshwartlopez, jaxolis, jguillano
 Tags: linksync, woocommerce, download, downloadable, Vend
 Requires at least: 4.4
@@ -66,6 +66,11 @@ Glad you asked. We provide support via chat, phone and email, and every person w
 1. You'll see linksync settings in the admin menu.
 
 == Changelog ==
+
+= Version 2.5.18 - 25 June 2018 Release =
+
+* Order settings - User can select either sync by order date or current date.
+* Duplicate order issue when sync vend to woo
 
 = Version 2.5.9 - 25 September 2017 Release =
 

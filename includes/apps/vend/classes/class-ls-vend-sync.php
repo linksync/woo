@@ -710,6 +710,10 @@ class LS_Vend_Sync
         //UTC Time
         date_default_timezone_set("UTC");
         $created = date("Y-m-d H:i:s", time());
+        if(get_option('order_date_wc_to_vend') == 'order_date') {
+            $c_order = new WC_Order($order_id);
+            $created = date('Y-m-d H:i:s', strtotime($c_order->order_date));
+        }
         $registerDb = get_option('wc_to_vend_register');
         $export_user_details = get_option('wc_to_vend_export');
         $primaryEmail = null;

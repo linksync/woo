@@ -203,6 +203,9 @@ class LS_Vend_Order_Option extends LS_Vend_Option
                 if (!empty($userOrderOptions['order_sync_type'])) {
                     update_option('order_sync_type', $userOrderOptions['order_sync_type']);
                 }
+                if (!empty($userOrderOptions['order_date_wc_to_vend'])) {
+                    update_option('order_date_wc_to_vend', $userOrderOptions['order_date_wc_to_vend']);
+                }
                 if (isset($userOrderOptions['order_status_wc_to_vend'])) {
                     update_option('order_status_wc_to_vend', isset($userOrderOptions['order_status_wc_to_vend']) ? $userOrderOptions['order_status_wc_to_vend'] : 'off');
                 } else {

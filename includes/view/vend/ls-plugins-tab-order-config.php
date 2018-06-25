@@ -93,6 +93,21 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
             <table class="form-table">
                 <tbody>
                 <tr valign="top">
+                    <th  class="titledesc">Order Date
+                        <?php
+                        help_link(array(
+                            'title' => "Use this option to select what date the order must be sync before it is exported. Keep in mind that an order can only be exported to Vend once, and once exported, it can not be edited in Vend. "
+                        ));
+                        ?>
+                    </th>
+                    <td class="forminp forminp-checkbox">
+                        <select name="order_date_wc_to_vend">
+                            <option value="current_date" <?php echo ((get_option('order_date_wc_to_vend')=='current_date')?'selected="selected"':''); ?>> Current Date </option>
+                            <option value="order_date" <?php echo ((get_option('order_date_wc_to_vend')=='order_date')?'selected="selected"':''); ?>> Order Date </option>
+                        </select>
+                    </td>
+                </tr>
+                <tr valign="top">
                     <th  class="titledesc">Order Status
                         <?php
                         help_link(array(
