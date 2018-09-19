@@ -113,7 +113,9 @@ class LS_User_Helper
 
         global $linksync_vend_laid,$ls_vend_product_capping_error, $ls_vend_order_capping_error, $ls_vend_current_screen, $ls_vend_capping_error_limit;
 
-        if(!empty($linksync_vend_laid)){
+        $vend_user_account_status = LS_Vend()->option()->get_option('vend_user_account_status');
+
+        if(!empty($linksync_vend_laid) && $vend_user_account_status){
 
             $laid_info = LS_Vend()->laid()->get_laid_info($linksync_vend_laid);
             if (!empty($laid_info)) {
@@ -150,6 +152,8 @@ class LS_User_Helper
             $update_button = '<a  href="https://my.linksync.com/index.php?m=dashboard" 
                               target="_blank" 
                               class="button button-primary" style="margin-top: -4px;">Click here to upgrade now</a>';
+
+            LS_Vend()->option()->update_option('vend_user_account_status', $isFreeTrial);
 
             $showTrialEnds = false;
             if (true == $isFreeTrial && isset($registrationDate)) {

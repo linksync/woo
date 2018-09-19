@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with Vend.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.18
+  Version: 2.5.19
  */
 
 if (!class_exists('Linksync_Vend')) {
@@ -58,11 +58,21 @@ if (!class_exists('Linksync_Vend')) {
             /**
              * To handle all languages
              */
-            mb_internal_encoding('UTF-8');
-            mb_http_output('UTF-8');
-            mb_http_input('UTF-8');
-            mb_language('uni');
-            mb_regex_encoding('UTF-8');
+            if(extension_loaded('mb_internal_encoding')) {
+                mb_internal_encoding('UTF-8');
+            }
+            if(extension_loaded('mb_http_output')) {
+                mb_http_output('UTF-8');
+            }
+            if(extension_loaded('mb_http_input')) {
+                mb_http_input('UTF-8');
+            }
+            if(extension_loaded('mb_language')) {
+                mb_language('uni');
+            }
+            if(extension_loaded('mb_regex_encoding')) {
+                mb_regex_encoding('UTF-8');
+            }
 
             /**
              * Initialize hooks

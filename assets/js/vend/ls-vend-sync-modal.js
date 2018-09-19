@@ -700,20 +700,23 @@
                 syncingTime.set_end_time();
                 lsVendSyncModal.syncing_times_in_seconds.push(syncingTime.get_execution_time_in_seconds());
 
+                if (linksync_response.products !== undefined) {
+                    var product_count = linksync_response.products.length;
+                    if (product_count > 0) {
 
-                var product_count = linksync_response.products.length;
-                if (product_count > 0) {
+                        lsVendSyncModal.syncProductFromVend(linksync_response, 0);
 
-                    lsVendSyncModal.syncProductFromVend(linksync_response, 0);
-
-                } else if (product_count <= 1) {
-                    lsVendSyncModal.$progressBar.progressbar("value", 100);
-                    lsVendSyncModal.syncCompleted();
-                    if (lsVendSyncModal.options.no_products_to_import_woo == null) {
-                        lsVendSyncModal.$progressBarLabel.html("No products were imported to WooCommerce");
-                    } else {
-                        lsVendSyncModal.$progressBarLabel.html(lsVendSyncModal.options.no_products_to_import_woo);
+                    } else if (product_count <= 1) {
+                        lsVendSyncModal.$progressBar.progressbar("value", 100);
+                        lsVendSyncModal.syncCompleted();
+                        if (lsVendSyncModal.options.no_products_to_import_woo == null) {
+                            lsVendSyncModal.$progressBarLabel.html("No products were imported to WooCommerce");
+                        } else {
+                            lsVendSyncModal.$progressBarLabel.html(lsVendSyncModal.options.no_products_to_import_woo);
+                        }
                     }
+                } else {
+                    jQuery('#sync_progress_container').html('<center><h4>'+ linksync_response.userMessage +'</h4></center>');
                 }
 
             }).fail(function (data) {
