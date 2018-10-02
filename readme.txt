@@ -67,6 +67,10 @@ Glad you asked. We provide support via chat, phone and email, and every person w
 
 == Changelog ==
 
+= Version 2.5.20 - 02 Oct 2018 Release =
+
+* Minor enhancement
+
 = Version 2.5.18 - 25 June 2018 Release =
 
 * Order settings - User can select either sync by order date or current date.
