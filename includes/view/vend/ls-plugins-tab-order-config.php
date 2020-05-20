@@ -386,10 +386,14 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                     ?><ul><legend style="display: inline-block;width:200px;float: left;"> <b>WooCommerce Tax Classes</b></legend>   <legend style="display: inline-block;width: 80px; float: left">=></legend>  <legend style="display: inline-block; "><b>Vend Taxes</b></legend><br><?php
                                     $implode_tax['tax_name']['standard-tax'] = '';
                                     $tax_classes_list = array_map("rtrim", explode("\n", get_option('woocommerce_tax_classes')));
+                                    
+                                    $tax_classes_list = WC_Tax::get_tax_classes();
+                                       
                                     foreach ($tax_classes_list as $value) {
                                         $taxexplode = explode(" ", strtolower($value));
                                         $implode_tax['tax_name'][implode("-", $taxexplode)] = implode("-", $taxexplode);
                                     }
+                                    
 
                                     foreach ($implode_tax['tax_name'] as $tax_classes_name => $woo_taxes) {
                                         global $wpdb;

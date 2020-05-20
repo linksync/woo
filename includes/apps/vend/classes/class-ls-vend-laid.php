@@ -241,7 +241,7 @@ class LS_Vend_Laid
 
                         if (isset($response_outlets) && !empty($response_outlets)) {
                             if (isset($response_outlets['errorCode']) && !empty($response_outlets['userMessage'])) {
-                                update_option('ps_outlet_details', 'off');
+                                // update_option('ps_outlet_details', 'off');
                                 $response_ = $response_outlets['userMessage'];
                                 LSC_Log::add('linksync_getOutlets', 'fail', $response_, $laid_key);
                             } else {

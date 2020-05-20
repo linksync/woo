@@ -249,11 +249,19 @@ $productSyncOption = LS_Vend()->product_option();
                                 }
                             }
                             $taxes_all = explode(',', get_option('tax_class'));
+                            $tax_classes = WC_Tax::get_tax_classes();
+
                             if (isset($taxes) && !empty($taxes)) {
                                 if (!isset($taxes['errorCode'])) {
                                     if (isset($taxes['taxes'])) {
                                         ?><div style="margin-left: 23px;"><ul><legend class="ps_price_sub_options" style="display: inline-block;width: 8em; float: left"> <b>Vend Taxes</b></legend>   <legend class="ps_price_sub_options" style="display: inline-block;width: 3em; float: left">=></legend>  <legend class="ps_price_sub_options" style="display: inline-block;width: 25em; "><b>Woo-Commerce Tax Classes</b></legend><br><?php
+
                                             $tax_classes_list = array_map("rtrim", explode("\n", get_option('woocommerce_tax_classes')));
+                                        
+                                              if(empty($tax_classes_list[0])){
+                                                $tax_classes_list = WC_Tax::get_tax_classes();
+                                              }
+                                           
                                             $implode_tax['tax_name'][] = 'standard-tax';
                                             foreach ($tax_classes_list as $value) {
                                                 $taxexplode = explode(" ", strtolower($value));

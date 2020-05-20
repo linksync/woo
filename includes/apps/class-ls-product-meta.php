@@ -357,8 +357,10 @@ class LS_Product_Meta
     {
         if ($product_quantity <= 0) {
             $this->update_stock_status('outofstock');
+            wp_set_post_terms( $this->product_id, 'outofstock', 'product_visibility', true );
         } else {
             $this->update_stock_status('instock');
+            wp_remove_object_terms( $this->product_id, 'outofstock', 'product_visibility' );
         }
 
     }
