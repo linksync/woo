@@ -67,6 +67,11 @@ Glad you asked. We provide support via chat, phone and email, and every person w
 
 == Changelog ==
 
+= Version 2.5.21 - 29 June 2020 Release =
+* Fix product archive count where product is missing therefore making the count incorrect
+* Fix tax class not showing properly
+* Make inactivate product in vend to be draft in woocommerce	
+
 = Version 2.5.20 - 02 Oct 2018 Release =
 
 * Minor enhancement

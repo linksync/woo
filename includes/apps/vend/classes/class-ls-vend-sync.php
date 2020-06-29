@@ -406,6 +406,9 @@ class LS_Vend_Sync
             $product = new LS_Product($product);
         }
 
+        remove_all_actions('save_post');
+        $wooProductId = LS_Product_Helper::getParentProductIdBySku($product->get_sku());
+
         $productSyncOption = LS_Vend()->product_option();
         $activeInVend = $product->getData('active');
         if (
@@ -415,13 +418,19 @@ class LS_Vend_Sync
             '0' == $activeInVend ||
             0 == $activeInVend
         ) {
+            if(!empty($wooProductId)) {
+                // Since product is inative in vend then we should put the product to draft as well
+                wp_update_post(array(
+                    'ID'    =>  $wooProductId,
+                    'post_status'   =>  'draft'
+                ));
+            }
             //Do not create this product in woocommerce if the sku is shipping
             //Or return if sync type is disabled
             return;
         }
 
-        remove_all_actions('save_post');
-        $wooProductId = LS_Product_Helper::getParentProductIdBySku($product->get_sku());
+        
         $productDeletedAt = $product->get_deleted_at();
 
         if (!empty($productDeletedAt)) {
