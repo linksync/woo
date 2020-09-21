@@ -216,7 +216,7 @@ class LS_Product_Helper
             $product->set_short_description($postarr['post_excerpt']);
         }
 
-        return $product->save();
+        return wp_insert_post($postarr, $wp_error);
     }
 
     public static function deleteWooProductBySku($sku, $force_delete = true, $post_type = 'product_variation')
