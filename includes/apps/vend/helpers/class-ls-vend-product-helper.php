@@ -154,7 +154,7 @@ class LS_Vend_Product_Helper
             $product_args['post_status'] = 'publish';
 
             if ('on' == $productSyncOption->description()) {
-                $product_args['post_content'] = !empty($productDescription) ? $productDescription : '';
+                $product_args['post_content'] = !empty($product_description) ? $product_description : '';
             }
 
             if ('on' == $productSyncOption->shortDescription()) {
@@ -332,23 +332,26 @@ class LS_Vend_Product_Helper
                     $products_meta->update_product_attributes($productAttributes);
                 }
 
+                WC_Product_Variable::sync( $productId );
+
             }
 
         } else {
 
-            if ('on' == $productSyncOption->price()) {
+        }
 
-                self::setWooProductTaxClassAndStatus($products_meta, $product);
-                if ('on' == $excluding_tax) {
-                    //If 'yes' then product price SELL Price(excluding any taxes.)
-                    self::updateWooPrice($products_meta, $product->get_sell_price());
+        if ('on' == $productSyncOption->price()) {
 
-                } else {
+            self::setWooProductTaxClassAndStatus($products_meta, $product);
+            if ('on' == $excluding_tax) {
+                //If 'yes' then product price SELL Price(excluding any taxes.)
+                self::updateWooPrice($products_meta, $product->get_sell_price());
 
-                    //If 'no' then product price SELL Price(including any taxes.)
-                    $tax_and_sell_price_product = $product->get_sell_price() + $product->get_tax_value();
-                    self::updateWooPrice($products_meta, $tax_and_sell_price_product);
-                }
+            } else {
+
+                //If 'no' then product price SELL Price(including any taxes.)
+                $tax_and_sell_price_product = $product->get_sell_price() + $product->get_tax_value();
+                self::updateWooPrice($products_meta, $tax_and_sell_price_product);
             }
         }
 

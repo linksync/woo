@@ -441,10 +441,10 @@
                     }).fail(function (data) {
 
                         console.log('Failed AJAX Call of syncProductToVend :( Return Data: => ');
-                        console.log(data);
 
-                        //If failed, retry to sync with the same product index
-                        lsVendSyncModal.syncProductToVend(woocommerce_products, product_index);
+                        //If failed, then move to next product
+                         // var temp_product_index = product_index + 1;
+                        lsVendSyncModal.syncProductToVend(woocommerce_products, product_number);
 
                     });
 
@@ -647,8 +647,8 @@
 
                     console.log('Failed AJAX Call of syncProductFromVend :( Return Data: ');
                     console.log(data);
-                    //If ajax failed retry with the same product_number
-                    lsVendSyncModal.syncProductFromVend(linksync, product_number);
+                    //If ajax failed then move to next product
+                    lsVendSyncModal.syncProductFromVend(linksync, product_count);
                 });
 
             } else if (typeof json_linksync_products == 'undefined') {

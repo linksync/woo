@@ -20,6 +20,9 @@ class LS_Vend_Script
             var connected_orders_url = '<?php echo admin_url(LS_Vend_Menu::page_menu_url('synced_orders')); ?>';
         </script>
         <style>
+            #sync_to_qbo {
+                width: 4ch;
+            }
             .yes-in-vend{
                 margin: auto 15px;
             }

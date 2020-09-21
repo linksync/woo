@@ -864,8 +864,9 @@ class LS_Vend_Sync
             $orderSyncOption->setFlagOrderWasSyncToVend($order_id, $post_order['orderId']);
             $wooOrderMeta->update_vend_order_id(get_vend_id($post_order['id']));
             $wooOrderMeta->update_vend_receipt_number($post_order['orderId']);
+            $orderstatus = $wooOrder->get_status();
 
-            $note = sprintf(__('This Order was exported to Vend with the Receipt Number %s', 'woocommerce'), $post_order['orderId']);
+            $note = sprintf(__('The order status was changed to %s. This Order was exported to Vend with the Receipt Number %s', 'woocommerce'), $orderstatus, $post_order['orderId']);
             $wooOrder->add_order_note($note);
             LSC_Log::add('Order Sync Woo to Vend', 'success', 'Woo Order no:' . $order_id, LS_Vend()->laid()->get_current_laid());
 

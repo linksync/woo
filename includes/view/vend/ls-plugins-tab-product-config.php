@@ -269,7 +269,7 @@ $productSyncOption = LS_Vend()->product_option();
                                             }
                                             foreach ($taxes['taxes'] as $select_tax) {
                                                 ?>
-                                                <li> <legend class="ps_price_sub_options" style="display: inline-block;width: 8em; float: left"><?php echo $select_tax['name']; ?> </legend>
+                                                <li style="height: 60px;"> <legend class="ps_price_sub_options" style="display: inline-block;width: 8em; float: left"><?php echo $select_tax['name']; ?> </legend>
                                                         <legend class="ps_price_sub_options" style="display: inline-block;width: 3em; float: left">=></legend>
                                                         <legend class="ps_price_sub_options" style="display: inline-block;width: 25em; "><select style="margin-top: -5px"name="tax_class[]">
                                                                 <?php

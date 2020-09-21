@@ -208,7 +208,15 @@ class LS_Product_Helper
 
         $postarr['post_type'] = $post_type;
         $postarr['post_title'] = empty($postarr['post_title']) ? 'This product name is empty' : $postarr['post_title'];
-        return wp_insert_post($postarr, $wp_error);
+        $product = new WC_Product();
+        $product->set_name($postarr['post_title']);
+        $product->set_status($postarr['post_status']);
+        $product->set_description($postarr['post_content']);
+        if(!empty($postarr['post_excerpt'])) {
+            $product->set_short_description($postarr['post_excerpt']);
+        }
+
+        return $product->save();
     }
 
     public static function deleteWooProductBySku($sku, $force_delete = true, $post_type = 'product_variation')

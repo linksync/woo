@@ -397,7 +397,13 @@ class LS_Product
 
     public function has_variant()
     {
-        return count($this->getData('variants')) > 0 ? true : false;
+        $variants = $this->getData('variants');
+        
+        if(empty($variants)) {
+            return false;
+        }
+
+        return count($variants) > 0 ? true : false;
     }
 
     public function get_variants()

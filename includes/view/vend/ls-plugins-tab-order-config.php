@@ -466,12 +466,16 @@ for ($count_order_Status = 1; $count_order_Status <= 3; $count_order_Status++) {
                                                 <legend style="display: inline-block;width: 25em; "><select style="margin-top: -5px" name="wc_to_vend_payment[]">
                                                         <?php
                                                         foreach ($payment['paymentTypes'] as $payment_mapping) {
-                                                            if (in_array($payment_mapping['name'] . "%%" . $payment_mapping['id'] . '|' . $gatways->title . '|' . $gatways->id, $wc_to_vend_payment)) {
-                                                                $selected = "selected";
-                                                            } else {
-                                                                $selected = "";
-                                                            }
-                                                            echo '<option value="' . $payment_mapping['name'] . "%%" . $payment_mapping['id'] . '|' . $gatways->title . '|' . $gatways->id . '" ' . $selected . '>' . $payment_mapping['name'] . '</option>';
+
+                                                            $option_value = $payment_mapping['name'] . "%%" . $payment_mapping['id'] . '|' . $payment_mapping['name'] . '|' . $gatways->id;
+
+                                                            $needle = $payment_mapping['name'] ."%%". $payment_mapping['id'];
+                                                            $selected = '';
+                                                            if(in_array($option_value, $wc_to_vend_payment)) {
+                                                                 $selected = "selected";
+                                                            } 
+                                                            
+                                                            echo '<option value="' . $option_value . '" ' . $selected . '>' . $payment_mapping['name'] . '</option>';
                                                         }
                                                         ?>
                                                     </select></legend></li>
